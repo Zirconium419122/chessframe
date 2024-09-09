@@ -1,3 +1,7 @@
+use crate::color::Color;
+
+#[repr(usize)]
+#[derive(Clone)]
 pub enum Piece {
     Pawn,
     Knight,
@@ -17,5 +21,10 @@ impl Piece {
             Piece::Queen => 'q',
             Piece::King => 'k',
         }
+    }
+
+    pub fn piece_index(&self, color: Color) -> usize {
+        let offset = color.color_index();
+        self.clone() as usize + offset
     }
 }

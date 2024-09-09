@@ -78,7 +78,49 @@ impl Board {
     }
 
     fn parse_pieces(&mut self, piece_placement: &str) {
-        todo!()
+        let mut rank = 7;
+        let mut file = 0;
+
+        for ch in piece_placement.chars() {
+            match ch {
+                // Piece placement characters
+                'P' => self.place_piece(Piece::Pawn, Color::White, rank, file),
+                'N' => self.place_piece(Piece::Knight, Color::White, rank, file),
+                'B' => self.place_piece(Piece::Bishop, Color::White, rank, file),
+                'R' => self.place_piece(Piece::Rook, Color::White, rank, file),
+                'Q' => self.place_piece(Piece::Queen, Color::White, rank, file),
+                'K' => self.place_piece(Piece::King, Color::White, rank, file),
+                'p' => self.place_piece(Piece::Pawn, Color::Black, rank, file),
+                'n' => self.place_piece(Piece::Knight, Color::Black, rank, file),
+                'b' => self.place_piece(Piece::Bishop, Color::Black, rank, file),
+                'r' => self.place_piece(Piece::Rook, Color::Black, rank, file),
+                'q' => self.place_piece(Piece::Queen, Color::Black, rank, file),
+                'k' => self.place_piece(Piece::King, Color::Black, rank, file),
+
+                // Empty squares
+                '1'..='8' => {
+                    file += ch.to_digit(10).unwrap() as usize;
+                }
+
+                // End of rank
+                '/' => {
+                    rank -= 1;
+                    file = 0;
+                }
+
+                _ => panic!("Invalid character in FEN piece placement: {}", ch),
+            }
+
+            // Move to the next file if piece was placed
+            if ch.is_alphabetic() {
+                file += 1;
+            }
+        }
+    }
+
+    fn place_piece(&mut self, piece: Piece, color: Color, rank: usize, file: usize) {
+        let square = 8 * rank + file;
+        self.set_piece(piece, color, square);
     }
 
     fn parse_en_passant(&mut self, en_passant: &str) {
@@ -90,7 +132,9 @@ impl Board {
     }
 
     pub fn set_piece(&mut self, piece: Piece, color: Color, square: usize) {
-        todo!()
+        let bitboard = &mut self.pieces[piece.piece_index(color.clone())];
+        bitboard.set_bit(square);
+        self.occupancy[color.color_index()].set_bit(square);
     }
 
     pub fn clear_piece(&mut self, square: usize) {
