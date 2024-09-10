@@ -15,7 +15,7 @@ impl Color {
     pub fn color_index(&self) -> usize {
         match self {
             Color::White => 0,
-            Color::Black => 6,
+            Color::Black => 1,
         }
     }
 }

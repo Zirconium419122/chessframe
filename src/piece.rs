@@ -23,8 +23,11 @@ impl Piece {
         }
     }
 
-    pub fn piece_index(&self, color: Color) -> usize {
-        let offset = color.color_index();
+    pub fn piece_index(&self, color: &Color) -> usize {
+        let offset = match color {
+            Color::White => 0,
+            Color::Black => 6,
+        };
         self.clone() as usize + offset
     }
 }

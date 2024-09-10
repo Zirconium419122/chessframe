@@ -128,11 +128,15 @@ impl Board {
     }
 
     pub fn get_piece(&self, square: usize) -> Option<(Piece, Color)> {
+        if !self.occupancy[0].is_set(square) || !self.occupancy[1].is_set(square) {
+            return None;
+        }
+
         todo!()
     }
 
     pub fn set_piece(&mut self, piece: Piece, color: Color, square: usize) {
-        let bitboard = &mut self.pieces[piece.piece_index(color.clone())];
+        let bitboard = &mut self.pieces[piece.piece_index(&color)];
         bitboard.set_bit(square);
         self.occupancy[color.color_index()].set_bit(square);
     }

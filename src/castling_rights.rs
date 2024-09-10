@@ -20,7 +20,22 @@ impl Default for CastlingRights {
 
 impl CastlingRights {
     pub fn from_fen(fen: &str) -> Self {
-        todo!()
+        let mut castling_rights = CastlingRights::default();
+
+        if !fen.contains('K') {
+            castling_rights.white_kingside = false;
+        }
+        if !fen.contains('Q') {
+            castling_rights.white_queenside = false;
+        }
+        if !fen.contains('k') {
+            castling_rights.black_kingside = false;
+        }
+        if !fen.contains('q') {
+            castling_rights.black_queenside = false;
+        }
+
+        castling_rights
     }
 
     pub fn can_castle(&self, color: Color, kingside: bool) -> bool {
