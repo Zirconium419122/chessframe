@@ -132,7 +132,21 @@ impl Board {
             return None;
         }
 
-        todo!()
+        for (i, piece) in self.pieces.into_iter().enumerate() {
+            if piece.is_set(square) {
+                match i {
+                    0..6 => {
+                        return Some((Piece::from(i), Color::White));
+                    }
+                    6..12 => {
+                        return Some((Piece::from(i - 6), Color::Black));
+                    }
+                    _ => panic!("Invalid piece index: {}", i),
+                }
+            }
+        }
+
+        None
     }
 
     pub fn set_piece(&mut self, piece: Piece, color: Color, square: usize) {

@@ -11,6 +11,20 @@ pub enum Piece {
     King,
 }
 
+impl From<usize> for Piece {
+    fn from(value: usize) -> Self {
+        match value {
+            0 => Piece::Pawn,
+            1 => Piece::Knight,
+            2 => Piece::Bishop,
+            3 => Piece::Rook,
+            4 => Piece::Queen,
+            5 => Piece::King,
+            _ => panic!("Invalid piece index"),
+        }
+    }
+}
+
 impl Piece {
     pub fn to_fen(&self) -> char {
         match self {
