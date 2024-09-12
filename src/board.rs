@@ -28,18 +28,18 @@ impl BitBoard {
 }
 
 pub struct Board {
-    pieces: [BitBoard; 12],   // 6 for white, 6 for black
-    occupancy: [BitBoard; 2], // white, black occupancy
-    side_to_move: Color,
-    castling_rights: CastlingRights,
-    en_passant_square: Option<BitBoard>,
-    half_move_clock: u32,
-    full_move_clock: u32,
+    pub pieces: [BitBoard; 12],   // 6 for white, 6 for black
+    pub occupancy: [BitBoard; 2], // white, black occupancy
+    pub side_to_move: Color,
+    pub castling_rights: CastlingRights,
+    pub en_passant_square: Option<BitBoard>,
+    pub half_move_clock: u32,
+    pub full_move_clock: u32,
 }
 
 impl Default for Board {
     fn default() -> Self {
-        todo!()
+        Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
     }
 }
 
@@ -124,7 +124,13 @@ impl Board {
     }
 
     fn parse_en_passant(&mut self, en_passant: &str) {
-        todo!()
+        if en_passant != "-" {
+            let file = en_passant.chars().nth(0).unwrap() as usize - 'a' as usize;
+            let rank = en_passant.chars().nth(1).unwrap().to_digit(10).unwrap() as usize - 1;
+            let square = 8 * rank + file;
+
+            self.en_passant_square = Some(BitBoard(1 << square));
+        }
     }
 
     pub fn get_piece(&self, square: usize) -> Option<(Piece, Color)> {
