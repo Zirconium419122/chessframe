@@ -1,4 +1,4 @@
-use crate::{castling_rights::CastlingRights, color::Color, piece::Piece};
+use crate::{castling_rights::CastlingRights, color::Color, r#move::Move, piece::Piece};
 
 #[derive(Clone, Copy)]
 pub struct BitBoard(u64);
@@ -134,7 +134,7 @@ impl Board {
     }
 
     pub fn get_piece(&self, square: usize) -> Option<(Piece, Color)> {
-        if !self.occupancy[0].is_set(square) || !self.occupancy[1].is_set(square) {
+        if !self.occupancy[0].is_set(square) && !self.occupancy[1].is_set(square) {
             return None;
         }
 
@@ -162,6 +162,18 @@ impl Board {
     }
 
     pub fn clear_piece(&mut self, square: usize) {
-        todo!()
+        if !self.occupancy[0].is_set(square) && !self.occupancy[1].is_set(square) {
+            return;
+        }
+
+        if self.occupancy[0].is_set(square) {
+            for i in 0..6 {
+                self.pieces[i].clear_bit(square);
+            }
+        } else {
+            for i in 6..12 {
+                self.pieces[i].clear_bit(square);
+            }
+        }
     }
 }
