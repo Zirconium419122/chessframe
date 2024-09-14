@@ -1,4 +1,24 @@
-use chess_frame::{board::*, color::Color, piece::Piece};
+use chess_frame::{board::*, color::Color, piece::Piece, r#move::Square};
+
+#[test]
+fn test_square_to_bitboard() {
+    macro_rules! generate_assertions {
+        ($($x:literal),+) => {
+            $(
+                assert_eq!(BitBoard::from(Square::try_from($x).unwrap()), BitBoard(1 << $x));
+            )+
+        };
+        ($start:literal..$end:literal) => {
+            {
+                for i in $start..$end {
+                    assert_eq!(BitBoard::from(Square::try_from(i).unwrap()), BitBoard(1 << i));
+                }
+            }
+        }
+    }
+
+    generate_assertions!(0..64);
+}
 
 #[test]
 fn test_from_fen_starting_position() {

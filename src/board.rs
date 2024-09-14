@@ -1,11 +1,17 @@
-use crate::{castling_rights::CastlingRights, color::Color, r#move::Move, piece::Piece};
+use crate::{castling_rights::CastlingRights, color::Color, piece::Piece, r#move::Square};
 
-#[derive(Clone, Copy)]
-pub struct BitBoard(u64);
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BitBoard(pub u64);
 
 impl Default for BitBoard {
     fn default() -> Self {
         BitBoard(0)
+    }
+}
+
+impl From<Square> for BitBoard {
+    fn from(value: Square) -> Self {
+        BitBoard(1 << value as usize)
     }
 }
 
