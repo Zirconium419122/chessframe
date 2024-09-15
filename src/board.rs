@@ -1,4 +1,11 @@
-use crate::{castling_rights::CastlingRights, color::Color, piece::Piece, r#move::Square};
+use std::ops::{BitAnd, BitOr, Not, Shl, Shr};
+
+use crate::{
+    castling_rights::CastlingRights,
+    color::Color,
+    piece::Piece,
+    r#move::{Move, Square},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BitBoard(pub u64);
@@ -12,6 +19,46 @@ impl Default for BitBoard {
 impl From<Square> for BitBoard {
     fn from(value: Square) -> Self {
         BitBoard(1 << value as usize)
+    }
+}
+
+impl BitAnd for BitBoard {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        BitBoard(self.0 & rhs.0)
+    }
+}
+
+impl BitOr for BitBoard {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        BitBoard(self.0 | rhs.0)
+    }
+}
+
+impl Not for BitBoard {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        BitBoard(!self.0)
+    }
+}
+
+impl Shl<usize> for BitBoard {
+    type Output = Self;
+
+    fn shl(self, rhs: usize) -> Self::Output {
+        BitBoard(self.0 << rhs)
+    }
+}
+
+impl Shr<usize> for BitBoard {
+    type Output = Self;
+
+    fn shr(self, rhs: usize) -> Self::Output {
+        BitBoard(self.0 >> rhs)
     }
 }
 
@@ -30,6 +77,18 @@ impl BitBoard {
 
     pub fn is_set(&self, square: usize) -> bool {
         (self.0 & (1 << square)) != 0
+    }
+
+    pub fn is_not_set(&self, square: usize) -> bool {
+        (self.0 & (1 << square)) == 0
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+
+    pub fn is_not_zero(&self) -> bool {
+        self.0 != 0
     }
 }
 
@@ -140,7 +199,7 @@ impl Board {
     }
 
     pub fn get_piece(&self, square: usize) -> Option<(Piece, Color)> {
-        if !self.occupancy[0].is_set(square) && !self.occupancy[1].is_set(square) {
+        if self.occupancy[0].is_not_set(square) && self.occupancy[1].is_not_set(square) {
             return None;
         }
 
@@ -168,7 +227,7 @@ impl Board {
     }
 
     pub fn clear_piece(&mut self, square: usize) {
-        if !self.occupancy[0].is_set(square) && !self.occupancy[1].is_set(square) {
+        if self.occupancy[0].is_not_set(square) && self.occupancy[1].is_not_set(square) {
             return;
         }
 
@@ -181,5 +240,112 @@ impl Board {
                 self.pieces[i].clear_bit(square);
             }
         }
+    }
+
+    pub fn generate_moves(&self) -> Vec<Move> {
+        let mut moves = Vec::new();
+
+        moves.extend(self.generate_pawn_moves());
+
+        moves.extend(self.generate_knight_moves());
+
+        moves.extend(self.generate_bishop_moves());
+
+        moves.extend(self.generate_rook_moves());
+
+        moves.extend(self.generate_queen_moves());
+
+        moves.extend(self.generate_king_moves());
+
+        moves
+    }
+
+    fn generate_pawn_moves(&self) -> Vec<Move> {
+        todo!()
+    }
+
+    fn generate_pawn_pushes(&self) -> BitBoard {
+        let empty_squares = !(self.occupancy[0] | self.occupancy[1]);
+
+        match self.side_to_move {
+            Color::White => {
+                let single_push = (self.pieces[0] << 8) & empty_squares;
+
+                let second_rank = BitBoard(0x000000000000FF00);
+                let double_push =
+                    ((self.pieces[0] & second_rank) << 16) & (empty_squares << 8) & empty_squares;
+
+                single_push | double_push
+            }
+            Color::Black => {
+                let single_push = (self.pieces[6] >> 8) & empty_squares;
+
+                let seventh_rank = BitBoard(0x00FF000000000000);
+                let double_push =
+                    ((self.pieces[6] & seventh_rank) >> 16) & (empty_squares >> 8) & empty_squares;
+
+                single_push | double_push
+            }
+        }
+    }
+
+    #[rustfmt::skip]
+    fn generate_pawn_captures(&self) -> BitBoard {
+        let opponents_pieces = match self.side_to_move {
+            Color::White => self.occupancy[1],
+            Color::Black => self.occupancy[0],
+        };
+
+        match self.side_to_move {
+            Color::White => {
+                let northwest_capture =
+                    (self.pieces[0] << 7) & opponents_pieces & !BitBoard(0x8080808080808080); // Mask out the H file
+
+                let northeast_capture =
+                    (self.pieces[0] << 9) & opponents_pieces & !BitBoard(0x0101010101010101); // Mask out the A file
+
+                northwest_capture | northeast_capture
+            }
+            Color::Black => {
+                let southwest_capture =
+                    (self.pieces[6] >> 9) & opponents_pieces & !BitBoard(0x8080808080808080); // Mask out the H file
+
+                let southeast_capture =
+                    (self.pieces[6] >> 7) & opponents_pieces & !BitBoard(0x0101010101010101); // Mask out the A file
+
+                southwest_capture | southeast_capture
+            }
+        }
+    }
+
+    fn generate_en_passant(&self) -> BitBoard {
+        todo!()
+    }
+
+    fn is_promotion(&self, square: usize) -> bool {
+        match self.side_to_move {
+            Color::White => square >= 56, // Rank 8
+            Color::Black => square < 8,   // Rank 1
+        }
+    }
+
+    fn generate_knight_moves(&self) -> Vec<Move> {
+        todo!()
+    }
+
+    fn generate_bishop_moves(&self) -> Vec<Move> {
+        todo!()
+    }
+
+    fn generate_rook_moves(&self) -> Vec<Move> {
+        todo!()
+    }
+
+    fn generate_queen_moves(&self) -> Vec<Move> {
+        todo!()
+    }
+
+    fn generate_king_moves(&self) -> Vec<Move> {
+        todo!()
     }
 }

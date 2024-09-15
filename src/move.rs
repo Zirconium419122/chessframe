@@ -1,4 +1,4 @@
-use crate::{board::BitBoard, piece::Piece};
+use crate::piece::Piece;
 
 #[rustfmt::skip]
 #[repr(u8)]
@@ -25,16 +25,16 @@ impl TryFrom<usize> for Square {
 }
 
 pub struct Move {
-    pub from: BitBoard,
-    pub to: BitBoard,
+    pub from: usize,
+    pub to: usize,
     pub move_type: Option<MoveType>,
 }
 
 impl Move {
     pub fn new(from: Square, to: Square) -> Move {
         Move {
-            from: BitBoard::from(from),
-            to: BitBoard::from(to),
+            from: from as usize,
+            to: to as usize,
             move_type: None,
         }
     }
