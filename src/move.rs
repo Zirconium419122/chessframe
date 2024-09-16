@@ -27,15 +27,47 @@ impl TryFrom<usize> for Square {
 pub struct Move {
     pub from: usize,
     pub to: usize,
-    pub move_type: Option<MoveType>,
+    pub move_type: MoveType,
 }
 
 impl Move {
-    pub fn new(from: Square, to: Square) -> Move {
+    pub fn new(from: usize, to: usize) -> Move {
         Move {
             from: from as usize,
             to: to as usize,
-            move_type: None,
+            move_type: MoveType::Quiet,
+        }
+    }
+
+    pub fn new_promotion(from: usize, to: usize, promotion: Piece) -> Move {
+        Move {
+            from,
+            to,
+            move_type: MoveType::Promotion(promotion),
+        }
+    }
+
+    pub fn new_capture(from: usize, to: usize) -> Move {
+        Move {
+            from,
+            to,
+            move_type: MoveType::Capture,
+        }
+    }
+
+    pub fn new_capture_promotion(from: usize, to: usize, promotion: Piece) -> Move {
+        Move {
+            from,
+            to,
+            move_type: MoveType::CapturePromotion(promotion),
+        }
+    }
+
+    pub fn new_en_passant(from: usize, to: usize) -> Move {
+        Move {
+            from,
+            to,
+            move_type: MoveType::EnPassant,
         }
     }
 }
@@ -46,5 +78,6 @@ pub enum MoveType {
     Castle,
     EnPassant,
     Promotion(Piece),
+    CapturePromotion(Piece),
     Check,
 }

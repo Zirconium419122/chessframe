@@ -62,6 +62,20 @@ impl Shr<usize> for BitBoard {
     }
 }
 
+impl Iterator for BitBoard {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0 == 0 {
+            None
+        } else {
+            let lsb = self.0.trailing_zeros() as usize;
+            self.0 &= self.0 - 1;
+            Some(lsb)
+        }
+    }
+}
+
 impl BitBoard {
     pub fn new(bits: u64) -> BitBoard {
         BitBoard(bits)
@@ -260,8 +274,125 @@ impl Board {
         moves
     }
 
+    #[rustfmt::skip]
     fn generate_pawn_moves(&self) -> Vec<Move> {
-        todo!()
+        let mut moves = Vec::new();
+
+        let pawn_pushes = self.generate_pawn_pushes();
+        for square in pawn_pushes {
+            if self.is_promotion(square) {
+                match self.side_to_move {
+                    Color::White => {
+                        moves.push(Move::new_promotion(square - 8, square, Piece::Queen));
+                        moves.push(Move::new_promotion(square - 8, square, Piece::Rook));
+                        moves.push(Move::new_promotion(square - 8, square, Piece::Bishop));
+                        moves.push(Move::new_promotion(square - 8, square, Piece::Knight));
+                    }
+                    Color::Black => {
+                        moves.push(Move::new_promotion(square + 8, square, Piece::Queen));
+                        moves.push(Move::new_promotion(square + 8, square, Piece::Rook));
+                        moves.push(Move::new_promotion(square + 8, square, Piece::Bishop));
+                        moves.push(Move::new_promotion(square + 8, square, Piece::Knight));
+                    }
+                }
+            } else {
+                match self.side_to_move {
+                    Color::White => {
+                        if self.pieces[0].is_set(square - 16) {
+                            moves.push(Move::new(square - 16, square));
+                        } else {
+                            moves.push(Move::new(square - 8, square));
+                        }
+                    }
+                    Color::Black => {
+                        if self.pieces[6].is_set(square + 16) {
+                            moves.push(Move::new(square + 16, square));
+                        } else {
+                            moves.push(Move::new(square + 8, square));
+                        }
+                    }
+                }
+            }
+        }
+
+        let pawn_captures = self.generate_pawn_captures();
+        for square in pawn_captures {
+            if self.is_promotion(square) {
+                match self.side_to_move {
+                    Color::White => {
+                        if self.pieces[0].is_set(square - 9) {
+                            moves.push(Move::new_capture_promotion(square - 9, square, Piece::Queen));
+                            moves.push(Move::new_capture_promotion(square - 9, square, Piece::Rook));
+                            moves.push(Move::new_capture_promotion(square - 9, square, Piece::Bishop));
+                            moves.push(Move::new_capture_promotion(square - 9, square, Piece::Knight));
+                        }
+                        if self.pieces[0].is_set(square - 7) {
+                            moves.push(Move::new_capture_promotion(square - 7, square, Piece::Queen));
+                            moves.push(Move::new_capture_promotion(square - 7, square, Piece::Rook));
+                            moves.push(Move::new_capture_promotion(square - 7, square, Piece::Bishop));
+                            moves.push(Move::new_capture_promotion(square - 7, square, Piece::Knight));
+                        }
+                    }
+                    Color::Black => {
+                        if self.pieces[6].is_set(square + 9) {
+                            moves.push(Move::new_capture_promotion(square + 9, square, Piece::Queen));
+                            moves.push(Move::new_capture_promotion(square + 9, square, Piece::Rook));
+                            moves.push(Move::new_capture_promotion(square + 9, square, Piece::Bishop));
+                            moves.push(Move::new_capture_promotion(square + 9, square, Piece::Knight));
+                        }
+                        if self.pieces[6].is_set(square + 7) {
+                            moves.push(Move::new_capture_promotion(square + 7, square, Piece::Queen));
+                            moves.push(Move::new_capture_promotion(square + 7, square, Piece::Rook));
+                            moves.push(Move::new_capture_promotion(square + 7, square, Piece::Bishop));
+                            moves.push(Move::new_capture_promotion(square + 7, square, Piece::Knight));
+                        }
+                    }
+                }
+            } else {
+                match self.side_to_move {
+                    Color::White => {
+                        if self.pieces[0].is_set(square - 9) {
+                            moves.push(Move::new_capture(square - 9, square));
+                        }
+                        if self.pieces[0].is_set(square - 7) {
+                            moves.push(Move::new_capture(square - 7, square));
+                        }
+                    }
+                    Color::Black => {
+                        if self.pieces[6].is_set(square + 9)  {
+                            moves.push(Move::new_capture(square + 9, square));
+                        }
+                        if self.pieces[6].is_set(square + 7)  {
+                            moves.push(Move::new_capture(square + 7, square));
+                        }
+                    }
+                }
+            }
+        }
+
+        let en_passant = self.generate_en_passant();
+        for square in en_passant {
+            match self.side_to_move {
+                Color::White => {
+                    if self.pieces[0].is_set(square - 9) {
+                        moves.push(Move::new_en_passant(square - 9, square));
+                    }
+                    if self.pieces[0].is_set(square - 7) {
+                        moves.push(Move::new_en_passant(square - 7, square));
+                    }
+                }
+                Color::Black => {
+                    if self.pieces[6].is_set(square + 9)   {
+                        moves.push(Move::new_en_passant(square + 9, square));
+                    }
+                    if self.pieces[6].is_set(square + 7)   {
+                        moves.push(Move::new_en_passant(square + 7, square));
+                    }
+                }
+            }
+        }
+
+        moves
     }
 
     fn generate_pawn_pushes(&self) -> BitBoard {
@@ -289,7 +420,6 @@ impl Board {
         }
     }
 
-    #[rustfmt::skip]
     fn generate_pawn_captures(&self) -> BitBoard {
         let opponents_pieces = match self.side_to_move {
             Color::White => self.occupancy[1],
@@ -319,7 +449,26 @@ impl Board {
     }
 
     fn generate_en_passant(&self) -> BitBoard {
-        todo!()
+        if let Some(en_passant) = self.en_passant_square {
+            match self.side_to_move {
+                Color::White => {
+                    let west_ep =
+                        (self.pieces[0] << 7) & en_passant & !BitBoard(0x8080808080808080); // Mask out the H file
+                    let east_ep =
+                        (self.pieces[0] << 9) & en_passant & !BitBoard(0x0101010101010101); // Mask out the A file
+                    west_ep | east_ep
+                }
+                Color::Black => {
+                    let west_ep =
+                        (self.pieces[6] >> 9) & en_passant & !BitBoard(0x8080808080808080); // Mask out the H file
+                    let east_ep =
+                        (self.pieces[6] >> 7) & en_passant & !BitBoard(0x0101010101010101); // Mask out the A file
+                    west_ep | east_ep
+                }
+            }
+        } else {
+            BitBoard(0)
+        }
     }
 
     fn is_promotion(&self, square: usize) -> bool {
