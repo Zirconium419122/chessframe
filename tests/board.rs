@@ -1,4 +1,4 @@
-use chess_frame::{board::*, color::Color, piece::Piece, r#move::Square};
+use chess_frame::{bitboard::BitBoard, board::*, color::Color, piece::Piece, r#move::Square};
 
 #[test]
 fn test_square_to_bitboard() {
