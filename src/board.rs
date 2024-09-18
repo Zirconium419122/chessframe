@@ -171,7 +171,7 @@ impl Board {
     }
 
     #[rustfmt::skip]
-    fn generate_pawn_moves(&self) -> Vec<Move> {
+    pub fn generate_pawn_moves(&self) -> Vec<Move> {
         let mut moves = Vec::new();
 
         let pawn_pushes = self.generate_pawn_pushes();
@@ -291,7 +291,7 @@ impl Board {
         moves
     }
 
-    fn generate_pawn_pushes(&self) -> BitBoard {
+    pub fn generate_pawn_pushes(&self) -> BitBoard {
         let empty_squares = !(self.occupancy[0] | self.occupancy[1]);
 
         match self.side_to_move {
@@ -316,7 +316,7 @@ impl Board {
         }
     }
 
-    fn generate_pawn_captures(&self) -> BitBoard {
+    pub fn generate_pawn_captures(&self) -> BitBoard {
         let opponents_pieces = match self.side_to_move {
             Color::White => self.occupancy[1],
             Color::Black => self.occupancy[0],
@@ -344,7 +344,7 @@ impl Board {
         }
     }
 
-    fn generate_en_passant(&self) -> BitBoard {
+    pub fn generate_en_passant(&self) -> BitBoard {
         if let Some(en_passant) = self.en_passant_square {
             match self.side_to_move {
                 Color::White => {
@@ -367,30 +367,30 @@ impl Board {
         }
     }
 
-    fn is_promotion(&self, square: usize) -> bool {
+    pub fn is_promotion(&self, square: usize) -> bool {
         match self.side_to_move {
             Color::White => square >= 56, // Rank 8
             Color::Black => square < 8,   // Rank 1
         }
     }
 
-    fn generate_knight_moves(&self) -> Vec<Move> {
+    pub fn generate_knight_moves(&self) -> Vec<Move> {
         todo!()
     }
 
-    fn generate_bishop_moves(&self) -> Vec<Move> {
+    pub fn generate_bishop_moves(&self) -> Vec<Move> {
         todo!()
     }
 
-    fn generate_rook_moves(&self) -> Vec<Move> {
+    pub fn generate_rook_moves(&self) -> Vec<Move> {
         todo!()
     }
 
-    fn generate_queen_moves(&self) -> Vec<Move> {
+    pub fn generate_queen_moves(&self) -> Vec<Move> {
         todo!()
     }
 
-    fn generate_king_moves(&self) -> Vec<Move> {
+    pub fn generate_king_moves(&self) -> Vec<Move> {
         todo!()
     }
 }

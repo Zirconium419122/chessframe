@@ -18,7 +18,7 @@ impl TryFrom<usize> for Square {
 
     fn try_from(value: usize) -> Result<Self, Self::Error> {
         match value {
-            0..64 => Ok(unsafe { std::mem::transmute(value as u8) }),
+            0..64 => Ok(unsafe { std::mem::transmute::<u8, Square>(value as u8) }),
             64.. => Err("Index out of bounds, must be between 0 and 63!"),
         }
     }
@@ -33,8 +33,8 @@ pub struct Move {
 impl Move {
     pub fn new(from: usize, to: usize) -> Move {
         Move {
-            from: from as usize,
-            to: to as usize,
+            from,
+            to,
             move_type: MoveType::Quiet,
         }
     }
