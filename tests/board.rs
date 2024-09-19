@@ -82,8 +82,11 @@ fn test_pawn_move_generation() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let board = Board::from_fen(fen);
 
-    let pawn_pushes = board.generate_pawn_pushes();
-    assert_eq!(pawn_pushes, BitBoard(0x00000000FFFF0000));
+    let (single_pawn_pushes, double_pawn_pushes) = board.generate_pawn_pushes();
+    assert_eq!(
+        single_pawn_pushes | double_pawn_pushes,
+        BitBoard(0x00000000FFFF0000)
+    );
 
     let pawn_captures = board.generate_pawn_captures();
     assert_eq!(pawn_captures, BitBoard(0));

@@ -174,8 +174,8 @@ impl Board {
     pub fn generate_pawn_moves(&self) -> Vec<Move> {
         let mut moves = Vec::new();
 
-        let pawn_pushes = self.generate_pawn_pushes();
-        for square in pawn_pushes {
+        let (single_pawn_pushes, double_pawn_pushes) = self.generate_pawn_pushes();
+        for square in single_pawn_pushes {
             if self.is_promotion(square) {
                 match self.side_to_move {
                     Color::White => {
@@ -194,20 +194,23 @@ impl Board {
             } else {
                 match self.side_to_move {
                     Color::White => {
-                        if self.pieces[0].is_set(square - 16) {
-                            moves.push(Move::new(square - 16, square));
-                        } else {
-                            moves.push(Move::new(square - 8, square));
-                        }
+                        moves.push(Move::new(square - 8, square));
                     }
                     Color::Black => {
-                        if self.pieces[6].is_set(square + 16) {
-                            moves.push(Move::new(square + 16, square));
-                        } else {
-                            moves.push(Move::new(square + 8, square));
-                        }
+                        moves.push(Move::new(square + 8, square));
                     }
                 }
+            }
+        }
+
+        for square in double_pawn_pushes {
+            match self.side_to_move {
+                Color::White => {
+                    moves.push(Move::new(square - 16, square));
+                },
+                Color::Black => {
+                    moves.push(Move::new(square + 16, square));
+                },
             }
         }
 
@@ -291,7 +294,7 @@ impl Board {
         moves
     }
 
-    pub fn generate_pawn_pushes(&self) -> BitBoard {
+    pub fn generate_pawn_pushes(&self) -> (BitBoard, BitBoard) {
         let empty_squares = !(self.occupancy[0] | self.occupancy[1]);
 
         match self.side_to_move {
@@ -302,7 +305,7 @@ impl Board {
                 let double_push =
                     ((self.pieces[0] & second_rank) << 16) & (empty_squares << 8) & empty_squares;
 
-                single_push | double_push
+                (single_push, double_push)
             }
             Color::Black => {
                 let single_push = (self.pieces[6] >> 8) & empty_squares;
@@ -311,7 +314,7 @@ impl Board {
                 let double_push =
                     ((self.pieces[6] & seventh_rank) >> 16) & (empty_squares >> 8) & empty_squares;
 
-                single_push | double_push
+                (single_push, double_push)
             }
         }
     }
