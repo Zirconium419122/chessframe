@@ -88,9 +88,9 @@ fn test_pawn_move_generation() {
         BitBoard(0x00000000FFFF0000)
     );
 
-    let pawn_captures = board.generate_pawn_captures();
-    assert_eq!(pawn_captures, BitBoard(0));
+    let (west_pawn_captures, east_pawn_captures) = board.generate_pawn_captures();
+    assert_eq!(west_pawn_captures | east_pawn_captures, BitBoard(0));
 
-    let en_passant = board.generate_en_passant();
-    assert_eq!(en_passant, BitBoard(0));
+    let (west_en_passant, east_en_passant) = board.generate_en_passant();
+    assert_eq!(west_en_passant | east_en_passant, BitBoard(0));
 }
