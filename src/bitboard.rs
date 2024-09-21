@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr, Not, Shl, Shr};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Shl, Shr};
 
 use crate::r#move::Square;
 
@@ -25,11 +25,31 @@ impl BitAnd for BitBoard {
     }
 }
 
+impl BitAndAssign for BitBoard {
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0;
+    }
+}
+
 impl BitOr for BitBoard {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
         BitBoard(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign for BitBoard {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl BitXor for BitBoard {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        BitBoard(self.0 ^ rhs.0)
     }
 }
 
