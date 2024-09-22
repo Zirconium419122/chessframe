@@ -1,4 +1,10 @@
-use crate::{bitboard::BitBoard, castling_rights::CastlingRights, color::Color, piece::Piece};
+use crate::{
+    bitboard::BitBoard,
+    castling_rights::CastlingRights,
+    color::Color,
+    piece::Piece,
+    r#move::{Move, MoveType},
+};
 
 pub struct Board {
     pub pieces: [BitBoard; 12],   // 6 for white, 6 for black
@@ -106,6 +112,82 @@ impl Board {
         }
     }
 
+    pub fn make_move(&mut self, mv: Move) -> Result<(), String> {
+        let (from, to) = mv.get_move();
+        let move_type = mv.get_move_type();
+
+        match self.side_to_move {
+            Color::White => {
+                if let Some((piece, _color)) = self.get_piece(from) {
+                    self.pieces[piece.clone() as usize].clear_bit(from);
+
+                    match move_type {
+                        MoveType::Quiet => self.pieces[piece as usize].set_bit(to),
+                        MoveType::Capture => {
+                            self.pieces[piece as usize].set_bit(to);
+                            self.clear_piece(to, Color::Black);
+                        }
+                        MoveType::Castle => todo!(),
+                        MoveType::EnPassant => {
+                            self.pieces[piece as usize].set_bit(to);
+                            self.clear_piece(to - 8, Color::Black)
+                        }
+                        MoveType::Promotion(piece) => {
+                            self.set_piece(piece.clone(), Color::White, to)
+                        }
+                        MoveType::CapturePromotion(piece) => {
+                            self.set_piece(piece.clone(), Color::White, to);
+                            self.clear_piece(to, Color::Black);
+                        }
+                        MoveType::Check => todo!(),
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    Ok(())
+                } else {
+                    Err(format!("No piece found on square: {}", from))
+                }
+            }
+            Color::Black => {
+                if let Some((piece, _color)) = self.get_piece(from) {
+                    self.pieces[piece.clone() as usize].clear_bit(from);
+
+                    match move_type {
+                        MoveType::Quiet => self.pieces[piece as usize].set_bit(to),
+                        MoveType::Capture => {
+                            self.pieces[piece as usize].set_bit(to);
+                            self.clear_piece(to, Color::White);
+                        }
+                        MoveType::Castle => todo!(),
+                        MoveType::EnPassant => {
+                            self.pieces[piece as usize].set_bit(to);
+                            self.clear_piece(to + 8, Color::White)
+                        }
+                        MoveType::Promotion(piece) => {
+                            self.set_piece(piece.clone(), Color::Black, to)
+                        }
+                        MoveType::CapturePromotion(piece) => {
+                            self.set_piece(piece.clone(), Color::Black, to);
+                            self.clear_piece(to, Color::White);
+                        }
+                        MoveType::Check => todo!(),
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    Ok(())
+                } else {
+                    Err(format!("No piece found on square: {}", from))
+                }
+            }
+        }
+    }
+
+    pub fn unmake_move(&mut self, mv: Move) -> Result<(), String> {
+        todo!()
+    }
+
     pub fn get_piece(&self, square: usize) -> Option<(Piece, Color)> {
         if self.occupancy[0].is_not_set(square) && self.occupancy[1].is_not_set(square) {
             return None;
@@ -134,19 +216,18 @@ impl Board {
         self.occupancy[color.color_index()].set_bit(square);
     }
 
-    pub fn clear_piece(&mut self, square: usize) {
-        if self.occupancy[0].is_not_set(square) && self.occupancy[1].is_not_set(square) {
+    pub fn clear_piece(&mut self, square: usize, color: Color) {
+        if self.occupancy[color.clone() as usize].is_not_set(square) {
             return;
         }
 
-        if self.occupancy[0].is_set(square) {
-            for i in 0..6 {
-                self.pieces[i].clear_bit(square);
-            }
-        } else {
-            for i in 6..12 {
-                self.pieces[i].clear_bit(square);
-            }
+        let offset = match color {
+            Color::White => 0,
+            Color::Black => 6,
+        };
+
+        for i in 0..6 {
+            self.pieces[i + offset].clear_bit(square);
         }
     }
 

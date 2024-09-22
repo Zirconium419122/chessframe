@@ -24,6 +24,12 @@ impl TryFrom<usize> for Square {
     }
 }
 
+impl Into<usize> for Square {
+    fn into(self) -> usize {
+        unsafe { std::mem::transmute::<Square, u8>(self).into() }
+    }
+}
+
 pub struct Move {
     pub from: usize,
     pub to: usize,
@@ -31,12 +37,20 @@ pub struct Move {
 }
 
 impl Move {
-    pub fn new(from: usize, to: usize) -> Move {
+    pub fn new<T: Into<usize>>(from: T, to: T) -> Move {
         Move {
-            from,
-            to,
+            from: from.into(),
+            to: to.into(),
             move_type: MoveType::Quiet,
         }
+    }
+
+    pub fn get_move(&self) -> (usize, usize) {
+        (self.from, self.to)
+    }
+
+    pub fn get_move_type(&self) -> &MoveType {
+        &self.move_type
     }
 
     pub fn new_promotion(from: usize, to: usize, promotion: Piece) -> Move {

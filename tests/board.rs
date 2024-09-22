@@ -1,4 +1,10 @@
-use chess_frame::{bitboard::BitBoard, board::*, color::Color, piece::Piece, r#move::Square};
+use chess_frame::{
+    bitboard::BitBoard,
+    board::*,
+    color::Color,
+    piece::Piece,
+    r#move::{Move, Square},
+};
 
 #[test]
 fn test_square_to_bitboard() {
@@ -102,4 +108,18 @@ fn test_knight_move_generation() {
 
     let knight_moves = board.generate_knight_moves();
     assert_eq!(knight_moves, BitBoard(0x0000000000A50000))
+}
+
+#[test]
+fn test_make_move() {
+    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    let mut board = Board::from_fen(fen);
+
+    assert_eq!(board.side_to_move, Color::White);
+    assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+
+    board.make_move(Move::new(Square::E2, Square::E4)).unwrap();
+
+    assert_eq!(board.side_to_move, Color::Black);
+    assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
 }
