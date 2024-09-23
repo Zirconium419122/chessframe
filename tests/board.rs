@@ -115,11 +115,28 @@ fn test_make_move() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);
 
-    assert_eq!(board.side_to_move, Color::White);
-    assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+    {
+        let mut board = board.clone();
 
-    board.make_move(Move::new(Square::E2, Square::E4)).unwrap();
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
 
-    assert_eq!(board.side_to_move, Color::Black);
-    assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
+        assert_eq!(board.make_move(Move::new(Square::E2, Square::E4)), Ok(()));
+
+        assert_eq!(board.side_to_move, Color::Black);
+        assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
+    }
+
+    {
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+
+        assert_eq!(
+            board.make_move(Move::new_capture(Square::E1, Square::D1)),
+            Err("Can't move piece to square: 3!".to_string())
+        );
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+    }
 }

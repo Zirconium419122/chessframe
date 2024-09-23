@@ -53,34 +53,34 @@ impl Move {
         &self.move_type
     }
 
-    pub fn new_promotion(from: usize, to: usize, promotion: Piece) -> Move {
+    pub fn new_promotion<T: Into<usize>>(from: T, to: T, promotion: Piece) -> Move {
         Move {
-            from,
-            to,
+            from: from.into(),
+            to: to.into(),
             move_type: MoveType::Promotion(promotion),
         }
     }
 
-    pub fn new_capture(from: usize, to: usize) -> Move {
+    pub fn new_capture<T: Into<usize>>(from: T, to: T) -> Move {
         Move {
-            from,
-            to,
+            from: from.into(),
+            to: to.into(),
             move_type: MoveType::Capture,
         }
     }
 
-    pub fn new_capture_promotion(from: usize, to: usize, promotion: Piece) -> Move {
+    pub fn new_capture_promotion<T: Into<usize>>(from: T, to: T, promotion: Piece) -> Move {
         Move {
-            from,
-            to,
+            from: from.into(),
+            to: to.into(),
             move_type: MoveType::CapturePromotion(promotion),
         }
     }
 
-    pub fn new_en_passant(from: usize, to: usize) -> Move {
+    pub fn new_en_passant<T: Into<usize>>(from: T, to: T) -> Move {
         Move {
-            from,
-            to,
+            from: from.into(),
+            to: to.into(),
             move_type: MoveType::EnPassant,
         }
     }

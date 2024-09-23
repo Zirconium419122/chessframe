@@ -6,6 +6,7 @@ use crate::{
     r#move::{Move, MoveType},
 };
 
+#[derive(Clone)]
 pub struct Board {
     pub pieces: [BitBoard; 12],   // 6 for white, 6 for black
     pub occupancy: [BitBoard; 2], // white, black occupancy
@@ -118,67 +119,113 @@ impl Board {
 
         match self.side_to_move {
             Color::White => {
-                if let Some((piece, _color)) = self.get_piece(from) {
-                    self.pieces[piece.clone() as usize].clear_bit(from);
+                if let Some((piece, _)) = self.get_piece(from) {
+                    if self.occupancy[0].is_set(to) {
+                        return Err(format!("Can't move piece to square: {}!", to));
+                    }
 
                     match move_type {
-                        MoveType::Quiet => self.pieces[piece as usize].set_bit(to),
+                        MoveType::Quiet => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
+                            self.pieces[piece as usize].set_bit(to)
+                        }
                         MoveType::Capture => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
                             self.pieces[piece as usize].set_bit(to);
                             self.clear_piece(to, Color::Black);
                         }
                         MoveType::Castle => todo!(),
                         MoveType::EnPassant => {
-                            self.pieces[piece as usize].set_bit(to);
-                            self.clear_piece(to - 8, Color::Black)
+                            if let Some(en_passant) = self.en_passant_square {
+                                if en_passant.is_not_set(to) {
+                                    return Err(format!(
+                                        "En passant to: {}, is not a legal move!",
+                                        to
+                                    ));
+                                }
+
+                                self.pieces[piece.clone() as usize].clear_bit(from);
+                                self.pieces[piece as usize].set_bit(to);
+                                self.clear_piece(to - 8, Color::Black)
+                            } else {
+                                return Err("No en passant square set!".to_string());
+                            }
                         }
                         MoveType::Promotion(piece) => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
                             self.set_piece(piece.clone(), Color::White, to)
                         }
                         MoveType::CapturePromotion(piece) => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
                             self.set_piece(piece.clone(), Color::White, to);
                             self.clear_piece(to, Color::Black);
                         }
-                        MoveType::Check => todo!(),
+                        MoveType::Check => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
+                            self.pieces[piece as usize].set_bit(to)
+                        }
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
 
                     Ok(())
                 } else {
-                    Err(format!("No piece found on square: {}", from))
+                    Err(format!("No piece found on square: {}!", from))
                 }
             }
             Color::Black => {
                 if let Some((piece, _color)) = self.get_piece(from) {
-                    self.pieces[piece.clone() as usize].clear_bit(from);
+                    if self.occupancy[1].is_set(to) {
+                        return Err(format!("Can't move piece to square: {}!", to));
+                    }
 
                     match move_type {
-                        MoveType::Quiet => self.pieces[piece as usize].set_bit(to),
+                        MoveType::Quiet => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
+                            self.pieces[piece as usize].set_bit(to)
+                        }
                         MoveType::Capture => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
                             self.pieces[piece as usize].set_bit(to);
                             self.clear_piece(to, Color::White);
                         }
                         MoveType::Castle => todo!(),
                         MoveType::EnPassant => {
-                            self.pieces[piece as usize].set_bit(to);
-                            self.clear_piece(to + 8, Color::White)
+                            if let Some(en_passant) = self.en_passant_square {
+                                if en_passant.is_not_set(to) {
+                                    return Err(format!(
+                                        "En passant to: {}, is not a legal move!",
+                                        to
+                                    ));
+                                }
+
+                                self.pieces[piece.clone() as usize].clear_bit(from);
+                                self.pieces[piece as usize].set_bit(to);
+                                self.clear_piece(to + 8, Color::White)
+                            } else {
+                                return Err("No en passant square set!".to_string());
+                            }
                         }
                         MoveType::Promotion(piece) => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
                             self.set_piece(piece.clone(), Color::Black, to)
                         }
                         MoveType::CapturePromotion(piece) => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
                             self.set_piece(piece.clone(), Color::Black, to);
                             self.clear_piece(to, Color::White);
                         }
-                        MoveType::Check => todo!(),
+                        MoveType::Check => {
+                            self.pieces[piece.clone() as usize].clear_bit(from);
+                            self.pieces[piece as usize].set_bit(to);
+                        }
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
 
                     Ok(())
                 } else {
-                    Err(format!("No piece found on square: {}", from))
+                    Err(format!("No piece found on square: {}!", from))
                 }
             }
         }
