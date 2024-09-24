@@ -84,6 +84,14 @@ impl Move {
             move_type: MoveType::EnPassant,
         }
     }
+
+    pub fn new_castle<T: Into<usize>>(from: T, to: T) -> Move {
+        Move {
+            from: from.into(),
+            to: to.into(),
+            move_type: MoveType::Castle,
+        }
+    }
 }
 
 pub enum MoveType {

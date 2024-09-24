@@ -128,12 +128,27 @@ fn test_make_move() {
     }
 
     {
+        let mut board = board.clone();
+
         assert_eq!(board.side_to_move, Color::White);
         assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
 
         assert_eq!(
             board.make_move(Move::new_capture(Square::E1, Square::D1)),
             Err("Can't move piece to square: 3!".to_string())
+        );
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+    }
+
+    {
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+
+        assert_eq!(
+            board.make_move(Move::new(Square::E1, Square::G1)),
+            Err("Can't move piece to square: 6!".to_string())
         );
 
         assert_eq!(board.side_to_move, Color::White);

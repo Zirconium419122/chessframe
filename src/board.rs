@@ -113,6 +113,10 @@ impl Board {
         }
     }
 
+    pub fn can_castle(&self, kingside: bool) -> Result<(), String> {
+        Err("Not implemented!".to_string())
+    }
+
     pub fn make_move(&mut self, mv: Move) -> Result<(), String> {
         let (from, to) = mv.get_move();
         let move_type = mv.get_move_type();
@@ -134,7 +138,25 @@ impl Board {
                             self.pieces[piece as usize].set_bit(to);
                             self.clear_piece(to, Color::Black);
                         }
-                        MoveType::Castle => todo!(),
+                        MoveType::Castle => {
+                            if from < to {
+                                self.can_castle(true)?;
+
+                                self.pieces[piece.clone() as usize].clear_bit(from);
+                                self.pieces[piece as usize].set_bit(to);
+
+                                self.pieces[3].clear_bit(7);
+                                self.pieces[3].set_bit(5);
+                            } else {
+                                self.can_castle(false)?;
+
+                                self.pieces[piece.clone() as usize].clear_bit(from);
+                                self.pieces[piece as usize].set_bit(to);
+
+                                self.pieces[3].clear_bit(0);
+                                self.pieces[3].set_bit(3);
+                            }
+                        }
                         MoveType::EnPassant => {
                             if let Some(en_passant) = self.en_passant_square {
                                 if en_passant.is_not_set(to) {
@@ -189,7 +211,25 @@ impl Board {
                             self.pieces[piece as usize].set_bit(to);
                             self.clear_piece(to, Color::White);
                         }
-                        MoveType::Castle => todo!(),
+                        MoveType::Castle => {
+                            if from < to {
+                                self.can_castle(true)?;
+
+                                self.pieces[piece.clone() as usize].clear_bit(from);
+                                self.pieces[piece as usize].set_bit(to);
+
+                                self.pieces[3].clear_bit(63);
+                                self.pieces[3].set_bit(61);
+                            } else {
+                                self.can_castle(false)?;
+
+                                self.pieces[piece.clone() as usize].clear_bit(from);
+                                self.pieces[piece as usize].set_bit(to);
+
+                                self.pieces[3].clear_bit(56);
+                                self.pieces[3].set_bit(59);
+                            }
+                        }
                         MoveType::EnPassant => {
                             if let Some(en_passant) = self.en_passant_square {
                                 if en_passant.is_not_set(to) {
