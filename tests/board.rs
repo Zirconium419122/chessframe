@@ -35,33 +35,33 @@ fn test_from_fen_starting_position() {
     // White pawns
     for file in 0..8 {
         // Rank 2 (index 8-15)
-        assert!(board.pieces[Piece::Pawn.piece_index(&Color::White)].is_set(8 + file));
+        assert!(board.pieces[Piece::Pawn.piece_index(&Color::White)].is_set(8 as usize + file));
     }
     // Black pawns
     for file in 0..8 {
         // Rank 7 (index 48-55)
-        assert!(board.pieces[Piece::Pawn.piece_index(&Color::Black)].is_set(48 + file));
+        assert!(board.pieces[Piece::Pawn.piece_index(&Color::Black)].is_set(48 as usize + file));
     }
 
     // Test White pieces
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(0)); // a1
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(1)); // b1
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(2)); // c1
-    assert!(board.pieces[Piece::Queen.piece_index(&Color::White)].is_set(3)); // d1
-    assert!(board.pieces[Piece::King.piece_index(&Color::White)].is_set(4)); // e1
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(5)); // f1
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(6)); // g1
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(7)); // h1
+    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(0 as usize)); // a1
+    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(1 as usize)); // b1
+    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(2 as usize)); // c1
+    assert!(board.pieces[Piece::Queen.piece_index(&Color::White)].is_set(3 as usize)); // d1
+    assert!(board.pieces[Piece::King.piece_index(&Color::White)].is_set(4 as usize)); // e1
+    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(5 as usize)); // f1
+    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(6 as usize)); // g1
+    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(7 as usize)); // h1
 
     // Test Black pieces
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(56)); // a8
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(57)); // b8
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(58)); // c8
-    assert!(board.pieces[Piece::Queen.piece_index(&Color::Black)].is_set(59)); // d8
-    assert!(board.pieces[Piece::King.piece_index(&Color::Black)].is_set(60)); // e8
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(61)); // f8
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(62)); // g8
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(63)); // h8
+    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(56 as usize)); // a8
+    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(57 as usize)); // b8
+    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(58 as usize)); // c8
+    assert!(board.pieces[Piece::Queen.piece_index(&Color::Black)].is_set(59 as usize)); // d8
+    assert!(board.pieces[Piece::King.piece_index(&Color::Black)].is_set(60 as usize)); // e8
+    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(61 as usize)); // f8
+    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(62 as usize)); // g8
+    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(63 as usize)); // h8
 
     // Test side to move
     assert_eq!(board.side_to_move, Color::White);
@@ -115,6 +115,7 @@ fn test_make_move() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);
 
+    // Test that you can push a pawn
     {
         let mut board = board.clone();
 
@@ -127,6 +128,7 @@ fn test_make_move() {
         assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
     }
 
+    // Test that you can't capture your own pieces
     {
         let mut board = board.clone();
 
@@ -142,6 +144,7 @@ fn test_make_move() {
         assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
     }
 
+    // Test that castling is not possible from the start position
     {
         assert_eq!(board.side_to_move, Color::White);
         assert_eq!(board.pieces[5], BitBoard(0x000000000000010));

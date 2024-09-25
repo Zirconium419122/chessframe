@@ -96,20 +96,20 @@ impl BitBoard {
         BitBoard(bits)
     }
 
-    pub fn set_bit(&mut self, square: usize) {
-        self.0 |= 1 << square;
+    pub fn set_bit<T: Into<usize>>(&mut self, square: T) {
+        self.0 |= 1 << square.into();
     }
 
-    pub fn clear_bit(&mut self, square: usize) {
-        self.0 &= !(1 << square);
+    pub fn clear_bit<T: Into<usize>>(&mut self, square: T) {
+        self.0 &= !(1 << square.into());
     }
 
-    pub fn is_set(&self, square: usize) -> bool {
-        (self.0 & (1 << square)) != 0
+    pub fn is_set<T: Into<usize>>(&self, square: T) -> bool {
+        (self.0 & (1 << square.into())) != 0
     }
 
-    pub fn is_not_set(&self, square: usize) -> bool {
-        (self.0 & (1 << square)) == 0
+    pub fn is_not_set<T: Into<usize>>(&self, square: T) -> bool {
+        (self.0 & (1 << square.into())) == 0
     }
 
     pub fn is_zero(&self) -> bool {

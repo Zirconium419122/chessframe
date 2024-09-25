@@ -113,8 +113,95 @@ impl Board {
         }
     }
 
-    pub fn can_castle(&self, kingside: bool) -> Result<(), String> {
-        Err("Not implemented!".to_string())
+    pub fn can_castle(&mut self, kingside: bool) -> Result<(), String> {
+        let occupancy = self.occupancy[0] | self.occupancy[1];
+
+        match self.side_to_move {
+            Color::White => {
+                if kingside {
+                    if !self.castling_rights.can_castle(Color::White, true) {
+                        return Err("Cannot castle kingside".to_string());
+                    }
+
+                    if occupancy.is_set(5 as usize) || occupancy.is_set(6 as usize) {
+                        return Err("Cannot castle kingside".to_string());
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    if (self.generate_moves() & BitBoard(0x000000000000070)).is_not_zero() {
+                        return Err("Cannot castle kingside".to_string());
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    Ok(())
+                } else {
+                    if !self.castling_rights.can_castle(Color::White, false) {
+                        return Err("Cannot castle queenside".to_string());
+                    }
+
+                    if occupancy.is_set(1 as usize)
+                        || occupancy.is_set(2 as usize)
+                        || occupancy.is_set(3 as usize)
+                    {
+                        return Err("Cannot castle queenside".to_string());
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    if (self.generate_moves() & BitBoard(0x00000000000001C)).is_not_zero() {
+                        return Err("Cannot castle kingside".to_string());
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    Ok(())
+                }
+            }
+            Color::Black => {
+                if kingside {
+                    if !self.castling_rights.can_castle(Color::Black, true) {
+                        return Err("Cannot castle kingside".to_string());
+                    }
+
+                    if occupancy.is_set(61 as usize) || occupancy.is_set(62 as usize) {
+                        return Err("Cannot castle kingside".to_string());
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    if (self.generate_moves() & BitBoard(0x700000000000000)).is_not_zero() {
+                        return Err("Cannot castle kingside".to_string());
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    Ok(())
+                } else {
+                    if !self.castling_rights.can_castle(Color::Black, false) {
+                        return Err("Cannot castle queenside".to_string());
+                    }
+
+                    if occupancy.is_set(56 as usize)
+                        || occupancy.is_set(57 as usize)
+                        || occupancy.is_set(58 as usize)
+                    {
+                        return Err("Cannot castle queenside".to_string());
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    if (self.generate_moves() & BitBoard(0x1C0000000000000)).is_not_zero() {
+                        return Err("Cannot castle kingside".to_string());
+                    }
+
+                    self.side_to_move = self.side_to_move.toggle();
+
+                    Ok(())
+                }
+            }
+        }
     }
 
     pub fn make_move(&mut self, mv: Move) -> Result<(), String> {
@@ -145,16 +232,16 @@ impl Board {
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
-                                self.pieces[3].clear_bit(7);
-                                self.pieces[3].set_bit(5);
+                                self.pieces[3].clear_bit(7 as usize);
+                                self.pieces[3].set_bit(5 as usize);
                             } else {
                                 self.can_castle(false)?;
 
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
-                                self.pieces[3].clear_bit(0);
-                                self.pieces[3].set_bit(3);
+                                self.pieces[3].clear_bit(0 as usize);
+                                self.pieces[3].set_bit(3 as usize);
                             }
                         }
                         MoveType::EnPassant => {
@@ -218,16 +305,16 @@ impl Board {
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
-                                self.pieces[3].clear_bit(63);
-                                self.pieces[3].set_bit(61);
+                                self.pieces[3].clear_bit(63 as usize);
+                                self.pieces[3].set_bit(61 as usize);
                             } else {
                                 self.can_castle(false)?;
 
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
-                                self.pieces[3].clear_bit(56);
-                                self.pieces[3].set_bit(59);
+                                self.pieces[3].clear_bit(56 as usize);
+                                self.pieces[3].set_bit(59 as usize);
                             }
                         }
                         MoveType::EnPassant => {
