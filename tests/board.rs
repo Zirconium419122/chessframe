@@ -158,3 +158,39 @@ fn test_make_move() {
         assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
     }
 }
+
+#[test]
+#[should_panic(expected = "not yet implemented")]
+fn test_can_castle() {
+    let fen = "r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 1 6";
+    let mut board = Board::from_fen(fen);
+
+    {
+        let mut board = board.clone();
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+
+        assert_eq!(board.can_castle(true), Ok(()));
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+    }
+
+    assert_eq!(
+        board.make_move(Move::new_castle(Square::E1, Square::F1)),
+        Ok(())
+    );
+    assert_eq!(board.pieces[5], BitBoard(0x000000000000040));
+    assert_eq!(board.pieces[3], BitBoard(0x000000000000021));
+
+    {
+        assert_eq!(board.side_to_move, Color::Black);
+        assert_eq!(board.pieces[11], BitBoard(0x100000000000000));
+
+        assert_eq!(board.can_castle(true), Ok(()));
+
+        assert_eq!(board.side_to_move, Color::Black);
+        assert_eq!(board.pieces[11], BitBoard(0x100000000000000));
+    }
+}

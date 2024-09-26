@@ -123,7 +123,7 @@ impl Board {
                         return Err("Cannot castle kingside".to_string());
                     }
 
-                    if occupancy.is_set(5 as usize) || occupancy.is_set(6 as usize) {
+                    if (occupancy & BitBoard(0x000000000000060)).is_not_zero() {
                         return Err("Cannot castle kingside".to_string());
                     }
 
@@ -141,16 +141,13 @@ impl Board {
                         return Err("Cannot castle queenside".to_string());
                     }
 
-                    if occupancy.is_set(1 as usize)
-                        || occupancy.is_set(2 as usize)
-                        || occupancy.is_set(3 as usize)
-                    {
+                    if (occupancy & BitBoard(0x000000000000000E)).is_not_zero() {
                         return Err("Cannot castle queenside".to_string());
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
 
-                    if (self.generate_moves() & BitBoard(0x00000000000001C)).is_not_zero() {
+                    if (self.generate_moves() & BitBoard(0x00000000000001E)).is_not_zero() {
                         return Err("Cannot castle kingside".to_string());
                     }
 
@@ -165,7 +162,7 @@ impl Board {
                         return Err("Cannot castle kingside".to_string());
                     }
 
-                    if occupancy.is_set(61 as usize) || occupancy.is_set(62 as usize) {
+                    if (occupancy & BitBoard(0x6000000000000000)).is_not_zero() {
                         return Err("Cannot castle kingside".to_string());
                     }
 
@@ -183,16 +180,13 @@ impl Board {
                         return Err("Cannot castle queenside".to_string());
                     }
 
-                    if occupancy.is_set(56 as usize)
-                        || occupancy.is_set(57 as usize)
-                        || occupancy.is_set(58 as usize)
-                    {
+                    if (occupancy & BitBoard(0x0700000000000000)).is_not_zero() {
                         return Err("Cannot castle queenside".to_string());
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
 
-                    if (self.generate_moves() & BitBoard(0x1C0000000000000)).is_not_zero() {
+                    if (self.generate_moves() & BitBoard(0x1E0000000000000)).is_not_zero() {
                         return Err("Cannot castle kingside".to_string());
                     }
 
