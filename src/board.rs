@@ -3,7 +3,7 @@ use crate::{
     castling_rights::CastlingRights,
     color::Color,
     piece::Piece,
-    r#move::{Move, MoveType},
+    r#move::{BoardHistory, Move, MoveType},
 };
 
 #[derive(Clone)]
@@ -15,6 +15,7 @@ pub struct Board {
     pub en_passant_square: Option<BitBoard>,
     pub half_move_clock: u32,
     pub full_move_clock: u32,
+    pub board_history: Vec<BoardHistory>,
 }
 
 impl Default for Board {
@@ -33,6 +34,7 @@ impl Board {
             en_passant_square: None,
             half_move_clock: 0,
             full_move_clock: 1,
+            board_history: Vec::new(),
         };
 
         let parts: Vec<&str> = fen.split_whitespace().collect();
@@ -53,6 +55,8 @@ impl Board {
         board.half_move_clock = parts[4].parse().expect("Invalid halfmove clock");
 
         board.full_move_clock = parts[5].parse().expect("Invalid fullmove clock");
+
+        board.board_history.push(BoardHistory::from(board.clone()));
 
         board
     }
@@ -211,10 +215,14 @@ impl Board {
 
                     match move_type {
                         MoveType::Quiet => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.pieces[piece as usize].set_bit(to)
                         }
                         MoveType::Capture => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.pieces[piece as usize].set_bit(to);
                             self.clear_piece(to, Color::Black);
@@ -223,6 +231,8 @@ impl Board {
                             if from < to {
                                 self.can_castle(true)?;
 
+                                self.board_history.push(BoardHistory::from(self.clone()));
+
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
@@ -230,6 +240,8 @@ impl Board {
                                 self.pieces[3].set_bit(5 as usize);
                             } else {
                                 self.can_castle(false)?;
+
+                                self.board_history.push(BoardHistory::from(self.clone()));
 
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
@@ -246,6 +258,7 @@ impl Board {
                                         to
                                     ));
                                 }
+                                self.board_history.push(BoardHistory::from(self.clone()));
 
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
@@ -255,15 +268,21 @@ impl Board {
                             }
                         }
                         MoveType::Promotion(piece) => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.set_piece(piece.clone(), Color::White, to)
                         }
                         MoveType::CapturePromotion(piece) => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.set_piece(piece.clone(), Color::White, to);
                             self.clear_piece(to, Color::Black);
                         }
                         MoveType::Check => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.pieces[piece as usize].set_bit(to)
                         }
@@ -284,10 +303,14 @@ impl Board {
 
                     match move_type {
                         MoveType::Quiet => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.pieces[piece as usize].set_bit(to)
                         }
                         MoveType::Capture => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.pieces[piece as usize].set_bit(to);
                             self.clear_piece(to, Color::White);
@@ -296,6 +319,8 @@ impl Board {
                             if from < to {
                                 self.can_castle(true)?;
 
+                                self.board_history.push(BoardHistory::from(self.clone()));
+
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
@@ -303,6 +328,8 @@ impl Board {
                                 self.pieces[3].set_bit(61 as usize);
                             } else {
                                 self.can_castle(false)?;
+
+                                self.board_history.push(BoardHistory::from(self.clone()));
 
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
@@ -319,6 +346,7 @@ impl Board {
                                         to
                                     ));
                                 }
+                                self.board_history.push(BoardHistory::from(self.clone()));
 
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
@@ -328,15 +356,21 @@ impl Board {
                             }
                         }
                         MoveType::Promotion(piece) => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.set_piece(piece.clone(), Color::Black, to)
                         }
                         MoveType::CapturePromotion(piece) => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.set_piece(piece.clone(), Color::Black, to);
                             self.clear_piece(to, Color::White);
                         }
                         MoveType::Check => {
+                            self.board_history.push(BoardHistory::from(self.clone()));
+
                             self.pieces[piece.clone() as usize].clear_bit(from);
                             self.pieces[piece as usize].set_bit(to);
                         }
@@ -352,8 +386,21 @@ impl Board {
         }
     }
 
-    pub fn unmake_move(&mut self, mv: Move) -> Result<(), String> {
-        todo!()
+    pub fn unmake_move(&mut self) -> Result<(), String> {
+        match self.board_history.pop() {
+            Some(board_history) => {
+                self.pieces = board_history.pieces;
+                self.occupancy = board_history.occupancy;
+                self.side_to_move = board_history.side_to_move.clone();
+                self.castling_rights = board_history.castling_rights.clone();
+                self.en_passant_square = board_history.en_passant_square;
+                self.half_move_clock = board_history.half_move_clock;
+                self.full_move_clock = board_history.full_move_clock;
+
+                Ok(())
+            }
+            None => Err("No move to unmake!".to_string()),
+        }
     }
 
     pub fn get_piece(&self, square: usize) -> Option<(Piece, Color)> {
