@@ -56,8 +56,6 @@ impl Board {
 
         board.full_move_clock = parts[5].parse().expect("Invalid fullmove clock");
 
-        board.board_history.push(BoardHistory::from(board.clone()));
-
         board
     }
 

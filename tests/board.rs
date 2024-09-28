@@ -164,6 +164,12 @@ fn test_unmake_move() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);
 
+    // Test initialy no move to unmake
+    {
+        assert_eq(board.board_history.len(), 0);
+        assert_eq(board.unmake_move(), Err("No move to unmake!".to_string()));
+    }
+
     // Test that you can make a move
     {
         assert_eq!(board.side_to_move, Color::White);
