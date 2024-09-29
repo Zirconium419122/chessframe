@@ -166,8 +166,8 @@ fn test_unmake_move() {
 
     // Test initialy no move to unmake
     {
-        assert_eq(board.board_history.len(), 0);
-        assert_eq(board.unmake_move(), Err("No move to unmake!".to_string()));
+        assert_eq!(board.board_history.len(), 0);
+        assert_eq!(board.unmake_move(), Err("No move to unmake!".to_string()));
     }
 
     // Test that you can make a move

@@ -462,6 +462,18 @@ impl Board {
         moves
     }
 
+    pub fn generate_ray_moves(&self) -> BitBoard {
+        let mut moves = BitBoard(0);
+
+        moves |= self.generate_bishop_moves();
+
+        moves |= self.generate_rook_moves();
+
+        moves |= self.generate_queen_moves();
+
+        moves
+    }
+
     pub fn generate_pawn_moves(&self) -> BitBoard {
         let pawn_pushes = self.generate_pawn_pushes();
         let pawn_captures = self.generate_pawn_captures();
