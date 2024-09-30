@@ -16,3 +16,7 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+# Ignore tables.rs as this is a generated file
+
+src/tables.rs
