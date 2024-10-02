@@ -4,3 +4,6 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+
+[build-dependencies]
+rand_chacha = "0.3.1"

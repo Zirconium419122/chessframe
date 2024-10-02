@@ -2,6 +2,9 @@ use std::fs::File;
 use std::io::Write;
 use std::thread;
 
+use rand_chacha::rand_core::{RngCore, SeedableRng};
+use rand_chacha::ChaCha8Rng;
+
 const STACK_SIZE: usize = 8 * 1024 * 1024;
 
 fn main() {
@@ -11,7 +14,15 @@ fn main() {
     writeln!(
         file,
         "pub const ROOK_BLOCKER_MASK: [u64; 64] = {:?};",
-        rook_blocker_mask
+        rook_blocker_mask,
+    )
+    .unwrap();
+
+    let rook_magics = generate_rook_magics();
+    writeln!(
+        file,
+        "pub const ROOK_MAGICS: [u64; 64] = {:?};",
+        rook_magics,
     )
     .unwrap();
 
@@ -29,6 +40,57 @@ fn main() {
         .unwrap();
 
     thread.join().unwrap();
+}
+
+fn generate_rook_magics() -> [u64; 64] {
+    let mut magics = [0_u64; 64];
+
+    let blocker_masks = generate_rook_blocker_mask();
+    for (i, mask) in blocker_masks.iter().enumerate() {
+        magics[i] = find_magic(i, *mask, 12).unwrap();
+    }
+
+    magics
+}
+
+fn find_magic(square: usize, mask: u64, relevant_bits: usize) -> Result<u64, String> {
+    let blocker_subsets = generate_mask_subsets(mask);
+    let attack_table = generate_rook_moves_square(square);
+    let mut used_attacks = vec![0_u64; 1 << relevant_bits];
+
+    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
+
+    // Try magic numbers until we find one that works
+    for _ in 0..1000000 {
+        let magic = generate_magic_candidate(&mut rng);
+        let mut fail = false;
+        used_attacks.fill(0);
+
+        for (i, &blocker) in blocker_subsets.iter().enumerate() {
+            let index = magic_index(blocker, magic, relevant_bits);
+
+            if used_attacks[index] == 0 {
+                used_attacks[index] = attack_table[i];
+            } else if used_attacks[index] != attack_table[i] {
+                fail = true;
+                break;
+            }
+        }
+
+        if !fail {
+            return Ok(magic);
+        }
+    }
+
+    Err("Failed to find magic number!".to_string())
+}
+
+fn magic_index(blockers: u64, magic: u64, relevant_bits: usize) -> usize {
+    ((blockers.wrapping_mul(magic)) >> (64 - relevant_bits)) as usize
+}
+
+fn generate_magic_candidate(rng: &mut ChaCha8Rng) -> u64 {
+    rng.next_u64() & rng.next_u64() & rng.next_u64()
 }
 
 fn generate_rook_blocker_mask() -> [u64; 64] {
@@ -58,15 +120,22 @@ fn generate_rook_mask(square: usize) -> u64 {
 fn generate_rook_moves_table() -> [[u64; 4096]; 64] {
     let mut moves = [[0_u64; 4096]; 64];
 
-    let rook_blocker_mask = generate_rook_blocker_mask();
-
     for square in 0..64 {
-        for (i, subset) in generate_mask_subsets(rook_blocker_mask[square])
-            .into_iter()
-            .enumerate()
-        {
-            moves[square][i] = generate_rook_moves(1 << square, subset);
-        }
+        moves[square] = generate_rook_moves_square(square);
+    }
+
+    moves
+}
+
+fn generate_rook_moves_square(square: usize) -> [u64; 4096] {
+    let mut moves = [0_u64; 4096];
+
+    let rook_blocker_mask = generate_rook_blocker_mask()[square];
+    for (i, subset) in generate_mask_subsets(rook_blocker_mask)
+        .into_iter()
+        .enumerate()
+    {
+        moves[i] = generate_rook_moves(1 << square, subset);
     }
 
     moves
