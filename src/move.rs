@@ -26,9 +26,9 @@ impl TryFrom<usize> for Square {
     }
 }
 
-impl Into<usize> for Square {
-    fn into(self) -> usize {
-        unsafe { std::mem::transmute::<Square, u8>(self).into() }
+impl From<Square> for usize {
+    fn from(value: Square) -> Self {
+        unsafe { std::mem::transmute::<Square, u8>(value).into() }
     }
 }
 

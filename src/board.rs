@@ -234,8 +234,8 @@ impl Board {
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
-                                self.pieces[3].clear_bit(7 as usize);
-                                self.pieces[3].set_bit(5 as usize);
+                                self.pieces[3].clear_bit(7_usize);
+                                self.pieces[3].set_bit(5_usize);
                             } else {
                                 self.can_castle(false)?;
 
@@ -244,8 +244,8 @@ impl Board {
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
-                                self.pieces[3].clear_bit(0 as usize);
-                                self.pieces[3].set_bit(3 as usize);
+                                self.pieces[3].clear_bit(0_usize);
+                                self.pieces[3].set_bit(3_usize);
                             }
                         }
                         MoveType::EnPassant => {
@@ -322,8 +322,8 @@ impl Board {
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
-                                self.pieces[3].clear_bit(63 as usize);
-                                self.pieces[3].set_bit(61 as usize);
+                                self.pieces[3].clear_bit(63_usize);
+                                self.pieces[3].set_bit(61_usize);
                             } else {
                                 self.can_castle(false)?;
 
@@ -332,8 +332,8 @@ impl Board {
                                 self.pieces[piece.clone() as usize].clear_bit(from);
                                 self.pieces[piece as usize].set_bit(to);
 
-                                self.pieces[3].clear_bit(56 as usize);
-                                self.pieces[3].set_bit(59 as usize);
+                                self.pieces[3].clear_bit(56_usize);
+                                self.pieces[3].set_bit(59_usize);
                             }
                         }
                         MoveType::EnPassant => {

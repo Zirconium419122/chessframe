@@ -112,7 +112,7 @@ fn generate_rook_mask(square: usize) -> u64 {
     let horizontal_mask: u64 = 0x000000000000007E;
 
     mask |= vertical_mask << file;
-    mask |= horizontal_mask << rank * 8;
+    mask |= horizontal_mask << (rank * 8);
 
     mask & !(1 << square)
 }

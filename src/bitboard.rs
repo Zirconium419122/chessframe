@@ -2,14 +2,8 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Shl, Shr};
 
 use crate::r#move::Square;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct BitBoard(pub u64);
-
-impl Default for BitBoard {
-    fn default() -> Self {
-        BitBoard(0)
-    }
-}
 
 impl From<Square> for BitBoard {
     fn from(value: Square) -> Self {
