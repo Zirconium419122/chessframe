@@ -96,8 +96,8 @@ fn generate_magic_candidate(rng: &mut ChaCha8Rng) -> u64 {
 fn generate_rook_blocker_mask() -> [u64; 64] {
     let mut table = [0_u64; 64];
 
-    for square in 0..64 {
-        table[square] = generate_rook_mask(square);
+    for (i, square) in table.iter_mut().enumerate() {
+        *square = generate_rook_mask(i);
     }
 
     table
@@ -120,8 +120,8 @@ fn generate_rook_mask(square: usize) -> u64 {
 fn generate_rook_moves_table() -> [[u64; 4096]; 64] {
     let mut moves = [[0_u64; 4096]; 64];
 
-    for square in 0..64 {
-        moves[square] = generate_rook_moves_square(square);
+    for (i, square) in moves.iter_mut().enumerate() {
+        *square = generate_rook_moves_square(i);
     }
 
     moves
