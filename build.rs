@@ -2,26 +2,28 @@ use std::fs::File;
 use std::io::Write;
 use std::thread;
 
-use rand_chacha::rand_core::{RngCore, SeedableRng};
-use rand_chacha::ChaCha8Rng;
+use rand_chacha::{
+    rand_core::{RngCore, SeedableRng},
+    ChaCha8Rng,
+};
 
 const STACK_SIZE: usize = 8 * 1024 * 1024;
 
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, Default)]
+struct Magic {
+    pub mask: u64,
+    pub magic: u64,
+    pub relevant_bits: u8,
+}
+
 fn main() {
-    let rook_blocker_mask = generate_rook_blocker_mask();
+    let rook_magics = generate_rook_magics();
 
     let mut file = File::create("src/tables.rs").unwrap();
     writeln!(
         file,
-        "pub const ROOK_BLOCKER_MASK: [u64; 64] = {:?};",
-        rook_blocker_mask,
-    )
-    .unwrap();
-
-    let rook_magics = generate_rook_magics();
-    writeln!(
-        file,
-        "pub const ROOK_MAGICS: [u64; 64] = {:?};",
+        "pub const ROOK_MAGICS: [Magic; 64] = {:?};",
         rook_magics,
     )
     .unwrap();
@@ -32,7 +34,7 @@ fn main() {
             let rook_moves = generate_rook_moves_table();
             writeln!(
                 file,
-                "pub const ROOK_MOVES_TABLE: [[u64; 4096]; 64] = {:?};",
+                "pub static ROOK_MOVES_TABLE: [[u64; 4096]; 64] = {:?};",
                 rook_moves,
             )
             .unwrap();
@@ -42,12 +44,16 @@ fn main() {
     thread.join().unwrap();
 }
 
-fn generate_rook_magics() -> [u64; 64] {
-    let mut magics = [0_u64; 64];
+fn generate_rook_magics() -> [Magic; 64] {
+    let mut magics = [Magic::default(); 64];
 
     let blocker_masks = generate_rook_blocker_mask();
     for (i, mask) in blocker_masks.iter().enumerate() {
-        magics[i] = find_magic(i, *mask, 12).unwrap();
+        magics[i] = Magic {
+            mask: *mask,
+            magic: find_magic(i, *mask, 12).unwrap(),
+            relevant_bits: mask.count_ones() as u8,
+        }
     }
 
     magics
