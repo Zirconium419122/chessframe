@@ -28,20 +28,31 @@ fn main() {
     )
     .unwrap();
 
-    let thread = thread::Builder::new()
-        .stack_size(STACK_SIZE)
-        .spawn(move || {
-            let rook_moves = generate_rook_moves_table();
-            writeln!(
-                file,
-                "pub static ROOK_MOVES_TABLE: [[u64; 4096]; 64] = {:?};",
-                rook_moves,
-            )
+    {
+        let mut file = file.try_clone().unwrap();
+        let thread = thread::Builder::new()
+            .stack_size(STACK_SIZE)
+            .spawn(move || {
+                let rook_moves = generate_rook_moves_table();
+                writeln!(
+                    file,
+                    "pub static ROOK_MOVES_TABLE: [[u64; 4096]; 64] = {:?};",
+                    rook_moves,
+                )
+                .unwrap();
+            })
             .unwrap();
-        })
-        .unwrap();
 
-    thread.join().unwrap();
+        thread.join().unwrap();
+    }
+
+    let bishop_moves = generate_bishop_moves_table();
+    writeln!(
+        file,
+        "pub static BISHOP_MOVES_TABLE: [[u64; 512]; 64] = {:?};",
+        bishop_moves,
+    )
+    .unwrap();
 }
 
 fn generate_rook_magics() -> [Magic; 64] {
@@ -137,11 +148,11 @@ fn generate_rook_moves_square(square: usize) -> [u64; 4096] {
     let mut moves = [0_u64; 4096];
 
     let rook_blocker_mask = generate_rook_blocker_mask()[square];
-    for (i, subset) in generate_mask_subsets(rook_blocker_mask)
+    for (i, blockers) in generate_mask_subsets(rook_blocker_mask)
         .into_iter()
         .enumerate()
     {
-        moves[i] = generate_rook_moves(1 << square, subset);
+        moves[i] = generate_rook_moves(1 << square, blockers);
     }
 
     moves
@@ -193,6 +204,76 @@ fn generate_rook_moves(square: u64, blockers: u64) -> u64 {
     moves
 }
 
+fn generate_bishop_moves_table() -> [[u64; 512]; 64] {
+    let mut moves = [[0_u64; 512]; 64];
+
+    for (i, square) in moves.iter_mut().enumerate() {
+        *square = generate_bishop_moves_square(i);
+    }
+
+    moves
+}
+
+fn generate_bishop_moves_square(square: usize) -> [u64; 512] {
+    let mut moves = [0_u64; 512];
+
+    let bishop_blocker_mask = generate_bishop_moves(1 << square, 0) & 0x007e7e7e7e7e7e00;
+    for (i, blockers) in generate_mask_subsets(bishop_blocker_mask)
+        .into_iter()
+        .enumerate()
+    {
+        moves[i] = generate_bishop_moves(1 << square, blockers);
+    }
+
+    moves
+}
+
+fn generate_bishop_moves(square: u64, blockers: u64) -> u64 {
+    let mut moves = 0;
+
+    // Northwest (upleft)
+    let mut current = shift_north_west(square);
+    while current != 0 {
+        moves |= current;
+        if current & blockers != 0 {
+            break;
+        }
+        current = shift_north_west(current);
+    }
+
+    // Northeast (upright)
+    let mut current = shift_north_east(square);
+    while current != 0 {
+        moves |= current;
+        if current & blockers != 0 {
+            break;
+        }
+        current = shift_north_east(current);
+    }
+
+    // Southwest (downleft)
+    let mut current = shift_south_west(square);
+    while current != 0 {
+        moves |= current;
+        if current & blockers != 0 {
+            break;
+        }
+        current = shift_south_west(current);
+    }
+
+    // Southeast (downright)
+    let mut current = shift_south_east(square);
+    while current != 0 {
+        moves |= current;
+        if current & blockers != 0 {
+            break;
+        }
+        current = shift_south_east(current);
+    }
+
+    moves
+}
+
 fn generate_mask_subsets(mask: u64) -> Vec<u64> {
     let mut subsets = Vec::new();
 
@@ -213,8 +294,24 @@ fn shift_north(bitboard: u64) -> u64 {
     bitboard << 8
 }
 
+fn shift_north_west(bitboard: u64) -> u64 {
+    (bitboard & !0x0101010101010101) >> 7
+}
+
+fn shift_north_east(bitboard: u64) -> u64 {
+    (bitboard & !0x8080808080808080) >> 9
+}
+
 fn shift_south(bitboard: u64) -> u64 {
     bitboard >> 8
+}
+
+fn shift_south_west(bitboard: u64) -> u64 {
+    (bitboard & !0x0101010101010101) << 7
+}
+
+fn shift_south_east(bitboard: u64) -> u64 {
+    (bitboard & !0x8080808080808080) << 9
 }
 
 fn shift_west(bitboard: u64) -> u64 {
