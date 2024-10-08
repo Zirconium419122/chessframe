@@ -10,6 +10,12 @@ use rand_chacha::{
 const STACK_SIZE: usize = 8 * 1024 * 1024;
 
 #[allow(dead_code)]
+enum Piece {
+    Bishop,
+    Rook,
+}
+
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, Default)]
 struct Magic {
     pub mask: u64,
@@ -18,33 +24,7 @@ struct Magic {
 }
 
 fn main() {
-    let rook_magics = generate_rook_magics();
-
     let mut file = File::create("src/tables.rs").unwrap();
-    writeln!(
-        file,
-        "pub const ROOK_MAGICS: [Magic; 64] = {:?};",
-        rook_magics,
-    )
-    .unwrap();
-
-    {
-        let mut file = file.try_clone().unwrap();
-        let thread = thread::Builder::new()
-            .stack_size(STACK_SIZE)
-            .spawn(move || {
-                let rook_moves = generate_rook_moves_table();
-                writeln!(
-                    file,
-                    "pub static ROOK_MOVES_TABLE: [[u64; 4096]; 64] = {:?};",
-                    rook_moves,
-                )
-                .unwrap();
-            })
-            .unwrap();
-
-        thread.join().unwrap();
-    }
 
     let bishop_moves = generate_bishop_moves_table();
     writeln!(
@@ -53,71 +33,83 @@ fn main() {
         bishop_moves,
     )
     .unwrap();
+
+    let thread = thread::Builder::new()
+        .stack_size(STACK_SIZE)
+        .spawn(move || {
+            let rook_magics_and_moves = generate_rook_moves_and_magics();
+            writeln!(
+                file,
+                "pub const ROOK_MAGICS: [Magic; 64] = {:?};",
+                rook_magics_and_moves.0,
+            )
+            .unwrap();
+
+            let rook_moves = format!("{:?}", rook_magics_and_moves.1).replace("[", "&[");
+            writeln!(
+                file,
+                "pub static ROOK_MOVES_TABLE: &[&[u64]; 64] = {};",
+                rook_moves,
+            )
+            .unwrap();
+        })
+        .unwrap();
+
+    thread.join().unwrap();
 }
 
-fn generate_rook_magics() -> [Magic; 64] {
-    let mut magics = [Magic::default(); 64];
-
-    let blocker_masks = generate_rook_blocker_mask();
-    for (i, mask) in blocker_masks.iter().enumerate() {
-        magics[i] = Magic {
-            mask: *mask,
-            magic: find_magic(i, *mask, 12).unwrap(),
-            relevant_bits: mask.count_ones() as u8,
-        }
-    }
-
-    magics
-}
-
-fn find_magic(square: usize, mask: u64, relevant_bits: usize) -> Result<u64, String> {
-    let blocker_subsets = generate_mask_subsets(mask);
-    let attack_table = generate_rook_moves_square(square);
-    let mut used_attacks = vec![0_u64; 1 << relevant_bits];
+fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), String> {
+    let mask = match piece {
+        Piece::Bishop => generate_bishop_moves(1 << square, 0) & 0x007e7e7e7e7e7e00,
+        Piece::Rook => generate_rook_mask(square),
+    };
 
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
 
-    // Try magic numbers until we find one that works
     for _ in 0..1000000 {
-        let magic = generate_magic_candidate(&mut rng);
-        let mut fail = false;
-        used_attacks.fill(0);
+        let magic_number = generate_magic_candidate(&mut rng);
+        let magic = Magic {
+            mask,
+            magic: magic_number,
+            relevant_bits: mask.count_ones() as u8,
+        };
 
-        for (i, &blocker) in blocker_subsets.iter().enumerate() {
-            let index = magic_index(blocker, magic, relevant_bits);
-
-            if used_attacks[index] == 0 {
-                used_attacks[index] = attack_table[i];
-            } else if used_attacks[index] != attack_table[i] {
-                fail = true;
-                break;
-            }
-        }
-
-        if !fail {
-            return Ok(magic);
+        if let Ok(table) = try_make_table(&piece, square, magic) {
+            return Ok((magic, table));
         }
     }
 
-    Err("Failed to find magic number!".to_string())
+    Err("Failed to find magic!".to_string())
 }
 
-fn magic_index(blockers: u64, magic: u64, relevant_bits: usize) -> usize {
-    ((blockers.wrapping_mul(magic)) >> (64 - relevant_bits)) as usize
+fn try_make_table(piece: &Piece, square: usize, magic: Magic) -> Result<Vec<u64>, String> {
+    let mut table = vec![0; 1 << magic.relevant_bits];
+
+    for blockers in subsets(magic.mask) {
+        let moves = match piece {
+            Piece::Bishop => generate_bishop_moves(1 << square, blockers),
+            Piece::Rook => generate_rook_moves(1 << square, blockers),
+        };
+        let table_entry = &mut table[magic_index(magic, blockers)];
+
+        if *table_entry == 0 {
+            *table_entry = moves;
+        } else if *table_entry != moves {
+            return Err("Hash collision!".to_string());
+        }
+    }
+
+    Ok(table)
+}
+
+fn magic_index(magic: Magic, blockers: u64) -> usize {
+    let blockers = blockers & magic.mask;
+    let hash = blockers.wrapping_mul(magic.magic);
+    (hash >> (64 - magic.relevant_bits)) as usize
 }
 
 fn generate_magic_candidate(rng: &mut ChaCha8Rng) -> u64 {
     rng.next_u64() & rng.next_u64() & rng.next_u64()
-}
-
-fn generate_rook_blocker_mask() -> [u64; 64] {
-    let mut table = [0_u64; 64];
-
-    for (i, square) in table.iter_mut().enumerate() {
-        *square = generate_rook_mask(i);
-    }
-
-    table
 }
 
 fn generate_rook_mask(square: usize) -> u64 {
@@ -134,28 +126,17 @@ fn generate_rook_mask(square: usize) -> u64 {
     mask & !(1 << square)
 }
 
-fn generate_rook_moves_table() -> [[u64; 4096]; 64] {
-    let mut moves = [[0_u64; 4096]; 64];
+fn generate_rook_moves_and_magics() -> ([Magic; 64], [Vec<u64>; 64]) {
+    let mut magics = [Magic::default(); 64];
+    let mut moves = [const { Vec::new() }; 64];
 
-    for (i, square) in moves.iter_mut().enumerate() {
-        *square = generate_rook_moves_square(i);
+    for square in 0..64 {
+        let magic_moves = find_magic(Piece::Rook, square).unwrap();
+        magics[square] = magic_moves.0;
+        moves[square] = magic_moves.1;
     }
 
-    moves
-}
-
-fn generate_rook_moves_square(square: usize) -> [u64; 4096] {
-    let mut moves = [0_u64; 4096];
-
-    let rook_blocker_mask = generate_rook_blocker_mask()[square];
-    for (i, blockers) in generate_mask_subsets(rook_blocker_mask)
-        .into_iter()
-        .enumerate()
-    {
-        moves[i] = generate_rook_moves(1 << square, blockers);
-    }
-
-    moves
+    (magics, moves)
 }
 
 fn generate_rook_moves(square: u64, blockers: u64) -> u64 {
@@ -218,10 +199,7 @@ fn generate_bishop_moves_square(square: usize) -> [u64; 512] {
     let mut moves = [0_u64; 512];
 
     let bishop_blocker_mask = generate_bishop_moves(1 << square, 0) & 0x007e7e7e7e7e7e00;
-    for (i, blockers) in generate_mask_subsets(bishop_blocker_mask)
-        .into_iter()
-        .enumerate()
-    {
+    for (i, blockers) in subsets(bishop_blocker_mask).into_iter().enumerate() {
         moves[i] = generate_bishop_moves(1 << square, blockers);
     }
 
@@ -274,7 +252,7 @@ fn generate_bishop_moves(square: u64, blockers: u64) -> u64 {
     moves
 }
 
-fn generate_mask_subsets(mask: u64) -> Vec<u64> {
+fn subsets(mask: u64) -> Vec<u64> {
     let mut subsets = Vec::new();
 
     let mut subset: u64 = 0;
