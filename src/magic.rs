@@ -15,6 +15,12 @@ pub fn magic_index(magic: Magic, blockers: BitBoard) -> usize {
     (hash >> (64 - magic.relevant_bits)) as usize
 }
 
+pub fn get_bishop_moves(square: usize, blockers: BitBoard) -> BitBoard {
+    let magic = &BISHOP_MAGICS[square];
+    let moves = &BISHOP_MOVES_TABLE[square];
+    BitBoard(moves[magic_index(*magic, blockers)])
+}
+
 pub fn get_rook_moves(square: usize, blockers: BitBoard) -> BitBoard {
     let magic = &ROOK_MAGICS[square];
     let moves = &ROOK_MOVES_TABLE[square];

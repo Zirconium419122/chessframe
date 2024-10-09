@@ -26,10 +26,18 @@ struct Magic {
 fn main() {
     let mut file = File::create("src/tables.rs").unwrap();
 
-    let bishop_moves = generate_bishop_moves_table();
+    let bishop_magics_and_moves = generate_bishop_magics_and_moves();
     writeln!(
         file,
-        "pub static BISHOP_MOVES_TABLE: [[u64; 512]; 64] = {:?};",
+        "pub const BISHOP_MAGICS: [Magic; 64] = {:?};",
+        bishop_magics_and_moves.0,
+    )
+    .unwrap();
+
+    let bishop_moves = format!("{:?}", bishop_magics_and_moves.1).replace("[", "&[");
+    writeln!(
+        file,
+        "pub static BISHOP_MOVES_TABLE: &[&[u64]; 64] = {};",
         bishop_moves,
     )
     .unwrap();
@@ -185,25 +193,17 @@ fn generate_rook_moves(square: u64, blockers: u64) -> u64 {
     moves
 }
 
-fn generate_bishop_moves_table() -> [[u64; 512]; 64] {
-    let mut moves = [[0_u64; 512]; 64];
+fn generate_bishop_magics_and_moves() -> ([Magic; 64], [Vec<u64>; 64]) {
+    let mut magics = [Magic::default(); 64];
+    let mut moves = [const { Vec::new() }; 64];
 
-    for (i, square) in moves.iter_mut().enumerate() {
-        *square = generate_bishop_moves_square(i);
+    for square in 0..64 {
+        let magic_moves = find_magic(Piece::Bishop, square).unwrap();
+        magics[square] = magic_moves.0;
+        moves[square] = magic_moves.1;
     }
 
-    moves
-}
-
-fn generate_bishop_moves_square(square: usize) -> [u64; 512] {
-    let mut moves = [0_u64; 512];
-
-    let bishop_blocker_mask = generate_bishop_moves(1 << square, 0) & 0x007e7e7e7e7e7e00;
-    for (i, blockers) in subsets(bishop_blocker_mask).into_iter().enumerate() {
-        moves[i] = generate_bishop_moves(1 << square, blockers);
-    }
-
-    moves
+    (magics, moves)
 }
 
 fn generate_bishop_moves(square: u64, blockers: u64) -> u64 {
@@ -273,11 +273,11 @@ fn shift_north(bitboard: u64) -> u64 {
 }
 
 fn shift_north_west(bitboard: u64) -> u64 {
-    (bitboard & !0x0101010101010101) >> 7
+    (bitboard & !0x0101010101010101) << 7
 }
 
 fn shift_north_east(bitboard: u64) -> u64 {
-    (bitboard & !0x8080808080808080) >> 9
+    (bitboard & !0x8080808080808080) << 9
 }
 
 fn shift_south(bitboard: u64) -> u64 {
@@ -285,11 +285,11 @@ fn shift_south(bitboard: u64) -> u64 {
 }
 
 fn shift_south_west(bitboard: u64) -> u64 {
-    (bitboard & !0x0101010101010101) << 7
+    (bitboard & !0x0101010101010101) >> 9
 }
 
 fn shift_south_east(bitboard: u64) -> u64 {
-    (bitboard & !0x8080808080808080) << 9
+    (bitboard & !0x8080808080808080) >> 7
 }
 
 fn shift_west(bitboard: u64) -> u64 {
