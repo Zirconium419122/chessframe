@@ -107,7 +107,26 @@ fn test_knight_move_generation() {
     let board = Board::from_fen(fen);
 
     let knight_moves = board.generate_knight_moves();
-    assert_eq!(knight_moves, BitBoard(0x0000000000A50000))
+    assert_eq!(knight_moves, BitBoard(0x0000000000A50000));
+}
+
+#[test]
+fn test_bishop_move_generation() {
+    {
+        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        let board = Board::from_fen(fen);
+
+        let bishop_moves = board.generate_bishop_moves();
+        assert_eq!(bishop_moves, BitBoard(0));
+    }
+
+    {
+        let fen = "rnbqkbnr/p1pp1ppp/8/1p2p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3";
+        let board = Board::from_fen(fen);
+
+        let bishop_moves = board.generate_bishop_moves();
+        assert_eq!(bishop_moves, BitBoard(0x000000204081000));
+    }
 }
 
 #[test]
