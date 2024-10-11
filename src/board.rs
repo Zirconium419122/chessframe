@@ -2,7 +2,7 @@ use crate::{
     bitboard::BitBoard,
     castling_rights::CastlingRights,
     color::Color,
-    magic::get_bishop_moves,
+    magic::{get_bishop_moves, get_rook_moves},
     piece::Piece,
     r#move::{BoardHistory, Move, MoveType},
 };
@@ -621,7 +621,28 @@ impl Board {
     }
 
     pub fn generate_rook_moves(&self) -> BitBoard {
-        todo!()
+        let occupancy = self.occupancy[0] | self.occupancy[1];
+
+        match self.side_to_move {
+            Color::White => {
+                let mut moves = BitBoard(0);
+
+                for square in self.pieces[3].into_iter() {
+                    moves |= get_rook_moves(square, occupancy);
+                }
+
+                moves & !self.occupancy[0]
+            }
+            Color::Black => {
+                let mut moves = BitBoard(0);
+
+                for square in self.pieces[9].into_iter() {
+                    moves |= get_rook_moves(square, occupancy);
+                }
+
+                moves & !self.occupancy[1]
+            }
+        }
     }
 
     pub fn generate_queen_moves(&self) -> BitBoard {

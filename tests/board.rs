@@ -112,6 +112,7 @@ fn test_knight_move_generation() {
 
 #[test]
 fn test_bishop_move_generation() {
+    // Test that there are no legal moves from the start position
     {
         let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         let board = Board::from_fen(fen);
@@ -120,12 +121,34 @@ fn test_bishop_move_generation() {
         assert_eq!(bishop_moves, BitBoard(0));
     }
 
+    // Test that there are legal moves from a opening position
     {
         let fen = "rnbqkbnr/p1pp1ppp/8/1p2p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3";
         let board = Board::from_fen(fen);
 
         let bishop_moves = board.generate_bishop_moves();
         assert_eq!(bishop_moves, BitBoard(0x000000204081000));
+    }
+}
+
+#[test]
+fn test_rook_move_generation() {
+    // Test that there are no legal moves from the start position
+    {
+        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        let board = Board::from_fen(fen);
+
+        let rook_moves = board.generate_rook_moves();
+        assert_eq!(rook_moves, BitBoard(0));
+    }
+
+    // Test that there are legal moves from a opening position
+    {
+        let fen = "rnbqkbnr/p1pp1ppp/8/1p2p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3";
+        let board = Board::from_fen(fen);
+
+        let rook_moves = board.generate_rook_moves();
+        assert_eq!(rook_moves, BitBoard(0x0000000000000040));
     }
 }
 
