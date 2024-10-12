@@ -1,13 +1,10 @@
 use std::fs::File;
 use std::io::Write;
-use std::thread;
 
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
     ChaCha8Rng,
 };
-
-const STACK_SIZE: usize = 8 * 1024 * 1024;
 
 #[allow(dead_code)]
 enum Piece {
@@ -42,31 +39,24 @@ fn main() {
     )
     .unwrap();
 
-    let thread = thread::Builder::new()
-        .stack_size(STACK_SIZE)
-        .spawn(move || {
-            let rook_magics_and_moves = generate_rook_moves_and_magics();
-            writeln!(
-                file,
-                "pub const ROOK_MAGICS: [Magic; 64] = {:?};",
-                rook_magics_and_moves.0,
-            )
-            .unwrap();
+    let rook_magics_and_moves = generate_rook_moves_and_magics();
+    writeln!(
+        file,
+        "pub const ROOK_MAGICS: [Magic; 64] = {:?};",
+        rook_magics_and_moves.0,
+    )
+    .unwrap();
 
-            let rook_moves = format!("{:?}", rook_magics_and_moves.1).replace("[", "&[");
-            writeln!(
-                file,
-                "pub static ROOK_MOVES_TABLE: &[&[u64]; 64] = {};",
-                rook_moves,
-            )
-            .unwrap();
-        })
-        .unwrap();
-
-    thread.join().unwrap();
+    let rook_moves = format!("{:?}", rook_magics_and_moves.1).replace("[", "&[");
+    writeln!(
+        file,
+        "pub static ROOK_MOVES_TABLE: &[&[u64]; 64] = {};",
+        rook_moves,
+    )
+    .unwrap();
 }
 
-fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), String> {
+fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), &'static str> {
     let mask = match piece {
         Piece::Bishop => generate_bishop_moves(1 << square, 0) & 0x007e7e7e7e7e7e00,
         Piece::Rook => generate_rook_mask(square),
@@ -87,10 +77,10 @@ fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), String> 
         }
     }
 
-    Err("Failed to find magic!".to_string())
+    Err("Failed to find magic!")
 }
 
-fn try_make_table(piece: &Piece, square: usize, magic: Magic) -> Result<Vec<u64>, String> {
+fn try_make_table(piece: &Piece, square: usize, magic: Magic) -> Result<Vec<u64>, &str> {
     let mut table = vec![0; 1 << magic.relevant_bits];
 
     for blockers in subsets(magic.mask) {
@@ -103,7 +93,7 @@ fn try_make_table(piece: &Piece, square: usize, magic: Magic) -> Result<Vec<u64>
         if *table_entry == 0 {
             *table_entry = moves;
         } else if *table_entry != moves {
-            return Err("Hash collision!".to_string());
+            return Err("Hash collision!");
         }
     }
 

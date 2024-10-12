@@ -153,6 +153,27 @@ fn test_rook_move_generation() {
 }
 
 #[test]
+fn test_queen_move_generation() {
+    // Test that there are no legal moves from the start position
+    {
+        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        let board = Board::from_fen(fen);
+
+        let queen_moves = board.generate_queen_moves();
+        assert_eq!(queen_moves, BitBoard(0));
+    }
+
+    // Test that there are legal moves from a opening position
+    {
+        let fen = "rnbqkbnr/p1pp1ppp/8/1p2p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3";
+        let board = Board::from_fen(fen);
+
+        let queen_moves = board.generate_queen_moves();
+        assert_eq!(queen_moves, BitBoard(0x0000000000001000));
+    }
+}
+
+#[test]
 fn test_make_move() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);
@@ -209,7 +230,7 @@ fn test_unmake_move() {
     // Test initialy no move to unmake
     {
         assert_eq!(board.board_history.len(), 0);
-        assert_eq!(board.unmake_move(), Err("No move to unmake!".to_string()));
+        assert_eq!(board.unmake_move(), Err("No move to unmake!"));
     }
 
     // Test that you can make a move

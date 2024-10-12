@@ -116,24 +116,24 @@ impl Board {
         }
     }
 
-    pub fn can_castle(&mut self, kingside: bool) -> Result<(), String> {
+    pub fn can_castle(&mut self, kingside: bool) -> Result<(), &str> {
         let occupancy = self.occupancy[0] | self.occupancy[1];
 
         match self.side_to_move {
             Color::White => {
                 if kingside {
                     if !self.castling_rights.can_castle(Color::White, true) {
-                        return Err("Cannot castle kingside".to_string());
+                        return Err("Cannot castle kingside");
                     }
 
                     if (occupancy & BitBoard(0x000000000000060)).is_not_zero() {
-                        return Err("Cannot castle kingside".to_string());
+                        return Err("Cannot castle kingside");
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
 
                     if (self.generate_moves() & BitBoard(0x000000000000070)).is_not_zero() {
-                        return Err("Cannot castle kingside".to_string());
+                        return Err("Cannot castle kingside");
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
@@ -141,17 +141,17 @@ impl Board {
                     Ok(())
                 } else {
                     if !self.castling_rights.can_castle(Color::White, false) {
-                        return Err("Cannot castle queenside".to_string());
+                        return Err("Cannot castle queenside");
                     }
 
                     if (occupancy & BitBoard(0x000000000000000E)).is_not_zero() {
-                        return Err("Cannot castle queenside".to_string());
+                        return Err("Cannot castle queenside");
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
 
                     if (self.generate_moves() & BitBoard(0x00000000000001E)).is_not_zero() {
-                        return Err("Cannot castle kingside".to_string());
+                        return Err("Cannot castle kingside");
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
@@ -162,17 +162,17 @@ impl Board {
             Color::Black => {
                 if kingside {
                     if !self.castling_rights.can_castle(Color::Black, true) {
-                        return Err("Cannot castle kingside".to_string());
+                        return Err("Cannot castle kingside");
                     }
 
                     if (occupancy & BitBoard(0x6000000000000000)).is_not_zero() {
-                        return Err("Cannot castle kingside".to_string());
+                        return Err("Cannot castle kingside");
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
 
                     if (self.generate_moves() & BitBoard(0x700000000000000)).is_not_zero() {
-                        return Err("Cannot castle kingside".to_string());
+                        return Err("Cannot castle kingside");
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
@@ -180,17 +180,17 @@ impl Board {
                     Ok(())
                 } else {
                     if !self.castling_rights.can_castle(Color::Black, false) {
-                        return Err("Cannot castle queenside".to_string());
+                        return Err("Cannot castle queenside");
                     }
 
                     if (occupancy & BitBoard(0x0700000000000000)).is_not_zero() {
-                        return Err("Cannot castle queenside".to_string());
+                        return Err("Cannot castle queenside");
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
 
                     if (self.generate_moves() & BitBoard(0x1E0000000000000)).is_not_zero() {
-                        return Err("Cannot castle kingside".to_string());
+                        return Err("Cannot castle kingside");
                     }
 
                     self.side_to_move = self.side_to_move.toggle();
@@ -287,6 +287,8 @@ impl Board {
                         }
                     }
 
+                    self.update_occupancy();
+
                     self.side_to_move = self.side_to_move.toggle();
 
                     Ok(())
@@ -375,6 +377,8 @@ impl Board {
                         }
                     }
 
+                    self.update_occupancy();
+
                     self.side_to_move = self.side_to_move.toggle();
 
                     Ok(())
@@ -385,7 +389,7 @@ impl Board {
         }
     }
 
-    pub fn unmake_move(&mut self) -> Result<(), String> {
+    pub fn unmake_move(&mut self) -> Result<(), &str> {
         match self.board_history.pop() {
             Some(board_history) => {
                 self.pieces = board_history.pieces;
@@ -398,7 +402,26 @@ impl Board {
 
                 Ok(())
             }
-            None => Err("No move to unmake!".to_string()),
+            None => Err("No move to unmake!"),
+        }
+    }
+
+    fn update_occupancy(&mut self) {
+        match self.side_to_move {
+            Color::White => {
+                self.occupancy[0] = self
+                    .pieces
+                    .iter()
+                    .take(6)
+                    .fold(BitBoard(0), |acc, x| acc | *x);
+            }
+            Color::Black => {
+                self.occupancy[1] = self
+                    .pieces
+                    .iter()
+                    .skip(6)
+                    .fold(BitBoard(0), |acc, x| acc | *x);
+            }
         }
     }
 
@@ -646,7 +669,30 @@ impl Board {
     }
 
     pub fn generate_queen_moves(&self) -> BitBoard {
-        todo!()
+        let occupancy = self.occupancy[0] | self.occupancy[1];
+
+        match self.side_to_move {
+            Color::White => {
+                let mut moves = BitBoard(0);
+
+                for square in self.pieces[4].into_iter() {
+                    moves |= get_bishop_moves(square, occupancy);
+                    moves |= get_rook_moves(square, occupancy);
+                }
+
+                moves & !self.occupancy[0]
+            }
+            Color::Black => {
+                let mut moves = BitBoard(0);
+
+                for square in self.pieces[10].into_iter() {
+                    moves |= get_bishop_moves(square, occupancy);
+                    moves |= get_rook_moves(square, occupancy);
+                }
+
+                moves & !self.occupancy[1]
+            }
+        }
     }
 
     pub fn generate_king_moves(&self) -> BitBoard {
