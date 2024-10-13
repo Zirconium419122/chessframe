@@ -64,6 +64,7 @@ fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), &'static
 
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
 
+    // Try magic numbers until we find one that works
     for _ in 0..1000000 {
         let magic_number = generate_magic_candidate(&mut rng);
         let magic = Magic {

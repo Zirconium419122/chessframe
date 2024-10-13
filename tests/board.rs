@@ -174,6 +174,27 @@ fn test_queen_move_generation() {
 }
 
 #[test]
+fn test_king_move_generation() {
+    // Test that there are no legal moves from the start position
+    {
+        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        let board = Board::from_fen(fen);
+
+        let king_moves = board.generate_king_moves();
+        assert_eq!(king_moves, BitBoard(0));
+    }
+
+    // Test that there are legal moves from a opening position
+    {
+        let fen = "r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 1 6";
+        let board = Board::from_fen(fen);
+
+        let king_moves = board.generate_king_moves();
+        assert_eq!(king_moves, BitBoard(0x0000000000001820));
+    }
+}
+
+#[test]
 fn test_make_move() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);
@@ -257,7 +278,6 @@ fn test_unmake_move() {
 }
 
 #[test]
-#[should_panic(expected = "not yet implemented")]
 fn test_can_castle() {
     let fen = "r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 1 6";
     let mut board = Board::from_fen(fen);
@@ -275,7 +295,7 @@ fn test_can_castle() {
     }
 
     assert_eq!(
-        board.make_move(Move::new_castle(Square::E1, Square::F1)),
+        board.make_move(Move::new_castle(Square::E1, Square::G1)),
         Ok(())
     );
     assert_eq!(board.pieces[5], BitBoard(0x000000000000040));
@@ -283,11 +303,11 @@ fn test_can_castle() {
 
     {
         assert_eq!(board.side_to_move, Color::Black);
-        assert_eq!(board.pieces[11], BitBoard(0x100000000000000));
+        assert_eq!(board.pieces[11], BitBoard(0x1000000000000000));
 
         assert_eq!(board.can_castle(true), Ok(()));
 
         assert_eq!(board.side_to_move, Color::Black);
-        assert_eq!(board.pieces[11], BitBoard(0x100000000000000));
+        assert_eq!(board.pieces[11], BitBoard(0x1000000000000000));
     }
 }

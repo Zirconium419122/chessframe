@@ -291,6 +291,12 @@ impl Board {
 
                     self.side_to_move = self.side_to_move.toggle();
 
+                    if (self.generate_ray_moves() & self.pieces[5]).is_not_zero() {
+                        self.unmake_move().unwrap();
+
+                        return Err("Cannot move pinned piece!".to_string());
+                    }
+
                     Ok(())
                 } else {
                     Err(format!("No piece found on square: {}!", from))
@@ -380,6 +386,12 @@ impl Board {
                     self.update_occupancy();
 
                     self.side_to_move = self.side_to_move.toggle();
+
+                    if (self.generate_ray_moves() & self.pieces[11]).is_not_zero() {
+                        self.unmake_move().unwrap();
+
+                        return Err("Cannot move pinned piece!".to_string());
+                    }
 
                     Ok(())
                 } else {
@@ -696,6 +708,29 @@ impl Board {
     }
 
     pub fn generate_king_moves(&self) -> BitBoard {
-        todo!()
+        let allied_pieces = match self.side_to_move {
+            Color::White => self.occupancy[0],
+            Color::Black => self.occupancy[1],
+        };
+
+        let kings = match self.side_to_move {
+            Color::White => self.pieces[5],
+            Color::Black => self.pieces[11],
+        };
+        let mut moves = BitBoard(0);
+
+        moves |= (kings << 7) & !BitBoard(0x0101010101010101); // Mask out the H file
+        moves |= kings << 8;
+        moves |= (kings << 9) & !BitBoard(0x8080808080808080); // Mask out the A file
+        moves |= (kings << 1) & !BitBoard(0x0101010101010101); // Mask out the H file
+
+        moves |= (kings >> 1) & !BitBoard(0x8080808080808080); // Mask out the A file
+        moves |= (kings >> 7) & !BitBoard(0x0101010101010101); // Mask out the H file
+        moves |= kings >> 8;
+        moves |= (kings >> 9) & !BitBoard(0x8080808080808080); // Mask out the A file
+
+        moves &= !allied_pieces;
+
+        moves
     }
 }
