@@ -195,6 +195,27 @@ fn test_king_move_generation() {
 }
 
 #[test]
+fn test_castling_move_generation() {
+    // Test that there are castling moves from the start position
+    {
+        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        let mut board = Board::from_fen(fen);
+
+        let castling_moves = board.generate_castling_moves();
+        assert_eq!(castling_moves, BitBoard(0));
+    }
+
+    // Test that there are castling moves from a opening position
+    {
+        let fen = "r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 1 6";
+        let mut board = Board::from_fen(fen);
+
+        let castling_moves = board.generate_castling_moves();
+        assert_eq!(castling_moves, BitBoard(0x40));
+    }
+}
+
+#[test]
 fn test_make_move() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);

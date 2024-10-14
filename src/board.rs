@@ -733,4 +733,52 @@ impl Board {
 
         moves
     }
+
+    pub fn generate_castling_moves(&mut self) -> BitBoard {
+        let occupancy = self.occupancy[0] | self.occupancy[1];
+
+        let (king_side, queen_side, king) = match self.side_to_move {
+            Color::White => (BitBoard(0x60), BitBoard(0x0e), self.pieces[5]),
+            Color::Black => (
+                BitBoard(0x6000000000000000),
+                BitBoard(0x0e00000000000000),
+                self.pieces[11],
+            ),
+        };
+        let mut moves = BitBoard(0);
+
+        self.side_to_move = self.side_to_move.toggle();
+
+        if self
+            .castling_rights
+            .can_castle(self.side_to_move.clone(), true)
+        {
+            if (occupancy & king_side).is_zero()
+                && (self.generate_moves() & (king_side | king)).is_zero()
+            {
+                moves |= match self.side_to_move.toggle() {
+                    Color::White => BitBoard(0x40),
+                    Color::Black => BitBoard(0x4000000000000000),
+                }
+            }
+        }
+
+        if self
+            .castling_rights
+            .can_castle(self.side_to_move.clone(), false)
+        {
+            if (occupancy & queen_side).is_zero()
+                && (self.generate_moves() & (queen_side | king)).is_zero()
+            {
+                moves |= match self.side_to_move.toggle() {
+                    Color::White => BitBoard(0x04),
+                    Color::Black => BitBoard(0x0400000000000000),
+                }
+            }
+        }
+
+        self.side_to_move = self.side_to_move.toggle();
+
+        moves
+    }
 }
