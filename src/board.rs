@@ -117,86 +117,30 @@ impl Board {
     }
 
     pub fn can_castle(&mut self, kingside: bool) -> Result<(), &str> {
-        let occupancy = self.occupancy[0] | self.occupancy[1];
+        let castling_moves = self.generate_castling_moves();
 
         match self.side_to_move {
             Color::White => {
-                if kingside {
-                    if !self.castling_rights.can_castle(Color::White, true) {
-                        return Err("Cannot castle kingside");
-                    }
-
-                    if (occupancy & BitBoard(0x000000000000060)).is_not_zero() {
-                        return Err("Cannot castle kingside");
-                    }
-
-                    self.side_to_move = self.side_to_move.toggle();
-
-                    if (self.generate_moves() & BitBoard(0x000000000000070)).is_not_zero() {
-                        return Err("Cannot castle kingside");
-                    }
-
-                    self.side_to_move = self.side_to_move.toggle();
-
-                    Ok(())
-                } else {
-                    if !self.castling_rights.can_castle(Color::White, false) {
-                        return Err("Cannot castle queenside");
-                    }
-
-                    if (occupancy & BitBoard(0x000000000000000E)).is_not_zero() {
-                        return Err("Cannot castle queenside");
-                    }
-
-                    self.side_to_move = self.side_to_move.toggle();
-
-                    if (self.generate_moves() & BitBoard(0x00000000000001E)).is_not_zero() {
-                        return Err("Cannot castle kingside");
-                    }
-
-                    self.side_to_move = self.side_to_move.toggle();
-
-                    Ok(())
+                if kingside && (castling_moves & BitBoard(0x40)).is_zero() {
+                    return Err("Cannot castle kingside");
                 }
+
+                if !kingside && (castling_moves & BitBoard(0x04)).is_zero() {
+                    return Err("Cannot castle queenside");
+                }
+
+                Ok(())
             }
             Color::Black => {
-                if kingside {
-                    if !self.castling_rights.can_castle(Color::Black, true) {
-                        return Err("Cannot castle kingside");
-                    }
-
-                    if (occupancy & BitBoard(0x6000000000000000)).is_not_zero() {
-                        return Err("Cannot castle kingside");
-                    }
-
-                    self.side_to_move = self.side_to_move.toggle();
-
-                    if (self.generate_moves() & BitBoard(0x700000000000000)).is_not_zero() {
-                        return Err("Cannot castle kingside");
-                    }
-
-                    self.side_to_move = self.side_to_move.toggle();
-
-                    Ok(())
-                } else {
-                    if !self.castling_rights.can_castle(Color::Black, false) {
-                        return Err("Cannot castle queenside");
-                    }
-
-                    if (occupancy & BitBoard(0x0700000000000000)).is_not_zero() {
-                        return Err("Cannot castle queenside");
-                    }
-
-                    self.side_to_move = self.side_to_move.toggle();
-
-                    if (self.generate_moves() & BitBoard(0x1E0000000000000)).is_not_zero() {
-                        return Err("Cannot castle kingside");
-                    }
-
-                    self.side_to_move = self.side_to_move.toggle();
-
-                    Ok(())
+                if kingside && (castling_moves & BitBoard(0x4000000000000000)).is_zero() {
+                    return Err("Cannot castle kingside");
                 }
+
+                if !kingside && (castling_moves & BitBoard(0x0400000000000000)).is_zero() {
+                    return Err("Cannot castle queenside");
+                }
+
+                Ok(())
             }
         }
     }
@@ -752,28 +696,24 @@ impl Board {
         if self
             .castling_rights
             .can_castle(self.side_to_move.clone(), true)
+            && (occupancy & king_side).is_zero()
+            && (self.generate_moves() & (king_side | king)).is_zero()
         {
-            if (occupancy & king_side).is_zero()
-                && (self.generate_moves() & (king_side | king)).is_zero()
-            {
-                moves |= match self.side_to_move.toggle() {
-                    Color::White => BitBoard(0x40),
-                    Color::Black => BitBoard(0x4000000000000000),
-                }
+            moves |= match self.side_to_move.toggle() {
+                Color::White => BitBoard(0x40),
+                Color::Black => BitBoard(0x4000000000000000),
             }
         }
 
         if self
             .castling_rights
             .can_castle(self.side_to_move.clone(), false)
+            && (occupancy & queen_side).is_zero()
+            && (self.generate_moves() & (queen_side | king)).is_zero()
         {
-            if (occupancy & queen_side).is_zero()
-                && (self.generate_moves() & (queen_side | king)).is_zero()
-            {
-                moves |= match self.side_to_move.toggle() {
-                    Color::White => BitBoard(0x04),
-                    Color::Black => BitBoard(0x0400000000000000),
-                }
+            moves |= match self.side_to_move.toggle() {
+                Color::White => BitBoard(0x04),
+                Color::Black => BitBoard(0x0400000000000000),
             }
         }
 
