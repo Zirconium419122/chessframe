@@ -156,6 +156,16 @@ impl Board {
                         return Err(format!("Can't move piece to square: {}!", to));
                     }
 
+                    if let Piece::Pawn = piece {
+                        if (from & (to - 16)) != 0 {
+                            self.en_passant_square = Some(BitBoard(1 << (to - 8)));
+                        } else {
+                            self.en_passant_square = None;
+                        }
+                    } else {
+                        self.en_passant_square = None;
+                    }
+
                     match move_type {
                         MoveType::Quiet => {
                             self.board_history.push(BoardHistory::from(self.clone()));
@@ -250,6 +260,16 @@ impl Board {
                 if let Some((piece, _color)) = self.get_piece(from) {
                     if self.occupancy[1].is_set(to) {
                         return Err(format!("Can't move piece to square: {}!", to));
+                    }
+
+                    if let Piece::Pawn = piece {
+                        if (from & (to + 16)) != 0 {
+                            self.en_passant_square = Some(BitBoard(1 << (to - 8)));
+                        } else {
+                            self.en_passant_square = None;
+                        }
+                    } else {
+                        self.en_passant_square = None;
                     }
 
                     match move_type {

@@ -226,11 +226,13 @@ fn test_make_move() {
 
         assert_eq!(board.side_to_move, Color::White);
         assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+        assert_eq!(board.en_passant_square, None);
 
         assert_eq!(board.make_move(Move::new(Square::E2, Square::E4)), Ok(()));
 
         assert_eq!(board.side_to_move, Color::Black);
         assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
+        assert_eq!(board.en_passant_square, Some(BitBoard(0x100000)));
     }
 
     // Test that you can't capture your own pieces
@@ -279,11 +281,13 @@ fn test_unmake_move() {
     {
         assert_eq!(board.side_to_move, Color::White);
         assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+        assert_eq!(board.en_passant_square, None);
 
         assert_eq!(board.make_move(Move::new(Square::E2, Square::E4)), Ok(()));
 
         assert_eq!(board.side_to_move, Color::Black);
         assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
+        assert_eq!(board.en_passant_square, Some(BitBoard(0x100000)));
     }
 
     // Test that you can unmake a move
