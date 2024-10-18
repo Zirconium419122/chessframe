@@ -156,14 +156,24 @@ impl Board {
                         return Err(format!("Can't move piece to square: {}!", to));
                     }
 
-                    if let Piece::Pawn = piece {
-                        if (from & (to - 16)) != 0 {
-                            self.en_passant_square = Some(BitBoard(1 << (to - 8)));
-                        } else {
-                            self.en_passant_square = None;
+                    self.en_passant_square = None;
+
+                    match piece {
+                        Piece::Pawn => {
+                            if from == (to - 16) {
+                                self.en_passant_square = Some(BitBoard(1 << (to - 8)));
+                            } else {
+                                self.en_passant_square = None;
+                            }
                         }
-                    } else {
-                        self.en_passant_square = None;
+                        Piece::King => {
+                            if (BitBoard(1 << to) & self.generate_castling_moves()).is_zero() {
+                                self.castling_rights.revoke(self.side_to_move.clone(), true);
+                                self.castling_rights
+                                    .revoke(self.side_to_move.clone(), false);
+                            }
+                        }
+                        _ => (),
                     }
 
                     match move_type {
@@ -262,14 +272,22 @@ impl Board {
                         return Err(format!("Can't move piece to square: {}!", to));
                     }
 
-                    if let Piece::Pawn = piece {
-                        if (from & (to + 16)) != 0 {
-                            self.en_passant_square = Some(BitBoard(1 << (to - 8)));
-                        } else {
-                            self.en_passant_square = None;
+                    self.en_passant_square = None;
+
+                    match piece {
+                        Piece::Pawn => {
+                            if (from & (to + 16)) != 0 {
+                                self.en_passant_square = Some(BitBoard(1 << (to - 8)));
+                            }
                         }
-                    } else {
-                        self.en_passant_square = None;
+                        Piece::King => {
+                            if (BitBoard(1 << to) & self.generate_castling_moves()).is_zero() {
+                                self.castling_rights.revoke(self.side_to_move.clone(), true);
+                                self.castling_rights
+                                    .revoke(self.side_to_move.clone(), false);
+                            }
+                        }
+                        _ => (),
                     }
 
                     match move_type {
