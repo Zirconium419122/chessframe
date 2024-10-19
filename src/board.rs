@@ -162,15 +162,19 @@ impl Board {
                         Piece::Pawn => {
                             if from == (to - 16) {
                                 self.en_passant_square = Some(BitBoard(1 << (to - 8)));
-                            } else {
-                                self.en_passant_square = None;
                             }
                         }
                         Piece::King => {
-                            if (BitBoard(1 << to) & self.generate_castling_moves()).is_zero() {
-                                self.castling_rights.revoke(self.side_to_move.clone(), true);
-                                self.castling_rights
-                                    .revoke(self.side_to_move.clone(), false);
+                            if let MoveType::Castle = move_type {
+                            } else {
+                                self.castling_rights.revoke_all(&self.side_to_move);
+                            }
+                        }
+                        Piece::Rook => {
+                            if from == 7 {
+                                self.castling_rights.revoke(&self.side_to_move, true);
+                            } else if from == 0 {
+                                self.castling_rights.revoke(&self.side_to_move, false);
                             }
                         }
                         _ => (),
@@ -191,7 +195,7 @@ impl Board {
                             self.clear_piece(to, Color::Black);
                         }
                         MoveType::Castle => {
-                            if from < to {
+                            if to == 6 {
                                 self.can_castle(true)?;
 
                                 self.board_history.push(BoardHistory::from(self.clone()));
@@ -201,7 +205,9 @@ impl Board {
 
                                 self.pieces[3].clear_bit(7_usize);
                                 self.pieces[3].set_bit(5_usize);
-                            } else {
+
+                                self.castling_rights.revoke_all(&self.side_to_move);
+                            } else if to == 2 {
                                 self.can_castle(false)?;
 
                                 self.board_history.push(BoardHistory::from(self.clone()));
@@ -211,6 +217,10 @@ impl Board {
 
                                 self.pieces[3].clear_bit(0_usize);
                                 self.pieces[3].set_bit(3_usize);
+
+                                self.castling_rights.revoke_all(&self.side_to_move);
+                            } else {
+                                return Err("Invalid castling move".to_string());
                             }
                         }
                         MoveType::EnPassant => {
@@ -267,7 +277,7 @@ impl Board {
                 }
             }
             Color::Black => {
-                if let Some((piece, _color)) = self.get_piece(from) {
+                if let Some((piece, _)) = self.get_piece(from) {
                     if self.occupancy[1].is_set(to) {
                         return Err(format!("Can't move piece to square: {}!", to));
                     }
@@ -276,15 +286,21 @@ impl Board {
 
                     match piece {
                         Piece::Pawn => {
-                            if (from & (to + 16)) != 0 {
-                                self.en_passant_square = Some(BitBoard(1 << (to - 8)));
+                            if from == (to + 16) {
+                                self.en_passant_square = Some(BitBoard(1 << (to + 8)));
                             }
                         }
                         Piece::King => {
-                            if (BitBoard(1 << to) & self.generate_castling_moves()).is_zero() {
-                                self.castling_rights.revoke(self.side_to_move.clone(), true);
-                                self.castling_rights
-                                    .revoke(self.side_to_move.clone(), false);
+                            if let MoveType::Castle = move_type {
+                            } else {
+                                self.castling_rights.revoke_all(&self.side_to_move);
+                            }
+                        }
+                        Piece::Rook => {
+                            if from == 63 {
+                                self.castling_rights.revoke(&self.side_to_move, true);
+                            } else if from == 56 {
+                                self.castling_rights.revoke(&self.side_to_move, false);
                             }
                         }
                         _ => (),
@@ -305,7 +321,7 @@ impl Board {
                             self.clear_piece(to, Color::White);
                         }
                         MoveType::Castle => {
-                            if from < to {
+                            if to == 62 {
                                 self.can_castle(true)?;
 
                                 self.board_history.push(BoardHistory::from(self.clone()));
@@ -315,7 +331,9 @@ impl Board {
 
                                 self.pieces[3].clear_bit(63_usize);
                                 self.pieces[3].set_bit(61_usize);
-                            } else {
+
+                                self.castling_rights.revoke_all(&self.side_to_move);
+                            } else if to == 58 {
                                 self.can_castle(false)?;
 
                                 self.board_history.push(BoardHistory::from(self.clone()));
@@ -325,6 +343,10 @@ impl Board {
 
                                 self.pieces[3].clear_bit(56_usize);
                                 self.pieces[3].set_bit(59_usize);
+
+                                self.castling_rights.revoke_all(&self.side_to_move);
+                            } else {
+                                return Err("Invalid castling move".to_string());
                             }
                         }
                         MoveType::EnPassant => {
@@ -733,7 +755,7 @@ impl Board {
 
         if self
             .castling_rights
-            .can_castle(self.side_to_move.clone(), true)
+            .can_castle(&self.side_to_move.toggle(), true)
             && (occupancy & king_side).is_zero()
             && (self.generate_moves() & (king_side | king)).is_zero()
         {
@@ -745,7 +767,7 @@ impl Board {
 
         if self
             .castling_rights
-            .can_castle(self.side_to_move.clone(), false)
+            .can_castle(&self.side_to_move.toggle(), false)
             && (occupancy & queen_side).is_zero()
             && (self.generate_moves() & (queen_side | king)).is_zero()
         {

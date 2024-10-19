@@ -39,7 +39,7 @@ impl CastlingRights {
         castling_rights
     }
 
-    pub fn can_castle(&self, color: Color, kingside: bool) -> bool {
+    pub fn can_castle(&self, color: &Color, kingside: bool) -> bool {
         match (color, kingside) {
             (Color::White, true) => self.white_kingside,
             (Color::White, false) => self.white_queenside,
@@ -48,12 +48,25 @@ impl CastlingRights {
         }
     }
 
-    pub fn revoke(&mut self, color: Color, kingside: bool) {
+    pub fn revoke(&mut self, color: &Color, kingside: bool) {
         match (color, kingside) {
             (Color::White, true) => self.white_kingside = false,
             (Color::White, false) => self.white_queenside = false,
             (Color::Black, true) => self.black_kingside = false,
             (Color::Black, false) => self.black_queenside = false,
+        }
+    }
+
+    pub fn revoke_all(&mut self, color: &Color) {
+        match color {
+            Color::White => {
+                self.white_kingside = false;
+                self.white_queenside = false;
+            }
+            Color::Black => {
+                self.black_kingside = false;
+                self.black_queenside = false;
+            }
         }
     }
 }
