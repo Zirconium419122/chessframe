@@ -171,16 +171,24 @@ impl Board {
             match move_type {
                 MoveType::Quiet => {
                     let occupancy = self.occupancy[0] | self.occupancy[1];
+                    let moves = generate_moves[piece.clone() as usize];
 
-                    if (generate_moves[piece.clone() as usize] & !occupancy).is_zero() {
+                    if moves.is_not_set(to) {
+                        return Err(format!("Invalid move: {}!", to));
+                    }
+
+                    if (moves & !occupancy).is_zero() {
                         return Err("Move is not a quiet move!".to_string());
                     }
                 }
                 MoveType::Capture => {
-                    if (generate_moves[piece.clone() as usize]
-                        & self.occupancy[self.side_to_move.toggle() as usize])
-                        .is_zero()
-                    {
+                    let moves = generate_moves[piece.clone() as usize];
+
+                    if moves.is_not_set(to) {
+                        return Err(format!("Invalid move: {}!", to));
+                    }
+
+                    if (moves & self.occupancy[self.side_to_move.toggle() as usize]).is_zero() {
                         return Err("Move is not a capture!".to_string());
                     }
                 }
@@ -199,7 +207,7 @@ impl Board {
                     }
                 }
                 MoveType::EnPassant => {
-                    if let Some(_) = self.en_passant_square {
+                    if self.en_passant_square.is_some() {
                         if self.generate_en_passant().is_not_set(to) {
                             return Err(format!("En passant to: {}, is not a legal move!", to));
                         }
@@ -240,216 +248,131 @@ impl Board {
         let (from, to) = mv.get_move();
         let move_type = mv.get_move_type();
 
-        match self.side_to_move {
-            Color::White => {
-                let piece = self.validate_move(&mv)?;
+        let piece = self.validate_move(&mv)?;
 
-                self.en_passant_square = None;
+        self.en_passant_square = None;
 
-                match piece {
-                    Piece::Pawn => {
-                        if from == (to - 16) {
-                            self.en_passant_square = Some(BitBoard(1 << (to - 8)));
-                        }
-                    }
-                    Piece::King => {
-                        if let MoveType::Castle = move_type {
-                        } else {
-                            self.castling_rights.revoke_all(&self.side_to_move);
-                        }
-                    }
-                    Piece::Rook => {
-                        if from == 7 {
-                            self.castling_rights.revoke(&self.side_to_move, true);
-                        } else if from == 0 {
-                            self.castling_rights.revoke(&self.side_to_move, false);
-                        }
-                    }
-                    _ => (),
+        let offset = match self.side_to_move {
+            Color::White => 0,
+            Color::Black => 6,
+        };
+
+        match piece {
+            Piece::Pawn => {
+                let (square_behind_pawn, two_squares_behind_pawn) = match self.side_to_move {
+                    Color::White => (to - 8, to - 16),
+                    Color::Black => (to + 8, to + 16),
+                };
+                if from == two_squares_behind_pawn {
+                    self.en_passant_square = Some(BitBoard(1 << square_behind_pawn));
                 }
-
-                match move_type {
-                    MoveType::Quiet => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.pieces[piece as usize].set_bit(to)
-                    }
-                    MoveType::Capture => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.pieces[piece as usize].set_bit(to);
-                        self.clear_piece(to, Color::Black);
-                    }
-                    MoveType::Castle => {
-                        if to == 6 {
-                            self.board_history.push(BoardHistory::from(self.clone()));
-
-                            self.pieces[piece.clone() as usize].clear_bit(from);
-                            self.pieces[piece as usize].set_bit(to);
-
-                            self.pieces[3].clear_bit(7_usize);
-                            self.pieces[3].set_bit(5_usize);
-
-                            self.castling_rights.revoke_all(&self.side_to_move);
-                        } else if to == 2 {
-                            self.board_history.push(BoardHistory::from(self.clone()));
-
-                            self.pieces[piece.clone() as usize].clear_bit(from);
-                            self.pieces[piece as usize].set_bit(to);
-
-                            self.pieces[3].clear_bit(0_usize);
-                            self.pieces[3].set_bit(3_usize);
-
-                            self.castling_rights.revoke_all(&self.side_to_move);
-                        }
-                    }
-                    MoveType::EnPassant => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.pieces[piece as usize].set_bit(to);
-                        self.clear_piece(to - 8, Color::Black)
-                    }
-                    MoveType::Promotion(piece) => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.set_piece(piece.clone(), Color::White, to)
-                    }
-                    MoveType::CapturePromotion(piece) => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.set_piece(piece.clone(), Color::White, to);
-                        self.clear_piece(to, Color::Black);
-                    }
-                    MoveType::Check => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.pieces[piece as usize].set_bit(to)
-                    }
-                }
-
-                self.update_occupancy();
-
-                self.side_to_move = self.side_to_move.toggle();
-
-                if (self.generate_ray_moves() & self.pieces[5]).is_not_zero() {
-                    self.unmake_move().unwrap();
-
-                    return Err("Cannot move pinned piece!".to_string());
-                }
-
-                Ok(())
             }
-            Color::Black => {
-                let piece = self.validate_move(&mv)?;
-
-                self.en_passant_square = None;
-
-                match piece {
-                    Piece::Pawn => {
-                        if from == (to + 16) {
-                            self.en_passant_square = Some(BitBoard(1 << (to + 8)));
-                        }
-                    }
-                    Piece::King => {
-                        if let MoveType::Castle = move_type {
-                        } else {
-                            self.castling_rights.revoke_all(&self.side_to_move);
-                        }
-                    }
-                    Piece::Rook => {
-                        if from == 63 {
-                            self.castling_rights.revoke(&self.side_to_move, true);
-                        } else if from == 56 {
-                            self.castling_rights.revoke(&self.side_to_move, false);
-                        }
-                    }
-                    _ => (),
+            Piece::King => {
+                if let MoveType::Castle = move_type {
+                } else {
+                    self.castling_rights.revoke_all(&self.side_to_move);
                 }
+            }
+            Piece::Rook => {
+                let (kingside_rook, queenside_rook) = match self.side_to_move {
+                    Color::White => (7, 0),
+                    Color::Black => (63, 56),
+                };
 
-                match move_type {
-                    MoveType::Quiet => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.pieces[piece as usize].set_bit(to)
-                    }
-                    MoveType::Capture => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.pieces[piece as usize].set_bit(to);
-                        self.clear_piece(to, Color::White);
-                    }
-                    MoveType::Castle => {
-                        if to == 62 {
-                            self.board_history.push(BoardHistory::from(self.clone()));
-
-                            self.pieces[piece.clone() as usize].clear_bit(from);
-                            self.pieces[piece as usize].set_bit(to);
-
-                            self.pieces[3].clear_bit(63_usize);
-                            self.pieces[3].set_bit(61_usize);
-
-                            self.castling_rights.revoke_all(&self.side_to_move);
-                        } else if to == 58 {
-                            self.board_history.push(BoardHistory::from(self.clone()));
-
-                            self.pieces[piece.clone() as usize].clear_bit(from);
-                            self.pieces[piece as usize].set_bit(to);
-
-                            self.pieces[3].clear_bit(56_usize);
-                            self.pieces[3].set_bit(59_usize);
-
-                            self.castling_rights.revoke_all(&self.side_to_move);
-                        }
-                    }
-                    MoveType::EnPassant => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.pieces[piece as usize].set_bit(to);
-                        self.clear_piece(to + 8, Color::White)
-                    }
-                    MoveType::Promotion(piece) => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.set_piece(piece.clone(), Color::Black, to)
-                    }
-                    MoveType::CapturePromotion(piece) => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.set_piece(piece.clone(), Color::Black, to);
-                        self.clear_piece(to, Color::White);
-                    }
-                    MoveType::Check => {
-                        self.board_history.push(BoardHistory::from(self.clone()));
-
-                        self.pieces[piece.clone() as usize].clear_bit(from);
-                        self.pieces[piece as usize].set_bit(to);
-                    }
+                if from == kingside_rook {
+                    self.castling_rights.revoke(&self.side_to_move, true);
+                } else if from == queenside_rook {
+                    self.castling_rights.revoke(&self.side_to_move, false);
                 }
+            }
+            _ => (),
+        }
 
-                self.update_occupancy();
+        match move_type {
+            MoveType::Quiet => {
+                self.board_history.push(BoardHistory::from(self.clone()));
 
-                self.side_to_move = self.side_to_move.toggle();
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[piece as usize + offset].set_bit(to)
+            }
+            MoveType::Capture => {
+                self.board_history.push(BoardHistory::from(self.clone()));
 
-                if (self.generate_ray_moves() & self.pieces[11]).is_not_zero() {
-                    self.unmake_move().unwrap();
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[piece as usize + offset].set_bit(to);
+                self.clear_piece(to, Color::Black);
+            }
+            MoveType::Castle => {
+                let (kingside, queenside) = match self.side_to_move {
+                    Color::White => (6, 2),
+                    Color::Black => (62, 58),
+                };
 
-                    return Err("Cannot move pinned piece!".to_string());
+                if to == kingside {
+                    self.board_history.push(BoardHistory::from(self.clone()));
+
+                    self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                    self.pieces[piece as usize + offset].set_bit(to);
+
+                    self.pieces[3].clear_bit(kingside + 1);
+                    self.pieces[3].set_bit(kingside - 1);
+
+                    self.castling_rights.revoke_all(&self.side_to_move);
+                } else if to == queenside {
+                    self.board_history.push(BoardHistory::from(self.clone()));
+
+                    self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                    self.pieces[piece as usize + offset].set_bit(to);
+
+                    self.pieces[3].clear_bit(queenside - 2);
+                    self.pieces[3].set_bit(queenside + 1);
+
+                    self.castling_rights.revoke_all(&self.side_to_move);
                 }
+            }
+            MoveType::EnPassant => {
+                let behind_pawn = match self.side_to_move {
+                    Color::White => to - 8,
+                    Color::Black => to + 8,
+                };
+                self.board_history.push(BoardHistory::from(self.clone()));
 
-                Ok(())
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[piece as usize + offset].set_bit(to);
+                self.clear_piece(behind_pawn, Color::Black)
+            }
+            MoveType::Promotion(piece) => {
+                self.board_history.push(BoardHistory::from(self.clone()));
+
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.set_piece(piece.clone(), Color::White, to)
+            }
+            MoveType::CapturePromotion(piece) => {
+                self.board_history.push(BoardHistory::from(self.clone()));
+
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.set_piece(piece.clone(), Color::White, to);
+                self.clear_piece(to, Color::Black);
+            }
+            MoveType::Check => {
+                self.board_history.push(BoardHistory::from(self.clone()));
+
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[piece as usize + offset].set_bit(to)
             }
         }
+
+        self.update_occupancy();
+
+        self.side_to_move = self.side_to_move.toggle();
+
+        if (self.generate_ray_moves() & self.pieces[5 + offset]).is_not_zero() {
+            self.unmake_move().unwrap();
+
+            return Err("Cannot move pinned piece!".to_string());
+        }
+
+        Ok(())
     }
 
     pub fn unmake_move(&mut self) -> Result<(), &str> {

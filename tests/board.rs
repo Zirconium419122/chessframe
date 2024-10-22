@@ -103,6 +103,24 @@ fn test_make_move() {
         assert_eq!(board.en_passant_square, Some(BitBoard(0x100000)));
     }
 
+    // Test that you can't push a pawn three squares
+    {
+        let mut board = board.clone();
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+        assert_eq!(board.en_passant_square, None);
+
+        assert_eq!(
+            board.make_move(Move::new(Square::E2, Square::E5)),
+            Err("Invalid move: 36!".to_string())
+        );
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+        assert_eq!(board.en_passant_square, None);
+    }
+
     // Test that you can't capture your own pieces
     {
         let mut board = board.clone();
