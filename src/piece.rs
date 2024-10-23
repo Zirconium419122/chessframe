@@ -37,6 +37,17 @@ impl Piece {
         }
     }
 
+    pub fn to_index(&self) -> usize {
+        match self {
+            Piece::Pawn => 0,
+            Piece::Knight => 1,
+            Piece::Bishop => 2,
+            Piece::Rook => 3,
+            Piece::Queen => 4,
+            Piece::King => 5,
+        }
+    }
+
     pub fn piece_index(&self, color: &Color) -> usize {
         let offset = match color {
             Color::White => 0,

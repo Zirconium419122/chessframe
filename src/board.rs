@@ -472,6 +472,121 @@ impl Board {
         moves
     }
 
+    pub fn generate_moves_vec(&mut self) -> Vec<Move> {
+        macro_rules! extract_moves {
+            ($offset:literal, $($piece:expr),+) => {
+                {
+                    let mut moves: Vec<Move> = Vec::new();
+
+                    $(
+                        let pieces = self.pieces[$piece.to_index() + $offset];
+
+                        for square in pieces.into_iter() {
+                            self.pieces[$piece as usize + $offset] = BitBoard(1 << square);
+
+                            let quiet_moves: Option<BitBoard> = match $piece {
+                                Piece::Knight => Some(self.generate_knight_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Bishop => Some(self.generate_bishop_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Rook => Some(self.generate_rook_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Queen => Some(self.generate_queen_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::King => Some(self.generate_king_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
+                                _ => None,
+                            };
+
+                            if let Some(quiet_moves) = quiet_moves {
+                                moves.extend(quiet_moves.into_iter().map(|destination| Move::new(square, destination)));
+                            }
+
+                            let capture_moves: Option<BitBoard> = match $piece {
+                                Piece::Knight => Some(self.generate_knight_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Bishop => Some(self.generate_bishop_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Rook => Some(self.generate_rook_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Queen => Some(self.generate_queen_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::King => Some(self.generate_king_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
+                                _ => None,
+                            };
+
+                            if let Some(capture_moves) = capture_moves {
+                                moves.extend(capture_moves.into_iter().map(|destination| Move::new_capture(square, destination)));
+                            }
+
+                            if let Piece::Pawn = $piece {
+                                let pawn_pushes: Vec<Move> = self.generate_pawn_pushes().into_iter().flat_map(|destination| {
+                                    if self.is_promotion(destination) {
+                                        vec![
+                                            Move::new_promotion(square, destination, Piece::Knight),
+                                            Move::new_promotion(square, destination, Piece::Bishop),
+                                            Move::new_promotion(square, destination, Piece::Rook),
+                                            Move::new_promotion(square, destination, Piece::Queen),
+                                        ]
+                                    } else {
+                                        vec![
+                                            Move::new(square, destination)
+                                        ]
+                                    }
+                                }).collect();
+
+                                moves.extend(pawn_pushes);
+
+                                let pawn_captures: Vec<Move> = self.generate_pawn_captures().into_iter().flat_map(|destination| {
+                                    if self.is_promotion(destination) {
+                                        vec![
+                                            Move::new_capture_promotion(square, destination, Piece::Knight),
+                                            Move::new_capture_promotion(square, destination, Piece::Bishop),
+                                            Move::new_capture_promotion(square, destination, Piece::Rook),
+                                            Move::new_capture_promotion(square, destination, Piece::Queen),
+                                        ]
+                                    } else {
+                                        vec![
+                                            Move::new_capture(square, destination),
+                                        ]
+                                    }
+                                }).collect();
+
+                                moves.extend(pawn_captures);
+
+                                let en_passants: Vec<Move> = self.generate_en_passant().into_iter().map(|destination| {
+                                    Move::new_en_passant(square, destination)
+                                }).collect();
+
+                                moves.extend(en_passants);
+                            }
+                        }
+
+                        self.pieces[$piece as usize + $offset] = pieces;
+                    )+
+
+                    moves
+                }
+            };
+        }
+
+        let mut moves = Vec::new();
+
+        match self.side_to_move {
+            Color::White => moves.extend(extract_moves!(
+                0,
+                Piece::Pawn,
+                Piece::Knight,
+                Piece::Bishop,
+                Piece::Rook,
+                Piece::Queen,
+                Piece::King
+            )),
+            Color::Black => moves.extend(extract_moves!(
+                6,
+                Piece::Pawn,
+                Piece::Knight,
+                Piece::Bishop,
+                Piece::Rook,
+                Piece::Queen,
+                Piece::King
+            )),
+        }
+
+        todo!("Conditions for castling not yet implemented!")
+    }
+
     pub fn generate_ray_moves(&self) -> BitBoard {
         let mut moves = BitBoard(0);
 
