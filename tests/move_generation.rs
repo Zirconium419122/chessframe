@@ -1,21 +1,51 @@
 use chess_frame::{bitboard::BitBoard, board::*};
 
 #[test]
+fn test_generate_moves_vec() {
+    let fen = "8/p7/1k2Pp2/1P3P2/1K6/8/8/8 w - - 0 1";
+    let mut board = Board::from_fen(fen);
+
+    let moves = board.generate_moves_vec();
+    assert_eq!(moves.len(), 8)
+}
+
+#[test]
 fn test_pawn_move_generation() {
-    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    let board = Board::from_fen(fen);
+    // Test pawn move generation from a starting position
+    {
+        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        let board = Board::from_fen(fen);
+    
+        let pawn_pushes = board.generate_pawn_pushes();
+        assert_eq!(pawn_pushes, BitBoard(0x00000000FFFF0000));
+    
+        let pawn_captures = board.generate_pawn_captures();
+        assert_eq!(pawn_captures, BitBoard(0));
+    
+        let en_passant = board.generate_en_passant();
+        assert_eq!(en_passant, BitBoard(0));
+    
+        let pawn_moves = board.generate_pawn_moves();
+        assert_eq!(pawn_moves, BitBoard(0x00000000FFFF0000));
+    }
 
-    let pawn_pushes = board.generate_pawn_pushes();
-    assert_eq!(pawn_pushes, BitBoard(0x00000000FFFF0000));
+    // Test pawn move generation from a endgame position
+    {
+        let fen = "8/p7/1k2Pp2/1P3P2/1K6/8/8/8 w - - 0 1";
+        let board = Board::from_fen(fen);
 
-    let pawn_captures = board.generate_pawn_captures();
-    assert_eq!(pawn_captures, BitBoard(0));
+        let pawn_pushes = board.generate_pawn_pushes();
+        assert_eq!(pawn_pushes, BitBoard(0x0010000000000000));
 
-    let en_passant = board.generate_en_passant();
-    assert_eq!(en_passant, BitBoard(0));
+        let pawn_captures = board.generate_pawn_captures();
+        assert_eq!(pawn_captures, BitBoard(0));
 
-    let pawn_moves = board.generate_pawn_moves();
-    assert_eq!(pawn_moves, BitBoard(0x00000000FFFF0000));
+        let en_passant = board.generate_en_passant();
+        assert_eq!(en_passant, BitBoard(0));
+
+        let pawn_moves = board.generate_pawn_moves();
+        assert_eq!(pawn_moves, BitBoard(0x0010000000000000));
+    }
 }
 
 #[test]
@@ -108,6 +138,15 @@ fn test_king_move_generation() {
 
         let king_moves = board.generate_king_moves();
         assert_eq!(king_moves, BitBoard(0x0000000000001820));
+    }
+
+    // Test move generation from a endgame position
+    {
+        let fen = "8/p7/1k2Pp2/1P3P2/1K6/8/8/8 w - - 0 1";
+        let board = Board::from_fen(fen);
+
+        let king_moves = board.generate_king_moves();
+        assert_eq!(king_moves, BitBoard(0x0000000505070000));
     }
 }
 

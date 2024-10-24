@@ -485,11 +485,11 @@ impl Board {
                             self.pieces[$piece as usize + $offset] = BitBoard(1 << square);
 
                             let quiet_moves: Option<BitBoard> = match $piece {
-                                Piece::Knight => Some(self.generate_knight_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::Bishop => Some(self.generate_bishop_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::Rook => Some(self.generate_rook_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::Queen => Some(self.generate_queen_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::King => Some(self.generate_king_moves() ^ self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Knight => Some(self.generate_knight_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Bishop => Some(self.generate_bishop_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Rook => Some(self.generate_rook_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::Queen => Some(self.generate_queen_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
+                                Piece::King => Some(self.generate_king_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
                                 _ => None,
                             };
 
@@ -551,6 +551,14 @@ impl Board {
 
                                 moves.extend(en_passants);
                             }
+
+                            if let Piece::King = $piece {
+                                let castling_moves: Vec<Move> = self.generate_castling_moves().into_iter().map(|destination| {
+                                    Move::new_castle(square, destination)
+                                }).collect();
+
+                                moves.extend(castling_moves);
+                            }
                         }
 
                         self.pieces[$piece as usize + $offset] = pieces;
@@ -584,7 +592,7 @@ impl Board {
             )),
         }
 
-        todo!("Conditions for castling not yet implemented!")
+        moves
     }
 
     pub fn generate_ray_moves(&self) -> BitBoard {
@@ -808,13 +816,13 @@ impl Board {
         };
         let mut moves = BitBoard(0);
 
-        moves |= (kings << 7) & !BitBoard(0x0101010101010101); // Mask out the H file
+        moves |= (kings << 7) & !BitBoard(0x8080808080808080); // Mask out the H file
         moves |= kings << 8;
-        moves |= (kings << 9) & !BitBoard(0x8080808080808080); // Mask out the A file
-        moves |= (kings << 1) & !BitBoard(0x0101010101010101); // Mask out the H file
+        moves |= (kings << 9) & !BitBoard(0x0101010101010101); // Mask out the A file
+        moves |= (kings << 1) & !BitBoard(0x0101010101010101); // Mask out the A file
 
-        moves |= (kings >> 1) & !BitBoard(0x8080808080808080); // Mask out the A file
-        moves |= (kings >> 7) & !BitBoard(0x0101010101010101); // Mask out the H file
+        moves |= (kings >> 1) & !BitBoard(0x8080808080808080); // Mask out the H file
+        moves |= (kings >> 7) & !BitBoard(0x0101010101010101); // Mask out the A file
         moves |= kings >> 8;
         moves |= (kings >> 9) & !BitBoard(0x8080808080808080); // Mask out the A file
 
