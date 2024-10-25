@@ -15,16 +15,16 @@ fn test_pawn_move_generation() {
     {
         let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         let board = Board::from_fen(fen);
-    
+
         let pawn_pushes = board.generate_pawn_pushes();
         assert_eq!(pawn_pushes, BitBoard(0x00000000FFFF0000));
-    
+
         let pawn_captures = board.generate_pawn_captures();
         assert_eq!(pawn_captures, BitBoard(0));
-    
+
         let en_passant = board.generate_en_passant();
         assert_eq!(en_passant, BitBoard(0));
-    
+
         let pawn_moves = board.generate_pawn_moves();
         assert_eq!(pawn_moves, BitBoard(0x00000000FFFF0000));
     }
@@ -50,11 +50,22 @@ fn test_pawn_move_generation() {
 
 #[test]
 fn test_knight_move_generation() {
-    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    let board = Board::from_fen(fen);
+    {
+        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        let board = Board::from_fen(fen);
 
-    let knight_moves = board.generate_knight_moves();
-    assert_eq!(knight_moves, BitBoard(0x0000000000A50000));
+        let knight_moves = board.generate_knight_moves();
+        assert_eq!(knight_moves, BitBoard(0x0000000000A50000));
+    }
+
+    // Test move generation from a endgame position
+    {
+        let fen = "8/pn6/1k2Pp2/1P3P2/1K6/8/8/8 b - - 0 1";
+        let board = Board::from_fen(fen);
+
+        let kinght_moves = board.generate_knight_moves();
+        assert_eq!(kinght_moves, BitBoard(0x0800080500000000));
+    }
 }
 
 #[test]
@@ -74,7 +85,16 @@ fn test_bishop_move_generation() {
         let board = Board::from_fen(fen);
 
         let bishop_moves = board.generate_bishop_moves();
-        assert_eq!(bishop_moves, BitBoard(0x000000204081000));
+        assert_eq!(bishop_moves, BitBoard(0x0000000204081000));
+    }
+
+    // Test move generation from a endgame position
+    {
+        let fen = "8/p3r3/1k2Pp2/1P3P2/1K4B1/8/8/8 w H - 0 1";
+        let board = Board::from_fen(fen);
+
+        let bishop_moves = board.generate_bishop_moves();
+        assert_eq!(bishop_moves, BitBoard(0x0000008000a01008));
     }
 }
 
@@ -97,6 +117,15 @@ fn test_rook_move_generation() {
         let rook_moves = board.generate_rook_moves();
         assert_eq!(rook_moves, BitBoard(0x0000000000000040));
     }
+
+    // Test move generation from a endgame position
+    {
+        let fen = "8/p3r3/1k2Pp2/1P3P2/1K6/8/8/8 b - - 0 1";
+        let board = Board::from_fen(fen);
+
+        let rook_moves = board.generate_rook_moves();
+        assert_eq!(rook_moves, BitBoard(0x10ee100000000000));
+    }
 }
 
 #[test]
@@ -117,6 +146,15 @@ fn test_queen_move_generation() {
 
         let queen_moves = board.generate_queen_moves();
         assert_eq!(queen_moves, BitBoard(0x0000000000001000));
+    }
+
+    // Test move generation from a endgame position
+    {
+        let fen = "8/p1q5/1k2Pp2/1P3P2/1K6/8/R7/8 b H - 0 1";
+        let board = Board::from_fen(fen);
+
+        let queen_moves = board.generate_queen_moves();
+        assert_eq!(queen_moves, BitBoard(0x0efa0c1424448404));
     }
 }
 

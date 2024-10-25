@@ -300,7 +300,7 @@ impl Board {
 
                 self.pieces[piece.clone() as usize + offset].clear_bit(from);
                 self.pieces[piece as usize + offset].set_bit(to);
-                self.clear_piece(to, Color::Black);
+                self.clear_piece(to, self.side_to_move.toggle());
             }
             MoveType::Castle => {
                 let (kingside, queenside) = match self.side_to_move {
@@ -339,20 +339,20 @@ impl Board {
 
                 self.pieces[piece.clone() as usize + offset].clear_bit(from);
                 self.pieces[piece as usize + offset].set_bit(to);
-                self.clear_piece(behind_pawn, Color::Black)
+                self.clear_piece(behind_pawn, self.side_to_move.toggle())
             }
             MoveType::Promotion(piece) => {
                 self.board_history.push(BoardHistory::from(self.clone()));
 
                 self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.set_piece(piece.clone(), Color::White, to)
+                self.set_piece(piece.clone(), self.side_to_move.clone(), to)
             }
             MoveType::CapturePromotion(piece) => {
                 self.board_history.push(BoardHistory::from(self.clone()));
 
                 self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.set_piece(piece.clone(), Color::White, to);
-                self.clear_piece(to, Color::Black);
+                self.set_piece(piece.clone(), self.side_to_move.clone(), to);
+                self.clear_piece(to, self.side_to_move.toggle());
             }
             MoveType::Check => {
                 self.board_history.push(BoardHistory::from(self.clone()));
@@ -717,10 +717,10 @@ impl Board {
         knight_moves |= (knights >> 15) & !BitBoard(0x0101010101010101); // Mask out the H file
         knight_moves |= (knights >> 17) & !BitBoard(0x8080808080808080); // Mask out the A file
 
-        knight_moves |= (knights << 10) & !BitBoard(0xC0C0C0C0C0C0C0C0); // Mask out the GH file
-        knight_moves |= (knights << 6) & !BitBoard(0x0303030303030303); // Mask out the AB file
-        knight_moves |= (knights >> 6) & !BitBoard(0xC0C0C0C0C0C0C0C0); // Mask out the GH file
-        knight_moves |= (knights >> 10) & !BitBoard(0x0303030303030303); // Mask out the AB file
+        knight_moves |= (knights << 10) & !BitBoard(0x0303030303030303); // Mask out the GH file
+        knight_moves |= (knights << 6) & !BitBoard(0xC0C0C0C0C0C0C0C0); // Mask out the AB file
+        knight_moves |= (knights >> 6) & !BitBoard(0x0303030303030303); // Mask out the GH file
+        knight_moves |= (knights >> 10) & !BitBoard(0xC0C0C0C0C0C0C0C0); // Mask out the AB file
 
         knight_moves &= !allied_pieces;
 
@@ -821,10 +821,10 @@ impl Board {
         moves |= (kings << 9) & !BitBoard(0x0101010101010101); // Mask out the A file
         moves |= (kings << 1) & !BitBoard(0x0101010101010101); // Mask out the A file
 
-        moves |= (kings >> 1) & !BitBoard(0x8080808080808080); // Mask out the H file
         moves |= (kings >> 7) & !BitBoard(0x0101010101010101); // Mask out the A file
         moves |= kings >> 8;
-        moves |= (kings >> 9) & !BitBoard(0x8080808080808080); // Mask out the A file
+        moves |= (kings >> 9) & !BitBoard(0x8080808080808080); // Mask out the H file
+        moves |= (kings >> 1) & !BitBoard(0x8080808080808080); // Mask out the H file
 
         moves &= !allied_pieces;
 
