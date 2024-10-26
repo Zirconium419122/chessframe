@@ -170,14 +170,13 @@ impl Board {
 
             match move_type {
                 MoveType::Quiet => {
-                    let occupancy = self.occupancy[0] | self.occupancy[1];
                     let moves = generate_moves[piece.clone() as usize];
 
                     if moves.is_not_set(to) {
                         return Err(format!("Invalid move: {}!", to));
                     }
 
-                    if (moves & !occupancy).is_zero() {
+                    if (moves & self.occupancy[self.side_to_move.toggle() as usize]).is_set(to) {
                         return Err("Move is not a quiet move!".to_string());
                     }
                 }
@@ -188,7 +187,8 @@ impl Board {
                         return Err(format!("Invalid move: {}!", to));
                     }
 
-                    if (moves & self.occupancy[self.side_to_move.toggle() as usize]).is_zero() {
+                    if (moves & self.occupancy[self.side_to_move.toggle() as usize]).is_not_set(to)
+                    {
                         return Err("Move is not a capture!".to_string());
                     }
                 }
@@ -257,6 +257,80 @@ impl Board {
             Color::Black => 6,
         };
 
+        match move_type {
+            MoveType::Quiet => {
+                self.board_history.push(BoardHistory::from(self.clone()));
+
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[piece.clone() as usize + offset].set_bit(to)
+            }
+            MoveType::Capture => {
+                self.board_history.push(BoardHistory::from(self.clone()));
+
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[piece.clone() as usize + offset].set_bit(to);
+                self.clear_piece(to, self.side_to_move.toggle());
+            }
+            MoveType::Castle => {
+                let (kingside, queenside) = match self.side_to_move {
+                    Color::White => (6, 2),
+                    Color::Black => (62, 58),
+                };
+
+                if to == kingside {
+                    self.board_history.push(BoardHistory::from(self.clone()));
+
+                    self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                    self.pieces[piece.clone() as usize + offset].set_bit(to);
+
+                    self.pieces[3].clear_bit(kingside + 1);
+                    self.pieces[3].set_bit(kingside - 1);
+
+                    self.castling_rights.revoke_all(&self.side_to_move);
+                } else if to == queenside {
+                    self.board_history.push(BoardHistory::from(self.clone()));
+
+                    self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                    self.pieces[piece.clone() as usize + offset].set_bit(to);
+
+                    self.pieces[3].clear_bit(queenside - 2);
+                    self.pieces[3].set_bit(queenside + 1);
+
+                    self.castling_rights.revoke_all(&self.side_to_move);
+                }
+            }
+            MoveType::EnPassant => {
+                let behind_pawn = match self.side_to_move {
+                    Color::White => to - 8,
+                    Color::Black => to + 8,
+                };
+                self.board_history.push(BoardHistory::from(self.clone()));
+
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[piece.clone() as usize + offset].set_bit(to);
+                self.clear_piece(behind_pawn, self.side_to_move.toggle())
+            }
+            MoveType::Promotion(piece) => {
+                self.board_history.push(BoardHistory::from(self.clone()));
+
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.set_piece(piece.clone(), self.side_to_move.clone(), to)
+            }
+            MoveType::CapturePromotion(piece) => {
+                self.board_history.push(BoardHistory::from(self.clone()));
+
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.set_piece(piece.clone(), self.side_to_move.clone(), to);
+                self.clear_piece(to, self.side_to_move.toggle());
+            }
+            MoveType::Check => {
+                self.board_history.push(BoardHistory::from(self.clone()));
+
+                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[piece.clone() as usize + offset].set_bit(to)
+            }
+        }
+
         match piece {
             Piece::Pawn => {
                 let (square_behind_pawn, two_squares_behind_pawn) = match self.side_to_move {
@@ -286,80 +360,6 @@ impl Board {
                 }
             }
             _ => (),
-        }
-
-        match move_type {
-            MoveType::Quiet => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.pieces[piece as usize + offset].set_bit(to)
-            }
-            MoveType::Capture => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.pieces[piece as usize + offset].set_bit(to);
-                self.clear_piece(to, self.side_to_move.toggle());
-            }
-            MoveType::Castle => {
-                let (kingside, queenside) = match self.side_to_move {
-                    Color::White => (6, 2),
-                    Color::Black => (62, 58),
-                };
-
-                if to == kingside {
-                    self.board_history.push(BoardHistory::from(self.clone()));
-
-                    self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                    self.pieces[piece as usize + offset].set_bit(to);
-
-                    self.pieces[3].clear_bit(kingside + 1);
-                    self.pieces[3].set_bit(kingside - 1);
-
-                    self.castling_rights.revoke_all(&self.side_to_move);
-                } else if to == queenside {
-                    self.board_history.push(BoardHistory::from(self.clone()));
-
-                    self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                    self.pieces[piece as usize + offset].set_bit(to);
-
-                    self.pieces[3].clear_bit(queenside - 2);
-                    self.pieces[3].set_bit(queenside + 1);
-
-                    self.castling_rights.revoke_all(&self.side_to_move);
-                }
-            }
-            MoveType::EnPassant => {
-                let behind_pawn = match self.side_to_move {
-                    Color::White => to - 8,
-                    Color::Black => to + 8,
-                };
-                self.board_history.push(BoardHistory::from(self.clone()));
-
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.pieces[piece as usize + offset].set_bit(to);
-                self.clear_piece(behind_pawn, self.side_to_move.toggle())
-            }
-            MoveType::Promotion(piece) => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.set_piece(piece.clone(), self.side_to_move.clone(), to)
-            }
-            MoveType::CapturePromotion(piece) => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.set_piece(piece.clone(), self.side_to_move.clone(), to);
-                self.clear_piece(to, self.side_to_move.toggle());
-            }
-            MoveType::Check => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.pieces[piece as usize + offset].set_bit(to)
-            }
         }
 
         self.update_occupancy();
