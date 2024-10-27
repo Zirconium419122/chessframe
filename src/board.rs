@@ -306,20 +306,20 @@ impl Board {
                 };
                 self.board_history.push(BoardHistory::from(self.clone()));
 
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.pieces[piece.clone() as usize + offset].set_bit(to);
+                self.pieces[offset].clear_bit(from);
+                self.pieces[offset].set_bit(to);
                 self.clear_piece(behind_pawn, self.side_to_move.toggle())
             }
             MoveType::Promotion(piece) => {
                 self.board_history.push(BoardHistory::from(self.clone()));
 
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[offset].clear_bit(from);
                 self.set_piece(piece.clone(), self.side_to_move.clone(), to)
             }
             MoveType::CapturePromotion(piece) => {
                 self.board_history.push(BoardHistory::from(self.clone()));
 
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
+                self.pieces[offset].clear_bit(from);
                 self.set_piece(piece.clone(), self.side_to_move.clone(), to);
                 self.clear_piece(to, self.side_to_move.toggle());
             }
@@ -366,7 +366,9 @@ impl Board {
 
         self.side_to_move = self.side_to_move.toggle();
 
-        if (self.generate_ray_moves() & self.pieces[5 + offset]).is_not_zero() {
+        self.update_occupancy();
+
+        if (self.generate_moves() & self.pieces[5 + offset]).is_not_zero() {
             self.unmake_move().unwrap();
 
             return Err("Cannot move pinned piece!".to_string());
@@ -479,7 +481,7 @@ impl Board {
                     let mut moves: Vec<Move> = Vec::new();
 
                     $(
-                        let pieces = self.pieces[$piece.to_index() + $offset];
+                        let pieces = self.pieces[$piece as usize + $offset];
 
                         for square in pieces.into_iter() {
                             self.pieces[$piece as usize + $offset] = BitBoard(1 << square);

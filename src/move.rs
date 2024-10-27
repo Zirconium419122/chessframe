@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     bitboard::BitBoard, board::Board, castling_rights::CastlingRights, color::Color, piece::Piece,
 };
@@ -32,10 +34,27 @@ impl From<Square> for usize {
     }
 }
 
+#[derive(Clone)]
 pub struct Move {
     pub from: usize,
     pub to: usize,
     pub move_type: MoveType,
+}
+
+impl fmt::Display for Move {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let (rank_from, file_from) = (self.from / 8 + 1, self.from % 8);
+        let (rank_to, file_to) = (self.to / 8 + 1, self.to % 8);
+
+        let file_from_char = (file_from as u8 + b'a') as char;
+        let file_to_char = (file_to as u8 + b'a') as char;
+
+        write!(
+            f,
+            "{}{}{}{}",
+            file_from_char, rank_from, file_to_char, rank_to
+        )
+    }
 }
 
 impl Move {
@@ -96,6 +115,7 @@ impl Move {
     }
 }
 
+#[derive(Clone)]
 pub enum MoveType {
     Quiet,
     Capture,

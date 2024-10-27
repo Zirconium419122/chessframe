@@ -29,6 +29,21 @@ fn test_pawn_move_generation() {
         assert_eq!(pawn_moves, BitBoard(0x00000000FFFF0000));
     }
 
+    // Test pawn move generation from a opening position
+    {
+        let fen = "rnbqkbnr/1ppppppp/8/P7/8/8/P1PPPPPP/RNBQKBNR b KQkq - 0 2";
+        let board = Board::from_fen(fen);
+
+        let pawn_pushes = board.generate_pawn_pushes();
+        assert_eq!(pawn_pushes, BitBoard(0x0000fefe00000000));
+
+        let pawn_captures = board.generate_pawn_captures();
+        assert_eq!(pawn_captures, BitBoard(0));
+
+        let en_passant = board.generate_en_passant();
+        assert_eq!(en_passant, BitBoard(0));
+    }
+
     // Test pawn move generation from a endgame position
     {
         let fen = "8/p7/1k2Pp2/1P3P2/1K6/8/8/8 w - - 0 1";
