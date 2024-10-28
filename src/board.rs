@@ -250,8 +250,6 @@ impl Board {
 
         let piece = self.validate_move(&mv)?;
 
-        self.en_passant_square = None;
-
         let offset = match self.side_to_move {
             Color::White => 0,
             Color::Black => 6,
@@ -329,6 +327,11 @@ impl Board {
                 self.pieces[piece.clone() as usize + offset].clear_bit(from);
                 self.pieces[piece.clone() as usize + offset].set_bit(to)
             }
+        }
+
+        if let MoveType::EnPassant = move_type {
+        } else {
+            self.en_passant_square = None;
         }
 
         match piece {
