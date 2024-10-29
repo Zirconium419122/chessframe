@@ -115,7 +115,7 @@ impl Move {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum MoveType {
     Quiet,
     Capture,

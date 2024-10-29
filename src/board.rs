@@ -103,7 +103,7 @@ impl Board {
 
     fn place_piece(&mut self, piece: Piece, color: Color, rank: usize, file: usize) {
         let square = 8 * rank + file;
-        self.set_piece(piece, color, square);
+        self.set_piece(&piece, &color, square);
     }
 
     fn parse_en_passant(&mut self, en_passant: &str) {
@@ -149,99 +149,74 @@ impl Board {
         let (from, to) = mv.get_move();
         let move_type = mv.get_move_type();
 
-        let generate_moves = [
-            self.generate_pawn_moves(),
-            self.generate_knight_moves(),
-            self.generate_bishop_moves(),
-            self.generate_rook_moves(),
-            self.generate_queen_moves(),
-            self.generate_king_moves() | self.generate_castling_moves(),
-        ];
+        let (piece, _) = self
+            .get_piece(from)
+            .ok_or_else(|| format!("No piece found on square: {}!", from))?;
 
-        let offset = match self.side_to_move {
-            Color::White => 0,
-            Color::Black => 6,
-        };
-
-        if let Some((piece, _)) = self.get_piece(from) {
-            if self.occupancy[self.side_to_move.clone() as usize].is_set(to) {
-                return Err(format!("Can't move piece to square: {}!", to));
-            }
-
-            match move_type {
-                MoveType::Quiet => {
-                    let moves = generate_moves[piece.clone() as usize];
-
-                    if moves.is_not_set(to) {
-                        return Err(format!("Invalid move: {}!", to));
-                    }
-
-                    if (moves & self.occupancy[self.side_to_move.toggle() as usize]).is_set(to) {
-                        return Err("Move is not a quiet move!".to_string());
-                    }
-                }
-                MoveType::Capture => {
-                    let moves = generate_moves[piece.clone() as usize];
-
-                    if moves.is_not_set(to) {
-                        return Err(format!("Invalid move: {}!", to));
-                    }
-
-                    if (moves & self.occupancy[self.side_to_move.toggle() as usize]).is_not_set(to)
-                    {
-                        return Err("Move is not a capture!".to_string());
-                    }
-                }
-                MoveType::Castle => {
-                    let (king_side, queen_side) = match self.side_to_move {
-                        Color::White => (6, 2),
-                        Color::Black => (62, 58),
-                    };
-
-                    if to == king_side {
-                        self.can_castle(true)?
-                    } else if to == queen_side {
-                        self.can_castle(false)?
-                    } else {
-                        return Err("Invalid castling move!".to_string());
-                    }
-                }
-                MoveType::EnPassant => {
-                    if self.en_passant_square.is_some() {
-                        if self.generate_en_passant().is_not_set(to) {
-                            return Err(format!("En passant to: {}, is not a legal move!", to));
-                        }
-                    } else {
-                        return Err("No en passant square set!".to_string());
-                    }
-                }
-                MoveType::Promotion(_) => {
-                    if self.generate_pawn_pushes().is_not_set(to) {
-                        return Err(format!("Cannot promote at: {}!", to));
-                    }
-                }
-                MoveType::CapturePromotion(_) => {
-                    if self.generate_pawn_captures().is_not_set(to) {
-                        return Err(format!("Cannot capture and promote at: {}!", to));
-                    }
-                }
-                MoveType::Check => {
-                    let moves = generate_moves[piece.clone() as usize];
-
-                    if moves.is_not_set(to) {
-                        return Err(format!("Cannot move piece to: {}!", to));
-                    }
-
-                    if (self.pieces[5 + offset] & moves).is_zero() {
-                        return Err(format!("Moving piece to: {}, is not a check!", to));
-                    }
-                }
-            }
-
-            return Ok(piece);
+        if self.occupancy[self.side_to_move.clone() as usize].is_set(to) {
+            return Err(format!("Can't move piece to square: {}!", to));
         }
 
-        Err(format!("No piece found on square: {}!", from))
+        let piece_moves = match piece {
+            Piece::Pawn => self.generate_pawn_moves(),
+            Piece::Knight => self.generate_knight_moves(),
+            Piece::Bishop => self.generate_bishop_moves(),
+            Piece::Rook => self.generate_rook_moves(),
+            Piece::Queen => self.generate_queen_moves(),
+            Piece::King => self.generate_king_moves() | self.generate_castling_moves(),
+        };
+
+        match move_type {
+            MoveType::Quiet | MoveType::Capture | MoveType::Check => {
+                if piece_moves.is_not_set(to) {
+                    return Err(format!("Invalid move: {}!", to));
+                }
+
+                if (piece_moves & self.occupancy[self.side_to_move.toggle() as usize]).is_set(to)
+                    && move_type == &MoveType::Quiet
+                {
+                    return Err("Move is not a quiet move!".to_string());
+                }
+
+                if (piece_moves & self.occupancy[self.side_to_move.toggle() as usize])
+                    .is_not_set(to)
+                    && move_type == &MoveType::Capture
+                {
+                    return Err("Move is not a capture!".to_string());
+                }
+            }
+            MoveType::Castle => {
+                let (king_side, queen_side) = match self.side_to_move {
+                    Color::White => (6, 2),
+                    Color::Black => (62, 58),
+                };
+
+                if to == king_side {
+                    self.can_castle(true)?;
+                } else if to == queen_side {
+                    self.can_castle(false)?;
+                } else {
+                    return Err("Invalid castling move!".to_string());
+                }
+            }
+            MoveType::EnPassant => {
+                if self.en_passant_square.is_none() || self.generate_en_passant().is_not_set(to) {
+                    return Err("Invalid en passant move!".to_string());
+                }
+            }
+            MoveType::Promotion(_) => {
+                if self.generate_pawn_pushes().is_not_set(to) {
+                    return Err(format!("Cannot promote at: {}!", to));
+                }
+            }
+            MoveType::CapturePromotion(_) => {
+                if self.generate_pawn_captures().is_not_set(to) {
+                    return Err(format!("Cannot capture and promote at: {}!", to));
+                }
+            }
+        }
+
+        Ok(piece)
     }
 
     pub fn make_move(&mut self, mv: Move) -> Result<(), String> {
@@ -255,18 +230,16 @@ impl Board {
             Color::Black => 6,
         };
 
+        self.board_history.push(BoardHistory::from(self.clone()));
+
         match move_type {
             MoveType::Quiet => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.pieces[piece.clone() as usize + offset].set_bit(to)
+                self.pieces[piece.to_index() + offset].clear_bit(from);
+                self.pieces[piece.to_index() + offset].set_bit(to)
             }
             MoveType::Capture => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.pieces[piece.clone() as usize + offset].set_bit(to);
+                self.pieces[piece.to_index() + offset].clear_bit(from);
+                self.pieces[piece.to_index() + offset].set_bit(to);
                 self.clear_piece(to, self.side_to_move.toggle());
             }
             MoveType::Castle => {
@@ -276,20 +249,16 @@ impl Board {
                 };
 
                 if to == kingside {
-                    self.board_history.push(BoardHistory::from(self.clone()));
-
-                    self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                    self.pieces[piece.clone() as usize + offset].set_bit(to);
+                    self.pieces[piece.to_index() + offset].clear_bit(from);
+                    self.pieces[piece.to_index() + offset].set_bit(to);
 
                     self.pieces[3].clear_bit(kingside + 1);
                     self.pieces[3].set_bit(kingside - 1);
 
                     self.castling_rights.revoke_all(&self.side_to_move);
                 } else if to == queenside {
-                    self.board_history.push(BoardHistory::from(self.clone()));
-
-                    self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                    self.pieces[piece.clone() as usize + offset].set_bit(to);
+                    self.pieces[piece.to_index() + offset].clear_bit(from);
+                    self.pieces[piece.to_index() + offset].set_bit(to);
 
                     self.pieces[3].clear_bit(queenside - 2);
                     self.pieces[3].set_bit(queenside + 1);
@@ -302,30 +271,23 @@ impl Board {
                     Color::White => to - 8,
                     Color::Black => to + 8,
                 };
-                self.board_history.push(BoardHistory::from(self.clone()));
 
                 self.pieces[offset].clear_bit(from);
                 self.pieces[offset].set_bit(to);
                 self.clear_piece(behind_pawn, self.side_to_move.toggle())
             }
             MoveType::Promotion(piece) => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
                 self.pieces[offset].clear_bit(from);
-                self.set_piece(piece.clone(), self.side_to_move.clone(), to)
+                self.set_piece(piece, &self.side_to_move.clone(), to)
             }
             MoveType::CapturePromotion(piece) => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
                 self.pieces[offset].clear_bit(from);
-                self.set_piece(piece.clone(), self.side_to_move.clone(), to);
+                self.set_piece(piece, &self.side_to_move.clone(), to);
                 self.clear_piece(to, self.side_to_move.toggle());
             }
             MoveType::Check => {
-                self.board_history.push(BoardHistory::from(self.clone()));
-
-                self.pieces[piece.clone() as usize + offset].clear_bit(from);
-                self.pieces[piece.clone() as usize + offset].set_bit(to)
+                self.pieces[piece.to_index() + offset].clear_bit(from);
+                self.pieces[piece.to_index() + offset].set_bit(to)
             }
         }
 
@@ -369,8 +331,6 @@ impl Board {
 
         self.side_to_move = self.side_to_move.toggle();
 
-        self.update_occupancy();
-
         if (self.generate_moves() & self.pieces[5 + offset]).is_not_zero() {
             self.unmake_move().unwrap();
 
@@ -400,63 +360,62 @@ impl Board {
     fn update_occupancy(&mut self) {
         match self.side_to_move {
             Color::White => {
-                self.occupancy[0] = self
-                    .pieces
-                    .iter()
-                    .take(6)
-                    .fold(BitBoard(0), |acc, x| acc | *x);
+                self.occupancy[0] = self.pieces[0]
+                    | self.pieces[1]
+                    | self.pieces[2]
+                    | self.pieces[3]
+                    | self.pieces[4]
+                    | self.pieces[5]
             }
             Color::Black => {
-                self.occupancy[1] = self
-                    .pieces
-                    .iter()
-                    .skip(6)
-                    .fold(BitBoard(0), |acc, x| acc | *x);
+                self.occupancy[1] = self.pieces[6]
+                    | self.pieces[7]
+                    | self.pieces[8]
+                    | self.pieces[9]
+                    | self.pieces[10]
+                    | self.pieces[11]
             }
         }
     }
 
     pub fn get_piece(&self, square: usize) -> Option<(Piece, Color)> {
-        if self.occupancy[0].is_not_set(square) && self.occupancy[1].is_not_set(square) {
+        if (self.occupancy[0] | self.occupancy[1]).is_not_set(square) {
             return None;
         }
 
-        for (i, piece) in self.pieces.into_iter().enumerate() {
-            if piece.is_set(square) {
-                match i {
-                    0..6 => {
-                        return Some((Piece::from(i), Color::White));
-                    }
-                    6..12 => {
-                        return Some((Piece::from(i - 6), Color::Black));
-                    }
-                    _ => panic!("Invalid piece index: {}", i),
-                }
+        for i in 0..6 {
+            if self.pieces[i].is_set(square) {
+                return Some((Piece::from(i), Color::White));
+            } else if self.pieces[i + 6].is_set(square) {
+                return Some((Piece::from(i), Color::Black));
             }
         }
 
         None
     }
 
-    pub fn set_piece(&mut self, piece: Piece, color: Color, square: usize) {
-        let bitboard = &mut self.pieces[piece.piece_index(&color)];
+    pub fn set_piece(&mut self, piece: &Piece, color: &Color, square: usize) {
+        let bitboard = &mut self.pieces[piece.piece_index(color)];
         bitboard.set_bit(square);
         self.occupancy[color.color_index()].set_bit(square);
     }
 
     pub fn clear_piece(&mut self, square: usize, color: Color) {
-        if self.occupancy[color.clone() as usize].is_not_set(square) {
+        let color_index = color as usize;
+        if self.occupancy[color_index].is_not_set(square) {
             return;
         }
 
-        let offset = match color {
-            Color::White => 0,
-            Color::Black => 6,
-        };
+        let offset = color_index * 6;
 
         for i in 0..6 {
-            self.pieces[i + offset].clear_bit(square);
+            if self.pieces[i + offset].is_set(square) {
+                self.pieces[i + offset].clear_bit(square);
+                break;
+            }
         }
+
+        self.occupancy[color_index].clear_bit(square);
     }
 
     pub fn generate_moves(&self) -> BitBoard {
@@ -481,7 +440,8 @@ impl Board {
         macro_rules! extract_moves {
             ($offset:literal, $($piece:expr),+) => {
                 {
-                    let mut moves: Vec<Move> = Vec::new();
+                    let mut moves: Vec<Move> = Vec::with_capacity(218);
+                    let opponent_occupancy = self.occupancy[self.side_to_move.toggle() as usize];
 
                     $(
                         let pieces = self.pieces[$piece as usize + $offset];
@@ -489,81 +449,70 @@ impl Board {
                         for square in pieces.into_iter() {
                             self.pieces[$piece as usize + $offset] = BitBoard(1 << square);
 
-                            let quiet_moves: Option<BitBoard> = match $piece {
-                                Piece::Knight => Some(self.generate_knight_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::Bishop => Some(self.generate_bishop_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::Rook => Some(self.generate_rook_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::Queen => Some(self.generate_queen_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::King => Some(self.generate_king_moves() & !self.occupancy[self.side_to_move.toggle() as usize]),
-                                _ => None,
+                            let generated_moves = match $piece {
+                                Piece::Knight => self.generate_knight_moves(),
+                                Piece::Bishop => self.generate_bishop_moves(),
+                                Piece::Rook => self.generate_rook_moves(),
+                                Piece::Queen => self.generate_queen_moves(),
+                                Piece::King => self.generate_king_moves(),
+                                _ => BitBoard(0),
                             };
 
-                            if let Some(quiet_moves) = quiet_moves {
-                                moves.extend(quiet_moves.into_iter().map(|destination| Move::new(square, destination)));
+                            let quiet_moves = generated_moves & !opponent_occupancy;
+                            let capture_moves = generated_moves & opponent_occupancy;
+
+                            // Extend moves with quiet moves
+                            moves.extend(quiet_moves.into_iter().map(|destination| Move::new(square, destination)));
+
+                            // Extend moves with capture moves
+                            moves.extend(capture_moves.into_iter().map(|destination| Move::new_capture(square, destination)));
+
+                            match $piece {
+                                Piece::Pawn => {
+                                    moves.extend(self.generate_pawn_pushes().into_iter().flat_map(|destination| {
+                                        if self.is_promotion(destination) {
+                                            vec![
+                                                Move::new_promotion(square, destination, Piece::Knight),
+                                                Move::new_promotion(square, destination, Piece::Bishop),
+                                                Move::new_promotion(square, destination, Piece::Rook),
+                                                Move::new_promotion(square, destination, Piece::Queen),
+                                            ]
+                                        } else {
+                                            vec![
+                                                Move::new(square, destination)
+                                            ]
+                                        }
+                                    }));
+
+                                    moves.extend(self.generate_pawn_captures().into_iter().flat_map(|destination| {
+                                        if self.is_promotion(destination) {
+                                            vec![
+                                                Move::new_capture_promotion(square, destination, Piece::Knight),
+                                                Move::new_capture_promotion(square, destination, Piece::Bishop),
+                                                Move::new_capture_promotion(square, destination, Piece::Rook),
+                                                Move::new_capture_promotion(square, destination, Piece::Queen),
+                                            ]
+                                        } else {
+                                            vec![
+                                                Move::new_capture(square, destination),
+                                            ]
+                                        }
+                                    }));
+
+                                    moves.extend(self.generate_en_passant().into_iter().map(|destination| {
+                                            Move::new_en_passant(square, destination)
+                                        })
+                                    );
+                                }
+                                Piece::King => {
+                                    moves.extend(self.generate_castling_moves().into_iter().map(|destination| {
+                                            Move::new_castle(square, destination)
+                                        })
+                                    );
+                                }
+                                _ => (),
                             }
 
-                            let capture_moves: Option<BitBoard> = match $piece {
-                                Piece::Knight => Some(self.generate_knight_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::Bishop => Some(self.generate_bishop_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::Rook => Some(self.generate_rook_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::Queen => Some(self.generate_queen_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
-                                Piece::King => Some(self.generate_king_moves() & self.occupancy[self.side_to_move.toggle() as usize]),
-                                _ => None,
-                            };
-
-                            if let Some(capture_moves) = capture_moves {
-                                moves.extend(capture_moves.into_iter().map(|destination| Move::new_capture(square, destination)));
-                            }
-
-                            if let Piece::Pawn = $piece {
-                                let pawn_pushes: Vec<Move> = self.generate_pawn_pushes().into_iter().flat_map(|destination| {
-                                    if self.is_promotion(destination) {
-                                        vec![
-                                            Move::new_promotion(square, destination, Piece::Knight),
-                                            Move::new_promotion(square, destination, Piece::Bishop),
-                                            Move::new_promotion(square, destination, Piece::Rook),
-                                            Move::new_promotion(square, destination, Piece::Queen),
-                                        ]
-                                    } else {
-                                        vec![
-                                            Move::new(square, destination)
-                                        ]
-                                    }
-                                }).collect();
-
-                                moves.extend(pawn_pushes);
-
-                                let pawn_captures: Vec<Move> = self.generate_pawn_captures().into_iter().flat_map(|destination| {
-                                    if self.is_promotion(destination) {
-                                        vec![
-                                            Move::new_capture_promotion(square, destination, Piece::Knight),
-                                            Move::new_capture_promotion(square, destination, Piece::Bishop),
-                                            Move::new_capture_promotion(square, destination, Piece::Rook),
-                                            Move::new_capture_promotion(square, destination, Piece::Queen),
-                                        ]
-                                    } else {
-                                        vec![
-                                            Move::new_capture(square, destination),
-                                        ]
-                                    }
-                                }).collect();
-
-                                moves.extend(pawn_captures);
-
-                                let en_passants: Vec<Move> = self.generate_en_passant().into_iter().map(|destination| {
-                                    Move::new_en_passant(square, destination)
-                                }).collect();
-
-                                moves.extend(en_passants);
-                            }
-
-                            if let Piece::King = $piece {
-                                let castling_moves: Vec<Move> = self.generate_castling_moves().into_iter().map(|destination| {
-                                    Move::new_castle(square, destination)
-                                }).collect();
-
-                                moves.extend(castling_moves);
-                            }
                         }
 
                         self.pieces[$piece as usize + $offset] = pieces;
@@ -851,11 +800,13 @@ impl Board {
 
         self.side_to_move = self.side_to_move.toggle();
 
+        let enemy_moves = self.generate_moves();
+
         if self
             .castling_rights
             .can_castle(&self.side_to_move.toggle(), true)
             && (occupancy & king_side).is_zero()
-            && (self.generate_moves() & (king_side | king)).is_zero()
+            && (enemy_moves & (king_side | king)).is_zero()
         {
             moves |= match self.side_to_move.toggle() {
                 Color::White => BitBoard(0x40),
@@ -867,7 +818,7 @@ impl Board {
             .castling_rights
             .can_castle(&self.side_to_move.toggle(), false)
             && (occupancy & queen_side).is_zero()
-            && (self.generate_moves() & (queen_side | king)).is_zero()
+            && (enemy_moves & (queen_side | king)).is_zero()
         {
             moves |= match self.side_to_move.toggle() {
                 Color::White => BitBoard(0x04),
