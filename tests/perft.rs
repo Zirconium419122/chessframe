@@ -62,3 +62,22 @@ fn test_perft_depth_5() {
 
     assert_eq!(perft(&mut board, 5, false), 4865609);
 }
+
+// These test should only be run in release mode as the debug version is much slower
+#[test]
+#[cfg(not(debug_assertions))]
+fn test_perft_depth_6() {
+    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    let mut board = Board::from_fen(fen);
+
+    assert_eq!(perft(&mut board, 6, false), 119060324);
+}
+
+#[test]
+#[cfg(not(debug_assertions))]
+fn test_perft_depth_7() {
+    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    let mut board = Board::from_fen(fen);
+
+    assert_eq!(perft(&mut board, 7, true), 3195901860);
+}

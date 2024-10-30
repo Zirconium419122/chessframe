@@ -291,10 +291,7 @@ impl Board {
             }
         }
 
-        if let MoveType::EnPassant = move_type {
-        } else {
-            self.en_passant_square = None;
-        }
+        self.en_passant_square = None;
 
         match piece {
             Piece::Pawn => {
@@ -307,10 +304,7 @@ impl Board {
                 }
             }
             Piece::King => {
-                if let MoveType::Castle = move_type {
-                } else {
-                    self.castling_rights.revoke_all(&self.side_to_move);
-                }
+                self.castling_rights.revoke_all(&self.side_to_move);
             }
             Piece::Rook => {
                 let (kingside_rook, queenside_rook) = match self.side_to_move {

@@ -49,6 +49,21 @@ impl fmt::Display for Move {
         let file_from_char = (file_from as u8 + b'a') as char;
         let file_to_char = (file_to as u8 + b'a') as char;
 
+        match &self.move_type {
+            MoveType::Promotion(piece) | MoveType::CapturePromotion(piece) => {
+                return write!(
+                    f,
+                    "{}{}{}{}{}",
+                    file_from_char,
+                    rank_from,
+                    file_to_char,
+                    rank_to,
+                    piece.to_fen()
+                );
+            }
+            _ => (),
+        }
+
         write!(
             f,
             "{}{}{}{}",
