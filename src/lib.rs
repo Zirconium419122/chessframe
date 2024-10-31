@@ -5,3 +5,4 @@ pub mod color;
 pub mod magic;
 pub mod r#move;
 pub mod piece;
+pub mod uci;

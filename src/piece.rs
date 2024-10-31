@@ -1,7 +1,7 @@
 use crate::color::Color;
 
 #[repr(usize)]
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Piece {
     Pawn,
     Knight,
@@ -21,6 +21,20 @@ impl From<usize> for Piece {
             4 => Piece::Queen,
             5 => Piece::King,
             _ => panic!("Invalid piece index"),
+        }
+    }
+}
+
+impl From<char> for Piece {
+    fn from(value: char) -> Self {
+        match value {
+            'p' => Piece::Pawn,
+            'n' => Piece::Knight,
+            'b' => Piece::Bishop,
+            'r' => Piece::Rook,
+            'q' => Piece::Queen,
+            'k' => Piece::King,
+            _ => panic!("Invalid piece character"),
         }
     }
 }

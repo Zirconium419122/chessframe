@@ -34,7 +34,27 @@ impl From<Square> for usize {
     }
 }
 
-#[derive(Clone)]
+pub fn from_algebraic(square: &str) -> Result<usize, &'static str> {
+    if square.len() != 2 {
+        return Err("Invalid algebraic square notation");
+    }
+
+    let file = square.chars().next().unwrap();
+    let rank = square.chars().nth(1).unwrap();
+
+    // Convert file (a-h) to 0-7
+    let file_idx = (file as u8).wrapping_sub(b'a');
+    // Convert rank (1-8) to 0-7
+    let rank_idx = (rank as u8).wrapping_sub(b'1');
+
+    if file_idx < 8 && rank_idx < 8 {
+        Ok((rank_idx * 8 + file_idx) as usize)
+    } else {
+        Err("Invalid file or rank in algebraic square")
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Move {
     pub from: usize,
     pub to: usize,
@@ -130,7 +150,7 @@ impl Move {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MoveType {
     Quiet,
     Capture,

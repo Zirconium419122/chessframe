@@ -4,7 +4,7 @@ use crate::{
     color::Color,
     magic::{get_bishop_moves, get_rook_moves},
     piece::Piece,
-    r#move::{BoardHistory, Move, MoveType},
+    r#move::{from_algebraic, BoardHistory, Move, MoveType},
 };
 
 #[derive(Clone)]
@@ -143,6 +143,59 @@ impl Board {
                 Ok(())
             }
         }
+    }
+
+    pub fn infer_move(&mut self, mv: &str) -> Result<Move, &str> {
+        let from = from_algebraic(&mv[0..2]).unwrap();
+        let to = from_algebraic(&mv[2..4]).unwrap();
+        let promotion: Option<Piece> = match &mv.len() {
+            4 => None,
+            5 => Some(Piece::from(mv.chars().last().unwrap())),
+            _ => return Err("Invalid move notation!"),
+        };
+
+        if let Some((piece, _)) = self.get_piece(from) {
+            let mut mv;
+
+            if self.occupancy[self.side_to_move.toggle() as usize].is_not_set(to) {
+                mv = Move::new(from, to);
+            } else {
+                mv = Move::new_capture(from, to);
+            }
+
+            if let Ok(_) = self.validate_move(&mv) {
+                return Ok(mv);
+            }
+
+            match piece {
+                Piece::Pawn => {
+                    if let Some(promotion) = promotion {
+                        if self.occupancy[self.side_to_move.toggle() as usize].is_not_set(to) {
+                            mv = Move::new_promotion(from, to, promotion);
+                        } else {
+                            mv = Move::new_capture_promotion(from, to, promotion);
+                        }
+                    }
+                }
+                Piece::King => {
+                    let king = match self.side_to_move {
+                        Color::White => 4,
+                        Color::Black => 60,
+                    };
+
+                    if from == king && (to == king + 2 || to == king - 2) {
+                        mv = Move::new_castle(from, to);
+                    }
+                }
+                _ => unreachable!(),
+            }
+
+            if let Ok(_) = self.validate_move(&mv) {
+                return Ok(mv);
+            }
+        }
+
+        Err("No piece at from square")
     }
 
     pub fn validate_move(&mut self, mv: &Move) -> Result<Piece, String> {
