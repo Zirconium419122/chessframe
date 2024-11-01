@@ -51,7 +51,7 @@ impl From<String> for UciCommand {
     fn from(value: String) -> Self {
         let tokens: Vec<&str> = value.split_whitespace().collect();
 
-        match tokens.get(0) {
+        match tokens.first() {
             Some(&"uci") => UciCommand::Uci,
             Some(&"debug") => {
                 if tokens.get(1) == Some(&"on") {

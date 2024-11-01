@@ -163,7 +163,7 @@ impl Board {
                 mv = Move::new_capture(from, to);
             }
 
-            if let Ok(_) = self.validate_move(&mv) {
+            if self.validate_move(&mv).is_ok() {
                 return Ok(mv);
             }
 
@@ -190,7 +190,7 @@ impl Board {
                 _ => unreachable!(),
             }
 
-            if let Ok(_) = self.validate_move(&mv) {
+            if self.validate_move(&mv).is_ok() {
                 return Ok(mv);
             }
         }
