@@ -17,7 +17,7 @@ enum Piece {
 struct Magic {
     pub mask: u64,
     pub magic: u64,
-    pub relevant_bits: u8,
+    pub shift: u8,
 }
 
 fn main() {
@@ -70,7 +70,7 @@ fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), &'static
         let magic = Magic {
             mask,
             magic: magic_number,
-            relevant_bits: mask.count_ones() as u8,
+            shift: 64 - mask.count_ones() as u8,
         };
 
         if let Ok(table) = try_make_table(&piece, square, magic) {
@@ -82,7 +82,7 @@ fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), &'static
 }
 
 fn try_make_table(piece: &Piece, square: usize, magic: Magic) -> Result<Vec<u64>, &str> {
-    let mut table = vec![0; 1 << magic.relevant_bits];
+    let mut table = vec![0; 1 << magic.mask.count_ones() as usize];
 
     for blockers in subsets(magic.mask) {
         let moves = match piece {
@@ -104,7 +104,7 @@ fn try_make_table(piece: &Piece, square: usize, magic: Magic) -> Result<Vec<u64>
 fn magic_index(magic: Magic, blockers: u64) -> usize {
     let blockers = blockers & magic.mask;
     let hash = blockers.wrapping_mul(magic.magic);
-    (hash >> (64 - magic.relevant_bits)) as usize
+    (hash >> magic.shift) as usize
 }
 
 fn generate_magic_candidate(rng: &mut ChaCha8Rng) -> u64 {

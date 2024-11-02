@@ -6,13 +6,13 @@ include!("tables.rs");
 pub struct Magic {
     pub mask: u64,
     pub magic: u64,
-    pub relevant_bits: u8,
+    pub shift: u8,
 }
 
 pub fn magic_index(magic: Magic, blockers: BitBoard) -> usize {
     let blockers = blockers & BitBoard(magic.mask);
     let hash = blockers.0.wrapping_mul(magic.magic);
-    (hash >> (64 - magic.relevant_bits)) as usize
+    (hash >> magic.shift) as usize
 }
 
 pub fn get_bishop_moves(square: usize, blockers: BitBoard) -> BitBoard {

@@ -54,7 +54,7 @@ pub fn from_algebraic(square: &str) -> Result<usize, &'static str> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Move {
     pub from: usize,
     pub to: usize,
