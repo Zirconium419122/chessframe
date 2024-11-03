@@ -91,15 +91,15 @@ impl Uci for RandomMoveMaker {
                         self.board = Some(Board::default());
                     } else {
                         self.board = Some(Board::from_fen(&fen));
+                    };
 
-                        if let Some(moves) = moves {
-                            let board = self.board.as_mut().unwrap();
+                    if let Some(moves) = moves {
+                        let board = self.board.as_mut().unwrap();
 
-                            for mv in moves {
-                                let mv = board.infer_move(&mv).unwrap();
+                        for mv in moves {
+                            let mv = board.infer_move(&mv).unwrap();
 
-                                let _ = board.make_move(mv);
-                            }
+                            let _ = board.make_move(mv);
                         }
                     }
                 }

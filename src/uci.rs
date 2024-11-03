@@ -9,6 +9,10 @@ pub enum UciCommand {
         value: String,
     },
 
+    Register(String),
+
+    UciNewGame,
+
     Position {
         fen: String,
         moves: Option<Vec<String>>,
@@ -25,7 +29,10 @@ pub enum UciCommand {
         mate: Option<usize>,        // Search for mate in n moves
         move_time: Option<usize>,   // Time per move in ms
         infinite: bool,             // Infinite time control
+        ponder: bool,               // Engine should ponder
     },
+
+    PonderHit,
 
     Stop,
     Quit,
@@ -42,6 +49,9 @@ pub enum UciCommand {
         best_move: String,
         ponder: Option<String>,
     },
+
+    CopyProtection(String),
+    Registration(String),
 
     Info(String),
     Option(String),
@@ -106,6 +116,7 @@ impl From<String> for UciCommand {
                 let mut mate = None;
                 let mut move_time = None;
                 let mut infinite = false;
+                let mut ponder = false;
 
                 let mut i = 1;
                 while i < tokens.len() {
@@ -168,6 +179,10 @@ impl From<String> for UciCommand {
                             infinite = true;
                             i += 1;
                         }
+                        "ponder" => {
+                            ponder = true;
+                            i += 1;
+                        }
                         _ => i += 1,
                     }
                 }
@@ -183,6 +198,7 @@ impl From<String> for UciCommand {
                     mate,
                     move_time,
                     infinite,
+                    ponder,
                 }
             }
             Some(&"stop") => UciCommand::Stop,

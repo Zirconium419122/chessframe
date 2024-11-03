@@ -21,6 +21,8 @@ struct Magic {
 }
 
 fn main() {
+    println!("cargo::rerun-if-changed=build.rs");
+
     let mut file = File::create("src/tables.rs").unwrap();
 
     let bishop_magics_and_moves = generate_bishop_magics_and_moves();
