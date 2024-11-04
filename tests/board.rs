@@ -114,7 +114,7 @@ fn test_make_move() {
         assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
         assert_eq!(board.en_passant_square, None);
 
-        assert_eq!(board.make_move(Move::new(Square::E2, Square::E4)), Ok(()));
+        assert_eq!(board.make_move(&Move::new(Square::E2, Square::E4)), Ok(()));
 
         assert_eq!(board.side_to_move, Color::Black);
         assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
@@ -130,7 +130,7 @@ fn test_make_move() {
         assert_eq!(board.en_passant_square, None);
 
         assert_eq!(
-            board.make_move(Move::new(Square::E2, Square::E5)),
+            board.make_move(&Move::new(Square::E2, Square::E5)),
             Err("Invalid move: 36!".to_string())
         );
 
@@ -147,7 +147,7 @@ fn test_make_move() {
         assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
 
         assert_eq!(
-            board.make_move(Move::new_capture(Square::E1, Square::D1)),
+            board.make_move(&Move::new_capture(Square::E1, Square::D1)),
             Err("Can't move piece to square: 3!".to_string())
         );
 
@@ -161,7 +161,7 @@ fn test_make_move() {
         assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
 
         assert_eq!(
-            board.make_move(Move::new(Square::E1, Square::G1)),
+            board.make_move(&Move::new(Square::E1, Square::G1)),
             Err("Can't move piece to square: 6!".to_string())
         );
 
@@ -187,7 +187,7 @@ fn test_unmake_move() {
         assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
         assert_eq!(board.en_passant_square, None);
 
-        assert_eq!(board.make_move(Move::new(Square::E2, Square::E4)), Ok(()));
+        assert_eq!(board.make_move(&Move::new(Square::E2, Square::E4)), Ok(()));
 
         assert_eq!(board.side_to_move, Color::Black);
         assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
@@ -224,7 +224,7 @@ fn test_can_castle() {
     }
 
     assert_eq!(
-        board.make_move(Move::new_castle(Square::E1, Square::G1)),
+        board.make_move(&Move::new_castle(Square::E1, Square::G1)),
         Ok(())
     );
     assert_eq!(board.pieces[5], BitBoard(0x000000000000040));

@@ -221,18 +221,17 @@ impl Board {
 
         match move_type {
             MoveType::Quiet | MoveType::Capture | MoveType::Check => {
+                let opponent_occupancy = self.occupancy[self.side_to_move.toggle() as usize];
+
                 if piece_moves.is_not_set(to) {
                     return Err(format!("Invalid move: {}!", to));
                 }
 
-                if (piece_moves & self.occupancy[self.side_to_move.toggle() as usize]).is_set(to)
-                    && move_type == &MoveType::Quiet
-                {
+                if (piece_moves & opponent_occupancy).is_set(to) && move_type == &MoveType::Quiet {
                     return Err("Move is not a quiet move!".to_string());
                 }
 
-                if (piece_moves & self.occupancy[self.side_to_move.toggle() as usize])
-                    .is_not_set(to)
+                if (piece_moves & opponent_occupancy).is_not_set(to)
                     && move_type == &MoveType::Capture
                 {
                     return Err("Move is not a capture!".to_string());
@@ -272,27 +271,29 @@ impl Board {
         Ok(piece)
     }
 
-    pub fn make_move(&mut self, mv: Move) -> Result<(), String> {
+    pub fn make_move(&mut self, mv: &Move) -> Result<(), String> {
+        let piece = self.validate_move(mv)?;
+
         let (from, to) = mv.get_move();
         let move_type = mv.get_move_type();
-
-        let piece = self.validate_move(&mv)?;
 
         let offset = match self.side_to_move {
             Color::White => 0,
             Color::Black => 6,
         };
+        let index = piece.to_index() + offset;
 
         self.board_history.push(BoardHistory::from(self.clone()));
 
+        let mut move_piece = |index: usize, from: usize, to: usize| {
+            self.pieces[index].clear_bit(from);
+            self.pieces[index].set_bit(to);
+        };
+
         match move_type {
-            MoveType::Quiet => {
-                self.pieces[piece.to_index() + offset].clear_bit(from);
-                self.pieces[piece.to_index() + offset].set_bit(to)
-            }
+            MoveType::Quiet | MoveType::Check => move_piece(index, from, to),
             MoveType::Capture => {
-                self.pieces[piece.to_index() + offset].clear_bit(from);
-                self.pieces[piece.to_index() + offset].set_bit(to);
+                move_piece(index, from, to);
                 self.clear_piece(to, self.side_to_move.toggle());
             }
             MoveType::Castle => {
@@ -302,19 +303,13 @@ impl Board {
                 };
 
                 if to == kingside {
-                    self.pieces[piece.to_index() + offset].clear_bit(from);
-                    self.pieces[piece.to_index() + offset].set_bit(to);
-
-                    self.pieces[3].clear_bit(kingside + 1);
-                    self.pieces[3].set_bit(kingside - 1);
+                    move_piece(index, from, to);
+                    move_piece(3, kingside + 1, kingside - 1);
 
                     self.castling_rights.revoke_all(&self.side_to_move);
                 } else if to == queenside {
-                    self.pieces[piece.to_index() + offset].clear_bit(from);
-                    self.pieces[piece.to_index() + offset].set_bit(to);
-
-                    self.pieces[3].clear_bit(queenside - 2);
-                    self.pieces[3].set_bit(queenside + 1);
+                    move_piece(index, from, to);
+                    move_piece(3, queenside - 2, queenside + 1);
 
                     self.castling_rights.revoke_all(&self.side_to_move);
                 }
@@ -325,8 +320,7 @@ impl Board {
                     Color::Black => to + 8,
                 };
 
-                self.pieces[offset].clear_bit(from);
-                self.pieces[offset].set_bit(to);
+                move_piece(index, from, to);
                 self.clear_piece(behind_pawn, self.side_to_move.toggle())
             }
             MoveType::Promotion(piece) => {
@@ -337,10 +331,6 @@ impl Board {
                 self.pieces[offset].clear_bit(from);
                 self.set_piece(piece, &self.side_to_move.clone(), to);
                 self.clear_piece(to, self.side_to_move.toggle());
-            }
-            MoveType::Check => {
-                self.pieces[piece.to_index() + offset].clear_bit(from);
-                self.pieces[piece.to_index() + offset].set_bit(to)
             }
         }
 

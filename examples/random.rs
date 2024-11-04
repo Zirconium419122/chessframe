@@ -99,7 +99,7 @@ impl Uci for RandomMoveMaker {
                         for mv in moves {
                             let mv = board.infer_move(&mv).unwrap();
 
-                            let _ = board.make_move(mv);
+                            let _ = board.make_move(&mv);
                         }
                     }
                 }
@@ -108,7 +108,7 @@ impl Uci for RandomMoveMaker {
                         let mut moves = Vec::new();
 
                         for mv in board.generate_moves_vec() {
-                            if let Ok(_) = board.make_move(mv.clone()) {
+                            if let Ok(_) = board.make_move(&mv) {
                                 moves.push(mv);
 
                                 let _ = board.unmake_move();

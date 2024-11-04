@@ -154,11 +154,11 @@ impl Move {
 pub enum MoveType {
     Quiet,
     Capture,
+    Check,
     Castle,
     EnPassant,
     Promotion(Piece),
     CapturePromotion(Piece),
-    Check,
 }
 
 #[derive(Clone)]
