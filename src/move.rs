@@ -161,7 +161,7 @@ pub enum MoveType {
     CapturePromotion(Piece),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct BoardHistory {
     pub pieces: [BitBoard; 12],
     pub occupancy: [BitBoard; 2],
@@ -172,8 +172,8 @@ pub struct BoardHistory {
     pub full_move_clock: u32,
 }
 
-impl From<Board> for BoardHistory {
-    fn from(value: Board) -> Self {
+impl From<&Board> for BoardHistory {
+    fn from(value: &Board) -> Self {
         BoardHistory {
             pieces: value.pieces,
             occupancy: value.occupancy,

@@ -198,16 +198,16 @@ impl Board {
         Err("No piece at from square")
     }
 
-    pub fn validate_move(&mut self, mv: &Move) -> Result<Piece, String> {
+    pub fn validate_move(&mut self, mv: &Move) -> Result<Piece, &str> {
         let (from, to) = mv.get_move();
         let move_type = mv.get_move_type();
 
         let (piece, _) = self
             .get_piece(from)
-            .ok_or_else(|| format!("No piece found on square: {}!", from))?;
+            .ok_or_else(|| "No piece found on square!")?;
 
-        if self.occupancy[self.side_to_move.clone() as usize].is_set(to) {
-            return Err(format!("Can't move piece to square: {}!", to));
+        if self.occupancy[self.side_to_move.color_index()].is_set(to) {
+            return Err("Can't move piece to square as it is occupied by a allied piece!");
         }
 
         let piece_moves = match piece {
@@ -224,17 +224,17 @@ impl Board {
                 let opponent_occupancy = self.occupancy[self.side_to_move.toggle() as usize];
 
                 if piece_moves.is_not_set(to) {
-                    return Err(format!("Invalid move: {}!", to));
+                    return Err("Invalid move!");
                 }
 
                 if (piece_moves & opponent_occupancy).is_set(to) && move_type == &MoveType::Quiet {
-                    return Err("Move is not a quiet move!".to_string());
+                    return Err("Move is not a quiet move!");
                 }
 
                 if (piece_moves & opponent_occupancy).is_not_set(to)
                     && move_type == &MoveType::Capture
                 {
-                    return Err("Move is not a capture!".to_string());
+                    return Err("Move is not a capture!");
                 }
             }
             MoveType::Castle => {
@@ -248,22 +248,22 @@ impl Board {
                 } else if to == queen_side {
                     self.can_castle(false)?;
                 } else {
-                    return Err("Invalid castling move!".to_string());
+                    return Err("Invalid castling move!");
                 }
             }
             MoveType::EnPassant => {
                 if self.en_passant_square.is_none() || self.generate_en_passant().is_not_set(to) {
-                    return Err("Invalid en passant move!".to_string());
+                    return Err("Invalid en passant move!");
                 }
             }
             MoveType::Promotion(_) => {
                 if self.generate_pawn_pushes().is_not_set(to) {
-                    return Err(format!("Cannot promote at: {}!", to));
+                    return Err("Cannot promote!");
                 }
             }
             MoveType::CapturePromotion(_) => {
                 if self.generate_pawn_captures().is_not_set(to) {
-                    return Err(format!("Cannot capture and promote at: {}!", to));
+                    return Err("Cannot capture and promote!");
                 }
             }
         }
@@ -283,7 +283,7 @@ impl Board {
         };
         let index = piece.to_index() + offset;
 
-        self.board_history.push(BoardHistory::from(self.clone()));
+        self.board_history.push(BoardHistory::from(&*self));
 
         let mut move_piece = |index: usize, from: usize, to: usize| {
             self.pieces[index].clear_bit(from);
@@ -294,7 +294,7 @@ impl Board {
             MoveType::Quiet | MoveType::Check => move_piece(index, from, to),
             MoveType::Capture => {
                 move_piece(index, from, to);
-                self.clear_piece(to, self.side_to_move.toggle());
+                self.clear_piece(to, &self.side_to_move.toggle());
             }
             MoveType::Castle => {
                 let (kingside, queenside) = match self.side_to_move {
@@ -321,7 +321,7 @@ impl Board {
                 };
 
                 move_piece(index, from, to);
-                self.clear_piece(behind_pawn, self.side_to_move.toggle())
+                self.clear_piece(behind_pawn, &self.side_to_move.toggle())
             }
             MoveType::Promotion(piece) => {
                 self.pieces[offset].clear_bit(from);
@@ -330,7 +330,7 @@ impl Board {
             MoveType::CapturePromotion(piece) => {
                 self.pieces[offset].clear_bit(from);
                 self.set_piece(piece, &self.side_to_move.clone(), to);
-                self.clear_piece(to, self.side_to_move.toggle());
+                self.clear_piece(to, &self.side_to_move.toggle());
             }
         }
 
@@ -437,8 +437,8 @@ impl Board {
         self.occupancy[color.color_index()].set_bit(square);
     }
 
-    pub fn clear_piece(&mut self, square: usize, color: Color) {
-        let color_index = color as usize;
+    pub fn clear_piece(&mut self, square: usize, color: &Color) {
+        let color_index = color.color_index();
         if self.occupancy[color_index].is_not_set(square) {
             return;
         }
@@ -456,21 +456,12 @@ impl Board {
     }
 
     pub fn generate_moves(&self) -> BitBoard {
-        let mut moves = BitBoard(0);
-
-        moves |= self.generate_pawn_moves();
-
-        moves |= self.generate_knight_moves();
-
-        moves |= self.generate_bishop_moves();
-
-        moves |= self.generate_rook_moves();
-
-        moves |= self.generate_queen_moves();
-
-        moves |= self.generate_king_moves();
-
-        moves
+        self.generate_pawn_moves()
+            | self.generate_knight_moves()
+            | self.generate_bishop_moves()
+            | self.generate_rook_moves()
+            | self.generate_queen_moves()
+            | self.generate_king_moves()
     }
 
     pub fn generate_moves_vec(&mut self) -> Vec<Move> {
@@ -560,10 +551,8 @@ impl Board {
             };
         }
 
-        let mut moves = Vec::new();
-
         match self.side_to_move {
-            Color::White => moves.extend(extract_moves!(
+            Color::White => extract_moves!(
                 0,
                 Piece::Pawn,
                 Piece::Knight,
@@ -571,8 +560,8 @@ impl Board {
                 Piece::Rook,
                 Piece::Queen,
                 Piece::King
-            )),
-            Color::Black => moves.extend(extract_moves!(
+            ),
+            Color::Black => extract_moves!(
                 6,
                 Piece::Pawn,
                 Piece::Knight,
@@ -580,10 +569,8 @@ impl Board {
                 Piece::Rook,
                 Piece::Queen,
                 Piece::King
-            )),
+            ),
         }
-
-        moves
     }
 
     pub fn generate_ray_moves(&self) -> BitBoard {
@@ -599,11 +586,7 @@ impl Board {
     }
 
     pub fn generate_pawn_moves(&self) -> BitBoard {
-        let pawn_pushes = self.generate_pawn_pushes();
-        let pawn_captures = self.generate_pawn_captures();
-        let en_passant = self.generate_en_passant();
-
-        pawn_pushes | pawn_captures | en_passant
+        self.generate_pawn_pushes() | self.generate_pawn_captures() | self.generate_en_passant()
     }
 
     pub fn generate_pawn_pushes(&self) -> BitBoard {
