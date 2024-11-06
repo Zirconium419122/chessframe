@@ -12,6 +12,10 @@ impl Color {
         }
     }
 
+    pub fn flip(&mut self) {
+        *self = self.toggle();
+    }
+
     pub fn color_index(&self) -> usize {
         match self {
             Color::White => 0,

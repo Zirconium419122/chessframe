@@ -202,9 +202,7 @@ impl Board {
         let (from, to) = mv.get_move();
         let move_type = mv.get_move_type();
 
-        let (piece, _) = self
-            .get_piece(from)
-            .ok_or_else(|| "No piece found on square!")?;
+        let (piece, _) = self.get_piece(from).ok_or("No piece found on square!")?;
 
         if self.occupancy[self.side_to_move.color_index()].is_set(to) {
             return Err("Can't move piece to square as it is occupied by a allied piece!");
@@ -221,11 +219,11 @@ impl Board {
 
         match move_type {
             MoveType::Quiet | MoveType::Capture | MoveType::Check => {
-                let opponent_occupancy = self.occupancy[self.side_to_move.toggle() as usize];
-
                 if piece_moves.is_not_set(to) {
                     return Err("Invalid move!");
                 }
+
+                let opponent_occupancy = self.occupancy[self.side_to_move.toggle() as usize];
 
                 if (piece_moves & opponent_occupancy).is_set(to) && move_type == &MoveType::Quiet {
                     return Err("Move is not a quiet move!");
@@ -366,7 +364,7 @@ impl Board {
 
         self.update_occupancy();
 
-        self.side_to_move = self.side_to_move.toggle();
+        self.side_to_move.flip();
 
         if (self.generate_moves() & self.pieces[5 + offset]).is_not_zero() {
             self.unmake_move().unwrap();
@@ -382,8 +380,8 @@ impl Board {
             Some(board_history) => {
                 self.pieces = board_history.pieces;
                 self.occupancy = board_history.occupancy;
-                self.side_to_move = board_history.side_to_move.clone();
-                self.castling_rights = board_history.castling_rights.clone();
+                self.side_to_move = board_history.side_to_move;
+                self.castling_rights = board_history.castling_rights;
                 self.en_passant_square = board_history.en_passant_square;
                 self.half_move_clock = board_history.half_move_clock;
                 self.full_move_clock = board_history.full_move_clock;
@@ -529,8 +527,7 @@ impl Board {
 
                                     moves.extend(self.generate_en_passant().into_iter().map(|destination| {
                                             Move::new_en_passant(square, destination)
-                                        })
-                                    );
+                                    }));
                                 }
                                 Piece::King => {
                                     moves.extend(self.generate_castling_moves().into_iter().map(|destination| {
@@ -574,15 +571,7 @@ impl Board {
     }
 
     pub fn generate_ray_moves(&self) -> BitBoard {
-        let mut moves = BitBoard(0);
-
-        moves |= self.generate_bishop_moves();
-
-        moves |= self.generate_rook_moves();
-
-        moves |= self.generate_queen_moves();
-
-        moves
+        self.generate_bishop_moves() | self.generate_rook_moves() | self.generate_queen_moves()
     }
 
     pub fn generate_pawn_moves(&self) -> BitBoard {
@@ -818,7 +807,7 @@ impl Board {
         };
         let mut moves = BitBoard(0);
 
-        self.side_to_move = self.side_to_move.toggle();
+        self.side_to_move.flip();
 
         let enemy_moves = self.generate_moves();
 
@@ -846,7 +835,7 @@ impl Board {
             }
         }
 
-        self.side_to_move = self.side_to_move.toggle();
+        self.side_to_move.flip();
 
         moves
     }
