@@ -154,7 +154,7 @@ impl Board {
             _ => return Err("Invalid move notation!"),
         };
 
-        if let Some((piece, _)) = self.get_piece(from) {
+        if let Some(piece) = self.get_piece(from) {
             let mut mv;
 
             if self.occupancy[self.side_to_move.toggle() as usize].is_not_set(to) {
@@ -202,7 +202,7 @@ impl Board {
         let (from, to) = mv.get_move();
         let move_type = mv.get_move_type();
 
-        let (piece, _) = self.get_piece(from).ok_or("No piece found on square!")?;
+        let piece = self.get_piece(from).ok_or("No piece found on square!")?;
 
         if self.occupancy[self.side_to_move.color_index()].is_set(to) {
             return Err("Can't move piece to square as it is occupied by a allied piece!");
@@ -217,12 +217,12 @@ impl Board {
             Piece::King => self.generate_king_moves() | self.generate_castling_moves(),
         };
 
+        if piece_moves.is_not_set(to) {
+            return Err("Invalid move!");
+        }
+
         match move_type {
             MoveType::Quiet | MoveType::Capture | MoveType::Check => {
-                if piece_moves.is_not_set(to) {
-                    return Err("Invalid move!");
-                }
-
                 let opponent_occupancy = self.occupancy[self.side_to_move.toggle() as usize];
 
                 if (piece_moves & opponent_occupancy).is_set(to) && move_type == &MoveType::Quiet {
@@ -383,8 +383,8 @@ impl Board {
                 self.side_to_move = board_history.side_to_move;
                 self.castling_rights = board_history.castling_rights;
                 self.en_passant_square = board_history.en_passant_square;
-                self.half_move_clock = board_history.half_move_clock;
-                self.full_move_clock = board_history.full_move_clock;
+                self.half_move_clock -= 1;
+                self.full_move_clock -= 1;
 
                 Ok(())
             }
@@ -413,16 +413,14 @@ impl Board {
         }
     }
 
-    pub fn get_piece(&self, square: usize) -> Option<(Piece, Color)> {
+    pub fn get_piece(&self, square: usize) -> Option<Piece> {
         if (self.occupancy[0] | self.occupancy[1]).is_not_set(square) {
             return None;
         }
 
         for i in 0..6 {
-            if self.pieces[i].is_set(square) {
-                return Some((Piece::from(i), Color::White));
-            } else if self.pieces[i + 6].is_set(square) {
-                return Some((Piece::from(i), Color::Black));
+            if self.pieces[i].is_set(square) || self.pieces[i + 6].is_set(square) {
+                return Some(Piece::from(i));
             }
         }
 
@@ -527,7 +525,8 @@ impl Board {
 
                                     moves.extend(self.generate_en_passant().into_iter().map(|destination| {
                                             Move::new_en_passant(square, destination)
-                                    }));
+                                        })
+                                    );
                                 }
                                 Piece::King => {
                                     moves.extend(self.generate_castling_moves().into_iter().map(|destination| {
@@ -583,22 +582,20 @@ impl Board {
 
         match self.side_to_move {
             Color::White => {
-                let single_push = (self.pieces[0] << 8) & empty_squares;
+                let single_push = self.pieces[0] << 8;
 
                 let second_rank = BitBoard(0x000000000000FF00);
-                let double_push =
-                    ((self.pieces[0] & second_rank) << 16) & (empty_squares << 8) & empty_squares;
+                let double_push = ((self.pieces[0] & second_rank) << 16) & (empty_squares << 8);
 
-                single_push | double_push
+                (single_push | double_push) & empty_squares
             }
             Color::Black => {
-                let single_push = (self.pieces[6] >> 8) & empty_squares;
+                let single_push = self.pieces[6] >> 8;
 
                 let seventh_rank = BitBoard(0x00FF000000000000);
-                let double_push =
-                    ((self.pieces[6] & seventh_rank) >> 16) & (empty_squares >> 8) & empty_squares;
+                let double_push = ((self.pieces[6] & seventh_rank) >> 16) & (empty_squares >> 8);
 
-                single_push | double_push
+                (single_push | double_push) & empty_squares
             }
         }
     }

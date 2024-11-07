@@ -168,8 +168,6 @@ pub struct BoardHistory {
     pub side_to_move: Color,
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<BitBoard>,
-    pub half_move_clock: u32,
-    pub full_move_clock: u32,
 }
 
 impl From<&Board> for BoardHistory {
@@ -180,8 +178,6 @@ impl From<&Board> for BoardHistory {
             side_to_move: value.side_to_move,
             castling_rights: value.castling_rights,
             en_passant_square: value.en_passant_square,
-            half_move_clock: value.half_move_clock,
-            full_move_clock: value.full_move_clock,
         }
     }
 }

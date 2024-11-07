@@ -9,7 +9,11 @@ pub enum UciCommand {
         value: String,
     },
 
-    Register(String),
+    Register {
+        name: Option<String>,
+        code: Option<String>,
+        later: bool,
+    },
 
     UciNewGame,
 
@@ -50,8 +54,16 @@ pub enum UciCommand {
         ponder: Option<String>,
     },
 
-    CopyProtection(String),
-    Registration(String),
+    CopyProtection {
+        ok: bool,
+        checking: bool,
+        error: bool,
+    },
+    Registration {
+        ok: bool,
+        checking: bool,
+        error: bool,
+    },
 
     Info(String),
     Option(String),
@@ -84,6 +96,37 @@ impl From<String> for UciCommand {
 
                 UciCommand::SetOption { name, value }
             }
+            Some(&"register") => {
+                let mut name = None;
+                let mut code = None;
+                let mut later = false;
+
+                let mut i = 1;
+                while i < tokens.len() {
+                    match tokens[i] {
+                        "name" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                name = Some(val.to_string());
+                            }
+                            i += 2;
+                        }
+                        "code" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                code = Some(val.to_string());
+                            }
+                            i += 2;
+                        }
+                        "later" => {
+                            later = true;
+                            i += 1;
+                        }
+                        _ => i += 1,
+                    }
+                }
+
+                UciCommand::Register { name, code, later }
+            }
+            Some(&"ucinewgame") => UciCommand::UciNewGame,
             Some(&"position") => {
                 if tokens.get(1) == Some(&"fen") {
                     let mut fen = tokens[2..].join(" ");
@@ -202,6 +245,7 @@ impl From<String> for UciCommand {
                 }
             }
             Some(&"stop") => UciCommand::Stop,
+            Some(&"ponderhit") => UciCommand::PonderHit,
             Some(&"quit") => UciCommand::Quit,
             Some(&"id") => {
                 let id_type = tokens.get(1).unwrap_or(&"");
@@ -230,6 +274,54 @@ impl From<String> for UciCommand {
                 };
 
                 UciCommand::BestMove { best_move, ponder }
+            }
+            Some(&"copyprotection") => {
+                if let Some(val) = tokens.get(1) {
+                    return match *val {
+                        "ok" => UciCommand::CopyProtection {
+                            ok: true,
+                            checking: false,
+                            error: false,
+                        },
+                        "checking" => UciCommand::CopyProtection {
+                            ok: false,
+                            checking: true,
+                            error: false,
+                        },
+                        "error" => UciCommand::CopyProtection {
+                            ok: false,
+                            checking: false,
+                            error: true,
+                        },
+                        _ => UciCommand::Info("Invalid option".to_string()),
+                    };
+                }
+
+                UciCommand::Info("Invalid copyprotection command".to_string())
+            }
+            Some(&"registration") => {
+                if let Some(val) = tokens.get(1) {
+                    return match *val {
+                        "ok" => UciCommand::Registration {
+                            ok: true,
+                            checking: false,
+                            error: false,
+                        },
+                        "checking" => UciCommand::Registration {
+                            ok: false,
+                            checking: true,
+                            error: false,
+                        },
+                        "error" => UciCommand::Registration {
+                            ok: false,
+                            checking: false,
+                            error: true,
+                        },
+                        _ => UciCommand::Info("Invalid option".to_string()),
+                    };
+                }
+
+                UciCommand::Info("Invalid registration command".to_string())
             }
             Some(&"info") => UciCommand::Info(tokens[1..].join(" ")),
             Some(&"option") => UciCommand::Option(tokens[1..].join(" ")),
