@@ -16,6 +16,13 @@ impl Color {
         *self = self.toggle();
     }
 
+    pub fn to_offset(&self) -> usize {
+        match self {
+            Color::White => 0,
+            Color::Black => 6,
+        }
+    }
+
     pub fn color_index(&self) -> usize {
         match self {
             Color::White => 0,

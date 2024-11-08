@@ -275,10 +275,7 @@ impl Board {
         let (from, to) = mv.get_move();
         let move_type = mv.get_move_type();
 
-        let offset = match self.side_to_move {
-            Color::White => 0,
-            Color::Black => 6,
-        };
+        let offset = self.side_to_move.to_offset();
         let index = piece.to_index() + offset;
 
         self.board_history.push(BoardHistory::from(&*self));
@@ -340,6 +337,7 @@ impl Board {
                     Color::White => (to - 8, to - 16),
                     Color::Black => (to + 8, to + 16),
                 };
+
                 if from == two_squares_behind_pawn {
                     self.en_passant_square = Some(BitBoard(1 << square_behind_pawn));
                 }
@@ -380,7 +378,7 @@ impl Board {
             Some(board_history) => {
                 self.pieces = board_history.pieces;
                 self.occupancy = board_history.occupancy;
-                self.side_to_move = board_history.side_to_move;
+                self.side_to_move.flip();
                 self.castling_rights = board_history.castling_rights;
                 self.en_passant_square = board_history.en_passant_square;
                 self.half_move_clock -= 1;
@@ -439,7 +437,7 @@ impl Board {
             return;
         }
 
-        let offset = color_index * 6;
+        let offset = color.to_offset();
 
         for i in 0..6 {
             if self.pieces[i + offset].is_set(square) {

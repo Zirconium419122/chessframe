@@ -1,8 +1,6 @@
 use core::fmt;
 
-use crate::{
-    bitboard::BitBoard, board::Board, castling_rights::CastlingRights, color::Color, piece::Piece,
-};
+use crate::{bitboard::BitBoard, board::Board, castling_rights::CastlingRights, piece::Piece};
 
 #[rustfmt::skip]
 #[repr(u8)]
@@ -165,7 +163,6 @@ pub enum MoveType {
 pub struct BoardHistory {
     pub pieces: [BitBoard; 12],
     pub occupancy: [BitBoard; 2],
-    pub side_to_move: Color,
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<BitBoard>,
 }
@@ -175,7 +172,6 @@ impl From<&Board> for BoardHistory {
         BoardHistory {
             pieces: value.pieces,
             occupancy: value.occupancy,
-            side_to_move: value.side_to_move,
             castling_rights: value.castling_rights,
             en_passant_square: value.en_passant_square,
         }

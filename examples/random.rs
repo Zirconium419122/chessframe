@@ -86,6 +86,7 @@ impl Uci for RandomMoveMaker {
                 UciCommand::IsReady => {
                     self.send_command(UciCommand::ReadyOk);
                 }
+                UciCommand::UciNewGame => self.board = None,
                 UciCommand::Position { fen, moves } => {
                     if fen == "startpos" {
                         self.board = Some(Board::default());
