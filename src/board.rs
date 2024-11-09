@@ -200,13 +200,12 @@ impl Board {
 
     pub fn validate_move(&mut self, mv: &Move) -> Result<Piece, &str> {
         let (from, to) = mv.get_move();
-        let move_type = mv.get_move_type();
-
         let piece = self.get_piece(from).ok_or("No piece found on square!")?;
 
-        if self.occupancy[self.side_to_move.color_index()].is_set(to) {
-            return Err("Can't move piece to square as it is occupied by a allied piece!");
-        }
+        let index = piece.to_index() + self.side_to_move.to_offset();
+        let pieces = self.pieces[index];
+
+        self.pieces[index] = BitBoard(1 << from);
 
         let piece_moves = match piece {
             Piece::Pawn => self.generate_pawn_moves(),
@@ -217,53 +216,10 @@ impl Board {
             Piece::King => self.generate_king_moves() | self.generate_castling_moves(),
         };
 
+        self.pieces[index] = pieces;
+
         if piece_moves.is_not_set(to) {
             return Err("Invalid move!");
-        }
-
-        match move_type {
-            MoveType::Quiet | MoveType::Capture | MoveType::Check => {
-                let opponent_occupancy = self.occupancy[self.side_to_move.toggle() as usize];
-
-                if (piece_moves & opponent_occupancy).is_set(to) && move_type == &MoveType::Quiet {
-                    return Err("Move is not a quiet move!");
-                }
-
-                if (piece_moves & opponent_occupancy).is_not_set(to)
-                    && move_type == &MoveType::Capture
-                {
-                    return Err("Move is not a capture!");
-                }
-            }
-            MoveType::Castle => {
-                let (king_side, queen_side) = match self.side_to_move {
-                    Color::White => (6, 2),
-                    Color::Black => (62, 58),
-                };
-
-                if to == king_side {
-                    self.can_castle(true)?;
-                } else if to == queen_side {
-                    self.can_castle(false)?;
-                } else {
-                    return Err("Invalid castling move!");
-                }
-            }
-            MoveType::EnPassant => {
-                if self.en_passant_square.is_none() || self.generate_en_passant().is_not_set(to) {
-                    return Err("Invalid en passant move!");
-                }
-            }
-            MoveType::Promotion(_) => {
-                if self.generate_pawn_pushes().is_not_set(to) {
-                    return Err("Cannot promote!");
-                }
-            }
-            MoveType::CapturePromotion(_) => {
-                if self.generate_pawn_captures().is_not_set(to) {
-                    return Err("Cannot capture and promote!");
-                }
-            }
         }
 
         Ok(piece)
@@ -286,8 +242,7 @@ impl Board {
         };
 
         match move_type {
-            MoveType::Quiet | MoveType::Check => move_piece(index, from, to),
-            MoveType::Capture => {
+            MoveType::Quiet | MoveType::Capture | MoveType::Check => {
                 move_piece(index, from, to);
                 self.clear_piece(to, &self.side_to_move.toggle());
             }
@@ -381,7 +336,7 @@ impl Board {
                 self.side_to_move.flip();
                 self.castling_rights = board_history.castling_rights;
                 self.en_passant_square = board_history.en_passant_square;
-                self.half_move_clock -= 1;
+                self.half_move_clock = board_history.half_move_clock;
                 self.full_move_clock -= 1;
 
                 Ok(())
@@ -416,13 +371,27 @@ impl Board {
             return None;
         }
 
-        for i in 0..6 {
-            if self.pieces[i].is_set(square) || self.pieces[i + 6].is_set(square) {
-                return Some(Piece::from(i));
-            }
-        }
+        let offset = self.side_to_move.to_offset();
 
-        None
+        if (self.pieces[Piece::Pawn.to_index() + offset]
+            ^ self.pieces[Piece::Knight.to_index() + offset]
+            ^ self.pieces[Piece::Bishop.to_index() + offset])
+            .is_set(square)
+        {
+            if self.pieces[Piece::Pawn.to_index() + offset].is_set(square) {
+                Some(Piece::Pawn)
+            } else if self.pieces[Piece::Knight.to_index() + offset].is_set(square) {
+                Some(Piece::Knight)
+            } else {
+                Some(Piece::Bishop)
+            }
+        } else if self.pieces[Piece::Rook.to_index() + offset].is_set(square) {
+            Some(Piece::Rook)
+        } else if self.pieces[Piece::Queen.to_index() + offset].is_set(square) {
+            Some(Piece::Queen)
+        } else {
+            Some(Piece::King)
+        }
     }
 
     pub fn set_piece(&mut self, piece: &Piece, color: &Color, square: usize) {

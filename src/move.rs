@@ -165,6 +165,7 @@ pub struct BoardHistory {
     pub occupancy: [BitBoard; 2],
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<BitBoard>,
+    pub half_move_clock: u32,
 }
 
 impl From<&Board> for BoardHistory {
@@ -174,6 +175,7 @@ impl From<&Board> for BoardHistory {
             occupancy: value.occupancy,
             castling_rights: value.castling_rights,
             en_passant_square: value.en_passant_square,
+            half_move_clock: value.half_move_clock,
         }
     }
 }
