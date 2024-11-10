@@ -146,8 +146,8 @@ impl Board {
     }
 
     pub fn infer_move(&mut self, mv: &str) -> Result<Move, &str> {
-        let from = from_algebraic(&mv[0..2]).unwrap();
-        let to = from_algebraic(&mv[2..4]).unwrap();
+        let from = from_algebraic(&mv[0..2])?;
+        let to = from_algebraic(&mv[2..4])?;
         let promotion: Option<Piece> = match &mv.len() {
             4 => None,
             5 => Some(Piece::from(mv.chars().last().unwrap())),
@@ -155,25 +155,15 @@ impl Board {
         };
 
         if let Some(piece) = self.get_piece(from) {
-            let mut mv;
-
-            if self.occupancy[self.side_to_move.toggle() as usize].is_not_set(to) {
-                mv = Move::new(from, to);
-            } else {
-                mv = Move::new_capture(from, to);
-            }
-
-            if self.validate_move(&mv).is_ok() {
-                return Ok(mv);
-            }
+            let mut mv: Option<Move> = None;
 
             match piece {
                 Piece::Pawn => {
                     if let Some(promotion) = promotion {
-                        if self.occupancy[self.side_to_move.toggle() as usize].is_not_set(to) {
-                            mv = Move::new_promotion(from, to, promotion);
+                        if self.occupancy[(!self.side_to_move).to_index()].is_not_set(to) {
+                            mv = Some(Move::new_promotion(from, to, promotion));
                         } else {
-                            mv = Move::new_capture_promotion(from, to, promotion);
+                            mv = Some(Move::new_capture_promotion(from, to, promotion));
                         }
                     }
                 }
@@ -184,14 +174,28 @@ impl Board {
                     };
 
                     if from == king && (to == king + 2 || to == king - 2) {
-                        mv = Move::new_castle(from, to);
+                        mv = Some(Move::new_castle(from, to));
                     }
                 }
-                _ => unreachable!(),
+                _ => (),
             }
 
-            if self.validate_move(&mv).is_ok() {
-                return Ok(mv);
+            if let Some(mv) = mv {
+                if self.validate_move(&mv).is_ok() {
+                    return Ok(mv);
+                }
+            }
+
+            if self.occupancy[(!self.side_to_move).to_index()].is_not_set(to) {
+                mv = Some(Move::new(from, to));
+            } else {
+                mv = Some(Move::new_capture(from, to));
+            }
+
+            if let Some(mv) = mv {
+                if self.validate_move(&mv).is_ok() {
+                    return Ok(mv);
+                }
             }
         }
 
@@ -244,7 +248,7 @@ impl Board {
         match move_type {
             MoveType::Quiet | MoveType::Capture | MoveType::Check => {
                 move_piece(index, from, to);
-                self.clear_piece(to, &self.side_to_move.toggle());
+                self.clear_piece(to, &!self.side_to_move);
             }
             MoveType::Castle => {
                 let (kingside, queenside) = match self.side_to_move {
@@ -271,7 +275,7 @@ impl Board {
                 };
 
                 move_piece(index, from, to);
-                self.clear_piece(behind_pawn, &self.side_to_move.toggle())
+                self.clear_piece(behind_pawn, &!self.side_to_move)
             }
             MoveType::Promotion(piece) => {
                 self.pieces[offset].clear_bit(from);
@@ -280,7 +284,7 @@ impl Board {
             MoveType::CapturePromotion(piece) => {
                 self.pieces[offset].clear_bit(from);
                 self.set_piece(piece, &self.side_to_move.clone(), to);
-                self.clear_piece(to, &self.side_to_move.toggle());
+                self.clear_piece(to, &!self.side_to_move);
             }
         }
 
@@ -397,11 +401,11 @@ impl Board {
     pub fn set_piece(&mut self, piece: &Piece, color: &Color, square: usize) {
         let bitboard = &mut self.pieces[piece.piece_index(color)];
         bitboard.set_bit(square);
-        self.occupancy[color.color_index()].set_bit(square);
+        self.occupancy[color.to_index()].set_bit(square);
     }
 
     pub fn clear_piece(&mut self, square: usize, color: &Color) {
-        let color_index = color.color_index();
+        let color_index = color.to_index();
         if self.occupancy[color_index].is_not_set(square) {
             return;
         }
@@ -432,7 +436,7 @@ impl Board {
             ($offset:literal, $($piece:expr),+) => {
                 {
                     let mut moves: Vec<Move> = Vec::with_capacity(218);
-                    let opponent_occupancy = self.occupancy[self.side_to_move.toggle() as usize];
+                    let opponent_occupancy = self.occupancy[(!self.side_to_move).to_index()];
 
                     $(
                         let pieces = self.pieces[$piece as usize + $offset];
@@ -775,25 +779,21 @@ impl Board {
 
         let enemy_moves = self.generate_moves();
 
-        if self
-            .castling_rights
-            .can_castle(&self.side_to_move.toggle(), true)
+        if self.castling_rights.can_castle(&!self.side_to_move, true)
             && (occupancy & king_side).is_zero()
             && (enemy_moves & (king_side | king)).is_zero()
         {
-            moves |= match self.side_to_move.toggle() {
+            moves |= match !self.side_to_move {
                 Color::White => BitBoard(0x40),
                 Color::Black => BitBoard(0x4000000000000000),
             }
         }
 
-        if self
-            .castling_rights
-            .can_castle(&self.side_to_move.toggle(), false)
+        if self.castling_rights.can_castle(&!self.side_to_move, false)
             && (occupancy & queen_side).is_zero()
             && (enemy_moves & (queen_side | king)).is_zero()
         {
-            moves |= match self.side_to_move.toggle() {
+            moves |= match !self.side_to_move {
                 Color::White => BitBoard(0x04),
                 Color::Black => BitBoard(0x0400000000000000),
             }
