@@ -1,9 +1,5 @@
 use chess_frame::{
-    bitboard::BitBoard,
-    board::*,
-    color::Color,
-    piece::Piece,
-    r#move::{Move, Square},
+    bitboard::BitBoard, board::*, color::Color, piece::Piece, r#move::Move, square::Square,
 };
 
 #[test]
@@ -11,13 +7,13 @@ fn test_square_to_bitboard() {
     macro_rules! generate_assertions {
         ($($x:literal),+) => {
             $(
-                assert_eq!(BitBoard::from(Square::try_from($x).unwrap()), BitBoard(1 << $x));
+                assert_eq!(BitBoard::from(BitBoard::from_square(Square::new(&x))), BitBoard(1 << $x));
             )+
         };
         ($start:literal..$end:literal) => {
             {
                 for i in $start..$end {
-                    assert_eq!(BitBoard::from(Square::try_from(i).unwrap()), BitBoard(1 << i));
+                    assert_eq!(BitBoard::from_square(Square::new(i)), BitBoard(1 << i));
                 }
             }
         }
@@ -35,33 +31,33 @@ fn test_from_fen_starting_position() {
     // White pawns
     for file in 0..8 {
         // Rank 2 (index 8-15)
-        assert!(board.pieces[Piece::Pawn.piece_index(&Color::White)].is_set(8 as usize + file));
+        assert!(board.pieces[Piece::Pawn.piece_index(&Color::White)].is_set(Square::new(8 + file)));
     }
     // Black pawns
     for file in 0..8 {
         // Rank 7 (index 48-55)
-        assert!(board.pieces[Piece::Pawn.piece_index(&Color::Black)].is_set(48 as usize + file));
+        assert!(board.pieces[Piece::Pawn.piece_index(&Color::Black)].is_set(Square::new(48 + file)));
     }
 
     // Test White pieces
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(0 as usize)); // a1
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(1 as usize)); // b1
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(2 as usize)); // c1
-    assert!(board.pieces[Piece::Queen.piece_index(&Color::White)].is_set(3 as usize)); // d1
-    assert!(board.pieces[Piece::King.piece_index(&Color::White)].is_set(4 as usize)); // e1
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(5 as usize)); // f1
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(6 as usize)); // g1
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(7 as usize)); // h1
+    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(Square::A1)); // a1
+    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(Square::B1)); // b1
+    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(Square::C1)); // c1
+    assert!(board.pieces[Piece::Queen.piece_index(&Color::White)].is_set(Square::D1)); // d1
+    assert!(board.pieces[Piece::King.piece_index(&Color::White)].is_set(Square::E1)); // e1
+    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(Square::F1)); // f1
+    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(Square::G1)); // g1
+    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(Square::H1)); // h1
 
     // Test Black pieces
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(56 as usize)); // a8
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(57 as usize)); // b8
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(58 as usize)); // c8
-    assert!(board.pieces[Piece::Queen.piece_index(&Color::Black)].is_set(59 as usize)); // d8
-    assert!(board.pieces[Piece::King.piece_index(&Color::Black)].is_set(60 as usize)); // e8
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(61 as usize)); // f8
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(62 as usize)); // g8
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(63 as usize)); // h8
+    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(Square::A8)); // a8
+    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(Square::B8)); // b8
+    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(Square::C8)); // c8
+    assert!(board.pieces[Piece::Queen.piece_index(&Color::Black)].is_set(Square::D8)); // d8
+    assert!(board.pieces[Piece::King.piece_index(&Color::Black)].is_set(Square::E8)); // e8
+    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(Square::F8)); // f8
+    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(Square::G8)); // g8
+    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(Square::H8)); // h8
 
     // Test side to move
     assert_eq!(board.side_to_move, Color::White);
@@ -131,7 +127,7 @@ fn test_make_move() {
 
         assert_eq!(
             board.make_move(&Move::new(Square::E2, Square::E5)),
-            Err("Invalid move: 36!".to_string())
+            Err("Invalid move!".to_string())
         );
 
         assert_eq!(board.side_to_move, Color::White);
@@ -148,7 +144,7 @@ fn test_make_move() {
 
         assert_eq!(
             board.make_move(&Move::new_capture(Square::E1, Square::D1)),
-            Err("Can't move piece to square: 3!".to_string())
+            Err("Invalid move!".to_string())
         );
 
         assert_eq!(board.side_to_move, Color::White);
@@ -162,7 +158,7 @@ fn test_make_move() {
 
         assert_eq!(
             board.make_move(&Move::new(Square::E1, Square::G1)),
-            Err("Can't move piece to square: 6!".to_string())
+            Err("Invalid move!".to_string())
         );
 
         assert_eq!(board.side_to_move, Color::White);
