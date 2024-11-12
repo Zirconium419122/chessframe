@@ -4,4 +4,7 @@ use thiserror::Error;
 pub enum Error {
     #[error("The string specified does not contain a valid square")]
     InvalidSquare,
+
+    #[error("The string specified does not contain a valid rank")]
+    InvalidRank,
 }

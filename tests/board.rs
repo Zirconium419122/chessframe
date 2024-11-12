@@ -7,7 +7,7 @@ fn test_square_to_bitboard() {
     macro_rules! generate_assertions {
         ($($x:literal),+) => {
             $(
-                assert_eq!(BitBoard::from(BitBoard::from_square(Square::new(&x))), BitBoard(1 << $x));
+                assert_eq!(BitBoard::from_square(Square::new(&x)), BitBoard(1 << $x));
             )+
         };
         ($start:literal..$end:literal) => {

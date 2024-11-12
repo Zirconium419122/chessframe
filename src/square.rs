@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::error::Error;
+use crate::{error::Error, rank::Rank};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Square(u8);
@@ -24,7 +24,7 @@ impl FromStr for Square {
         }
 
         Ok(Square::new(
-            (chars[0] as u8) - ('a' as u8) + ((chars[1] as u8) - ('1' as u8)) * 8,
+            (chars[0] as u8) - b'a' + ((chars[1] as u8) - b'1') * 8,
         ))
     }
 }
@@ -36,8 +36,8 @@ impl Square {
     }
 
     #[inline]
-    pub fn get_rank(&self) -> usize {
-        (self.0 >> 3) as usize
+    pub fn get_rank(&self) -> Rank {
+        Rank::from_index((self.0 >> 3) as usize)
     }
 
     #[inline]
@@ -47,7 +47,7 @@ impl Square {
 
     #[inline]
     pub fn up(&self) -> Option<Square> {
-        if self.get_rank() == 7 {
+        if self.get_rank() == Rank::Eighth {
             None
         } else {
             Some(Square::new(self.0 + 8))
@@ -56,7 +56,7 @@ impl Square {
 
     #[inline]
     pub fn down(&self) -> Option<Square> {
-        if self.get_rank() == 0 {
+        if self.get_rank() == Rank::First {
             None
         } else {
             Some(Square::new(self.0 - 8))

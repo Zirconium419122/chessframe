@@ -102,7 +102,7 @@ impl fmt::Display for BitBoard {
                 s.push_str(". ");
             }
             if square % 8 == 7 {
-                s.push_str("\n");
+                s.push('\n');
             }
         }
         write!(f, "{}", s)

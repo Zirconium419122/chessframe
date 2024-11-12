@@ -8,3 +8,4 @@ pub mod r#move;
 pub mod piece;
 pub mod square;
 pub mod uci;
+pub mod rank;
