@@ -41,7 +41,7 @@ impl Rank {
     /// Convert a `usize` to a `Rank`. If the index is > 7 wrap around.
     #[inline]
     pub fn from_index(index: usize) -> Rank {
-        match index % 7 {
+        match index % 8 {
             0 => Rank::First,
             1 => Rank::Second,
             2 => Rank::Third,
@@ -59,13 +59,13 @@ impl Rank {
     pub fn down(&self) -> Rank {
         Rank::from_index(self.to_index().wrapping_sub(1))
     }
-    
+
     /// Get the rank above this one. If the rank is `Eighth` wrap around.
     #[inline]
     pub fn up(&self) -> Rank {
         Rank::from_index(self.to_index() + 1)
     }
-    
+
     /// Convert this `Rank` into a `usize` between 0 and 7.
     #[inline]
     pub fn to_index(&self) -> usize {

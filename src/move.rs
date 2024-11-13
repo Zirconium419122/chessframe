@@ -13,8 +13,14 @@ pub struct Move {
 
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let (rank_from, file_from) = (self.from.get_rank().to_index(), self.from.get_file());
-        let (rank_to, file_to) = (self.to.get_rank().to_index(), self.to.get_file());
+        let (rank_from, file_from) = (
+            self.from.get_rank().to_index() + 1,
+            self.from.get_file().to_index(),
+        );
+        let (rank_to, file_to) = (
+            self.to.get_rank().to_index() + 1,
+            self.to.get_file().to_index(),
+        );
 
         let file_from_char = (file_from as u8 + b'a') as char;
         let file_to_char = (file_to as u8 + b'a') as char;

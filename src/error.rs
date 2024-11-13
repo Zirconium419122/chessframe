@@ -7,4 +7,7 @@ pub enum Error {
 
     #[error("The string specified does not contain a valid rank")]
     InvalidRank,
+
+    #[error("The string specified does not contain a valid file")]
+    InvalidFile,
 }

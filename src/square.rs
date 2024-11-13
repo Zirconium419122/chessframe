@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{error::Error, rank::Rank};
+use crate::{error::Error, file::File, rank::Rank};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Square(u8);
@@ -23,8 +23,9 @@ impl FromStr for Square {
             _ => return Err(Error::InvalidSquare),
         }
 
-        Ok(Square::new(
-            (chars[0] as u8) - b'a' + ((chars[1] as u8) - b'1') * 8,
+        Ok(Square::make_square(
+            Rank::from_index((chars[1] as usize) - ('1' as usize)),
+            File::from_index((chars[0] as usize) - ('a' as usize)),
         ))
     }
 }
@@ -36,13 +37,18 @@ impl Square {
     }
 
     #[inline]
+    pub fn make_square(rank: Rank, file: File) -> Square {
+        Square((rank.to_index() as u8) << 3 ^ (file.to_index() as u8))
+    }
+
+    #[inline]
     pub fn get_rank(&self) -> Rank {
         Rank::from_index((self.0 >> 3) as usize)
     }
 
     #[inline]
-    pub fn get_file(&self) -> usize {
-        (self.0 % 7) as usize
+    pub fn get_file(&self) -> File {
+        File::from_index((self.0 % 8) as usize)
     }
 
     #[inline]
@@ -50,7 +56,7 @@ impl Square {
         if self.get_rank() == Rank::Eighth {
             None
         } else {
-            Some(Square::new(self.0 + 8))
+            Some(Square::make_square(self.get_rank().up(), self.get_file()))
         }
     }
 
@@ -59,25 +65,28 @@ impl Square {
         if self.get_rank() == Rank::First {
             None
         } else {
-            Some(Square::new(self.0 - 8))
+            Some(Square::make_square(self.get_rank().down(), self.get_file()))
         }
     }
 
     #[inline]
     pub fn left(&self) -> Option<Square> {
-        if self.get_file() == 0 {
+        if self.get_file() == File::A {
             None
         } else {
-            Some(Square::new(self.0 - 1))
+            Some(Square::make_square(self.get_rank(), self.get_file().left()))
         }
     }
 
     #[inline]
     pub fn right(&self) -> Option<Square> {
-        if self.get_file() == 7 {
+        if self.get_file() == File::H {
             None
         } else {
-            Some(Square::new(self.0 + 1))
+            Some(Square::make_square(
+                self.get_rank(),
+                self.get_file().right(),
+            ))
         }
     }
 

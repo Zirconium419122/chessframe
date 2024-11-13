@@ -79,5 +79,5 @@ fn test_perft_depth_7() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);
 
-    assert_eq!(perft(&mut board, 7, true), 3195901860);
+    assert_eq!(perft(&mut board, 7, false), 3195901860);
 }
