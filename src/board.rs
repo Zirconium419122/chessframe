@@ -135,8 +135,6 @@ impl Board {
                 if !kingside && (castling_moves & BitBoard(0x04)).is_zero() {
                     return Err("Cannot castle queenside");
                 }
-
-                Ok(())
             }
             Color::Black => {
                 if kingside && (castling_moves & BitBoard(0x4000000000000000)).is_zero() {
@@ -146,10 +144,10 @@ impl Board {
                 if !kingside && (castling_moves & BitBoard(0x0400000000000000)).is_zero() {
                     return Err("Cannot castle queenside");
                 }
-
-                Ok(())
             }
         }
+
+        Ok(())
     }
 
     pub fn infer_move(&mut self, mv: &str) -> Result<Move, String> {
@@ -262,18 +260,26 @@ impl Board {
             }
             MoveType::Castle => {
                 let (kingside, queenside) = match self.side_to_move {
-                    Color::White => (6, 2),
-                    Color::Black => (62, 58),
+                    Color::White => (Square::G1, Square::C1),
+                    Color::Black => (Square::G8, Square::C8),
                 };
 
-                if to.to_index() == kingside {
+                if to == &kingside {
                     move_piece(index, from.to_index(), to.to_index());
-                    move_piece(3, kingside + 1, kingside - 1);
+                    move_piece(
+                        3,
+                        kingside.wrapping_right().to_index(),
+                        kingside.wrapping_left().to_index(),
+                    );
 
                     self.castling_rights.revoke_all(&self.side_to_move);
-                } else if to.to_index() == queenside {
+                } else if to == &queenside {
                     move_piece(index, from.to_index(), to.to_index());
-                    move_piece(3, queenside - 2, queenside + 1);
+                    move_piece(
+                        3,
+                        queenside.wrapping_left().wrapping_left().to_index(),
+                        queenside.wrapping_right().to_index(),
+                    );
 
                     self.castling_rights.revoke_all(&self.side_to_move);
                 }
@@ -303,13 +309,10 @@ impl Board {
 
         match piece {
             Piece::Pawn => {
-                let (square_behind_pawn, two_squares_behind_pawn) = match self.side_to_move {
-                    Color::White => (to.down().unwrap(), to.down().unwrap().down().unwrap()),
-                    Color::Black => (to.up().unwrap(), to.up().unwrap().up().unwrap()),
-                };
-
-                if from == &two_squares_behind_pawn {
-                    self.en_passant_square = Some(BitBoard::from_square(square_behind_pawn));
+                if from.get_rank() == self.side_to_move.to_second_rank() {
+                    self.en_passant_square = Some(BitBoard::from_square(
+                        to.wrapping_backwards(&self.side_to_move),
+                    ));
                 }
             }
             Piece::King => {

@@ -1,5 +1,7 @@
 use std::ops::Not;
 
+use crate::rank::Rank;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     White,
@@ -26,16 +28,16 @@ impl Color {
     }
 
     #[inline]
-    pub fn toggle(&self) -> Color {
+    pub fn to_second_rank(&self) -> Rank {
         match self {
-            Color::White => Color::Black,
-            Color::Black => Color::White,
+            Color::White => Rank::Second,
+            Color::Black => Rank::Seventh,
         }
     }
 
     #[inline]
     pub fn flip(&mut self) {
-        *self = self.toggle();
+        *self = !*self;
     }
 
     #[inline]

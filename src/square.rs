@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{error::Error, file::File, rank::Rank};
+use crate::{color::Color, error::Error, file::File, rank::Rank};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Square(u8);
@@ -87,6 +87,58 @@ impl Square {
                 self.get_rank(),
                 self.get_file().right(),
             ))
+        }
+    }
+
+    #[inline]
+    pub fn forward(&self, color: &Color) -> Option<Square> {
+        match color {
+            Color::White => self.up(),
+            Color::Black => self.down(),
+        }
+    }
+
+    #[inline]
+    pub fn backwards(&self, color: &Color) -> Option<Square> {
+        match color {
+            Color::White => self.down(),
+            Color::Black => self.up(),
+        }
+    }
+
+    #[inline]
+    pub fn wrapping_up(&self) -> Square {
+        Square::make_square(self.get_rank().up(), self.get_file())
+    }
+
+    #[inline]
+    pub fn wrapping_down(&self) -> Square {
+        Square::make_square(self.get_rank().down(), self.get_file())
+    }
+
+    #[inline]
+    pub fn wrapping_left(&self) -> Square {
+        Square::make_square(self.get_rank(), self.get_file().left())
+    }
+
+    #[inline]
+    pub fn wrapping_right(&self) -> Square {
+        Square::make_square(self.get_rank(), self.get_file().right())
+    }
+
+    #[inline]
+    pub fn wrapping_forward(&self, color: &Color) -> Square {
+        match color {
+            Color::White => self.wrapping_up(),
+            Color::Black => self.wrapping_down(),
+        }
+    }
+
+    #[inline]
+    pub fn wrapping_backwards(&self, color: &Color) -> Square {
+        match color {
+            Color::White => self.wrapping_down(),
+            Color::Black => self.wrapping_up(),
         }
     }
 
