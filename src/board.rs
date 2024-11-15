@@ -4,13 +4,15 @@ use crate::{
     bitboard::{BitBoard, EMPTY},
     castling_rights::CastlingRights,
     color::Color,
+    file::File,
     magic::{get_bishop_moves, get_rook_moves},
     piece::Piece,
-    r#move::{BoardHistory, Move, MoveType},
+    r#move::{Move, MoveType},
+    rank::Rank,
     square::Square,
 };
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Board {
     pub pieces: [BitBoard; 12],   // 6 for white, 6 for black
     pub occupancy: [BitBoard; 2], // white, black occupancy
@@ -19,7 +21,6 @@ pub struct Board {
     pub en_passant_square: Option<BitBoard>,
     pub half_move_clock: u32,
     pub full_move_clock: u32,
-    pub board_history: Vec<BoardHistory>,
 }
 
 impl Default for Board {
@@ -38,7 +39,6 @@ impl Board {
             en_passant_square: None,
             half_move_clock: 0,
             full_move_clock: 1,
-            board_history: Vec::new(),
         };
 
         let parts: Vec<&str> = fen.split_whitespace().collect();
@@ -105,7 +105,7 @@ impl Board {
     }
 
     fn place_piece(&mut self, piece: Piece, color: Color, rank: usize, file: usize) {
-        let square = 8 * rank + file;
+        let square = Square::make_square(Rank::from_index(rank), File::from_index(file));
         self.set_piece(&piece, &color, square);
     }
 
@@ -237,6 +237,14 @@ impl Board {
         Ok(piece)
     }
 
+    pub fn make_move_new(&self, mv: &Move) -> Result<Board, String> {
+        let mut board = *self;
+
+        board.make_move(mv)?;
+
+        Ok(board)
+    }
+
     pub fn make_move(&mut self, mv: &Move) -> Result<(), String> {
         let piece = self.validate_move(mv)?;
 
@@ -246,17 +254,15 @@ impl Board {
         let offset = self.side_to_move.to_offset();
         let index = piece.to_index() + offset;
 
-        self.board_history.push(BoardHistory::from(&*self));
-
-        let mut move_piece = |index: usize, from: usize, to: usize| {
+        let mut move_piece = |index: usize, from: Square, to: Square| {
             self.pieces[index].clear_bit(from);
             self.pieces[index].set_bit(to);
         };
 
         match move_type {
             MoveType::Quiet | MoveType::Capture | MoveType::Check => {
-                move_piece(index, from.to_index(), to.to_index());
-                self.clear_piece(to, &!self.side_to_move);
+                move_piece(index, *from, *to);
+                self.clear_piece(*to, &!self.side_to_move);
             }
             MoveType::Castle => {
                 let (kingside, queenside) = match self.side_to_move {
@@ -265,43 +271,35 @@ impl Board {
                 };
 
                 if to == &kingside {
-                    move_piece(index, from.to_index(), to.to_index());
-                    move_piece(
-                        3,
-                        kingside.wrapping_right().to_index(),
-                        kingside.wrapping_left().to_index(),
-                    );
+                    move_piece(index, *from, *to);
+                    move_piece(3, kingside.wrapping_right(), kingside.wrapping_left());
 
                     self.castling_rights.revoke_all(&self.side_to_move);
                 } else if to == &queenside {
-                    move_piece(index, from.to_index(), to.to_index());
+                    move_piece(index, *from, *to);
                     move_piece(
                         3,
-                        queenside.wrapping_left().wrapping_left().to_index(),
-                        queenside.wrapping_right().to_index(),
+                        queenside.wrapping_left().wrapping_left(),
+                        queenside.wrapping_right(),
                     );
 
                     self.castling_rights.revoke_all(&self.side_to_move);
                 }
             }
             MoveType::EnPassant => {
-                let behind_pawn = match self.side_to_move {
-                    Color::White => to.down(),
-                    Color::Black => to.up(),
-                }
-                .unwrap();
+                let behind_pawn = to.backwards(&self.side_to_move).unwrap();
 
-                move_piece(index, from.to_index(), to.to_index());
-                self.clear_piece(&behind_pawn, &!self.side_to_move)
+                move_piece(index, *from, *to);
+                self.clear_piece(behind_pawn, &!self.side_to_move)
             }
             MoveType::Promotion(piece) => {
-                self.pieces[offset].clear_bit(from.to_index());
-                self.set_piece(piece, &self.side_to_move.clone(), to.to_index());
+                self.pieces[offset].clear_bit(*from);
+                self.set_piece(piece, &self.side_to_move.clone(), *to);
             }
             MoveType::CapturePromotion(piece) => {
-                self.pieces[offset].clear_bit(from.to_index());
-                self.set_piece(piece, &self.side_to_move.clone(), to.to_index());
-                self.clear_piece(to, &!self.side_to_move);
+                self.pieces[offset].clear_bit(*from);
+                self.set_piece(piece, &self.side_to_move.clone(), *to);
+                self.clear_piece(*to, &!self.side_to_move);
             }
         }
 
@@ -309,7 +307,9 @@ impl Board {
 
         match piece {
             Piece::Pawn => {
-                if from.get_rank() == self.side_to_move.to_second_rank() {
+                if from.get_rank() == self.side_to_move.to_second_rank()
+                    && to.get_rank() == self.side_to_move.to_fourth_rank()
+                {
                     self.en_passant_square = Some(BitBoard::from_square(
                         to.wrapping_backwards(&self.side_to_move),
                     ));
@@ -338,29 +338,10 @@ impl Board {
         self.side_to_move.flip();
 
         if (self.generate_moves() & self.pieces[5 + offset]).is_not_zero() {
-            self.unmake_move().unwrap();
-
             return Err("Cannot move pinned piece!".to_string());
         }
 
         Ok(())
-    }
-
-    pub fn unmake_move(&mut self) -> Result<(), &str> {
-        match self.board_history.pop() {
-            Some(board_history) => {
-                self.pieces = board_history.pieces;
-                self.occupancy = board_history.occupancy;
-                self.side_to_move.flip();
-                self.castling_rights = board_history.castling_rights;
-                self.en_passant_square = board_history.en_passant_square;
-                self.half_move_clock = board_history.half_move_clock;
-                self.full_move_clock -= 1;
-
-                Ok(())
-            }
-            None => Err("No move to unmake!"),
-        }
     }
 
     fn update_occupancy(&mut self) {
@@ -413,28 +394,28 @@ impl Board {
         }
     }
 
-    pub fn set_piece(&mut self, piece: &Piece, color: &Color, square: usize) {
+    pub fn set_piece(&mut self, piece: &Piece, color: &Color, square: Square) {
         let bitboard = &mut self.pieces[piece.piece_index(color)];
         bitboard.set_bit(square);
         self.occupancy[color.to_index()].set_bit(square);
     }
 
-    pub fn clear_piece(&mut self, square: &Square, color: &Color) {
+    pub fn clear_piece(&mut self, square: Square, color: &Color) {
         let color_index = color.to_index();
-        if self.occupancy[color_index].is_not_set(*square) {
+        if self.occupancy[color_index].is_not_set(square) {
             return;
         }
 
         let offset = color.to_offset();
 
         for i in 0..6 {
-            if self.pieces[i + offset].is_set(*square) {
-                self.pieces[i + offset].clear_bit(square.to_index());
+            if self.pieces[i + offset].is_set(square) {
+                self.pieces[i + offset].clear_bit(square);
                 break;
             }
         }
 
-        self.occupancy[color_index].clear_bit(square.to_index());
+        self.occupancy[color_index].clear_bit(square);
     }
 
     pub fn generate_moves(&self) -> BitBoard {

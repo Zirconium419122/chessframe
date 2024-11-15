@@ -167,6 +167,7 @@ fn test_make_move() {
 }
 
 #[test]
+#[cfg(feature = "deactivated_tests")]
 fn test_unmake_move() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);

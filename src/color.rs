@@ -36,6 +36,14 @@ impl Color {
     }
 
     #[inline]
+    pub fn to_fourth_rank(&self) -> Rank {
+        match self {
+            Color::White => Rank::Fourth,
+            Color::Black => Rank::Fifth,
+        }
+    }
+
+    #[inline]
     pub fn flip(&mut self) {
         *self = !*self;
     }

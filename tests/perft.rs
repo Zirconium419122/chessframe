@@ -8,15 +8,13 @@ fn perft(board: &mut Board, depth: usize, divide: bool) -> usize {
     let mut count = 0;
 
     for mv in board.generate_moves_vec() {
-        if let Ok(_) = board.make_move(&mv) {
+        if let Ok(ref mut board) = board.make_move_new(&mv) {
             let perft = perft(board, depth - 1, false);
             count += perft;
 
             if divide {
                 println!("{}: {}", mv, perft);
             }
-
-            let _ = board.unmake_move();
         }
     }
 

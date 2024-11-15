@@ -130,14 +130,14 @@ impl BitBoard {
 
     /// Set the bit at `square`
     #[inline]
-    pub fn set_bit(&mut self, square: usize) {
-        self.0 |= 1 << square;
+    pub fn set_bit(&mut self, square: Square) {
+        self.0 |= 1 << square.to_int();
     }
 
     /// Clear the bit at `square`
     #[inline]
-    pub fn clear_bit(&mut self, square: usize) {
-        self.0 &= !(1 << square);
+    pub fn clear_bit(&mut self, square: Square) {
+        self.0 &= !(1 << square.to_int());
     }
 
     /// Check if a bit is set at `Square`
