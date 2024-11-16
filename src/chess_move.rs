@@ -1,17 +1,15 @@
 use core::fmt;
 
-use crate::{
-    bitboard::BitBoard, board::Board, castling_rights::CastlingRights, piece::Piece, square::Square,
-};
+use crate::{piece::Piece, square::Square};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Move {
+pub struct ChessMove {
     pub from: Square,
     pub to: Square,
     pub move_type: MoveType,
 }
 
-impl fmt::Display for Move {
+impl fmt::Display for ChessMove {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let (rank_from, file_from) = (
             self.from.get_rank().to_index() + 1,
@@ -48,9 +46,9 @@ impl fmt::Display for Move {
     }
 }
 
-impl Move {
-    pub fn new(from: Square, to: Square) -> Move {
-        Move {
+impl ChessMove {
+    pub fn new(from: Square, to: Square) -> ChessMove {
+        ChessMove {
             from,
             to,
             move_type: MoveType::Quiet,
@@ -65,40 +63,40 @@ impl Move {
         &self.move_type
     }
 
-    pub fn new_promotion(from: Square, to: Square, promotion: Piece) -> Move {
-        Move {
+    pub fn new_promotion(from: Square, to: Square, promotion: Piece) -> ChessMove {
+        ChessMove {
             from,
             to,
             move_type: MoveType::Promotion(promotion),
         }
     }
 
-    pub fn new_capture(from: Square, to: Square) -> Move {
-        Move {
+    pub fn new_capture(from: Square, to: Square) -> ChessMove {
+        ChessMove {
             from,
             to,
             move_type: MoveType::Capture,
         }
     }
 
-    pub fn new_capture_promotion(from: Square, to: Square, promotion: Piece) -> Move {
-        Move {
+    pub fn new_capture_promotion(from: Square, to: Square, promotion: Piece) -> ChessMove {
+        ChessMove {
             from,
             to,
             move_type: MoveType::CapturePromotion(promotion),
         }
     }
 
-    pub fn new_en_passant(from: Square, to: Square) -> Move {
-        Move {
+    pub fn new_en_passant(from: Square, to: Square) -> ChessMove {
+        ChessMove {
             from,
             to,
             move_type: MoveType::EnPassant,
         }
     }
 
-    pub fn new_castle(from: Square, to: Square) -> Move {
-        Move {
+    pub fn new_castle(from: Square, to: Square) -> ChessMove {
+        ChessMove {
             from,
             to,
             move_type: MoveType::Castle,
@@ -115,25 +113,4 @@ pub enum MoveType {
     EnPassant,
     Promotion(Piece),
     CapturePromotion(Piece),
-}
-
-#[derive(Clone, Copy)]
-pub struct BoardHistory {
-    pub pieces: [BitBoard; 12],
-    pub occupancy: [BitBoard; 2],
-    pub castling_rights: CastlingRights,
-    pub en_passant_square: Option<BitBoard>,
-    pub half_move_clock: u32,
-}
-
-impl From<&Board> for BoardHistory {
-    fn from(value: &Board) -> Self {
-        BoardHistory {
-            pieces: value.pieces,
-            occupancy: value.occupancy,
-            castling_rights: value.castling_rights,
-            en_passant_square: value.en_passant_square,
-            half_move_clock: value.half_move_clock,
-        }
-    }
 }

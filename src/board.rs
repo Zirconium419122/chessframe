@@ -7,7 +7,7 @@ use crate::{
     file::File,
     magic::{get_bishop_moves, get_rook_moves},
     piece::Piece,
-    r#move::{Move, MoveType},
+    chess_move::{ChessMove, MoveType},
     rank::Rank,
     square::Square,
 };
@@ -150,7 +150,7 @@ impl Board {
         Ok(())
     }
 
-    pub fn infer_move(&mut self, mv: &str) -> Result<Move, String> {
+    pub fn infer_move(&mut self, mv: &str) -> Result<ChessMove, String> {
         let from = Square::from_str(&mv[0..2]).map_err(|err| err.to_string())?;
         let to = Square::from_str(&mv[2..4]).map_err(|err| err.to_string())?;
         let promotion: Option<Piece> = match &mv.len() {
@@ -160,15 +160,15 @@ impl Board {
         };
 
         if let Some(piece) = self.get_piece(from) {
-            let mut mv: Option<Move> = None;
+            let mut mv: Option<ChessMove> = None;
 
             match piece {
                 Piece::Pawn => {
                     if let Some(promotion) = promotion {
                         if self.occupancy[(!self.side_to_move).to_index()].is_not_set(to) {
-                            mv = Some(Move::new_promotion(from, to, promotion));
+                            mv = Some(ChessMove::new_promotion(from, to, promotion));
                         } else {
-                            mv = Some(Move::new_capture_promotion(from, to, promotion));
+                            mv = Some(ChessMove::new_capture_promotion(from, to, promotion));
                         }
                     }
                 }
@@ -182,7 +182,7 @@ impl Board {
                         && (to == king.right().unwrap().right().unwrap()
                             || to == king.left().unwrap().left().unwrap())
                     {
-                        mv = Some(Move::new_castle(from, to));
+                        mv = Some(ChessMove::new_castle(from, to));
                     }
                 }
                 _ => (),
@@ -195,9 +195,9 @@ impl Board {
             }
 
             if self.occupancy[(!self.side_to_move).to_index()].is_not_set(to) {
-                mv = Some(Move::new(from, to));
+                mv = Some(ChessMove::new(from, to));
             } else {
-                mv = Some(Move::new_capture(from, to));
+                mv = Some(ChessMove::new_capture(from, to));
             }
 
             if let Some(mv) = mv {
@@ -210,7 +210,7 @@ impl Board {
         Err("No piece at from square".to_string())
     }
 
-    pub fn validate_move(&mut self, mv: &Move) -> Result<Piece, &str> {
+    pub fn validate_move(&mut self, mv: &ChessMove) -> Result<Piece, &str> {
         let (from, to) = mv.get_move();
         let piece = self.get_piece(*from).ok_or("No piece found on square!")?;
 
@@ -237,7 +237,7 @@ impl Board {
         Ok(piece)
     }
 
-    pub fn make_move_new(&self, mv: &Move) -> Result<Board, String> {
+    pub fn make_move_new(&self, mv: &ChessMove) -> Result<Board, String> {
         let mut board = *self;
 
         board.make_move(mv)?;
@@ -245,7 +245,7 @@ impl Board {
         Ok(board)
     }
 
-    pub fn make_move(&mut self, mv: &Move) -> Result<(), String> {
+    pub fn make_move(&mut self, mv: &ChessMove) -> Result<(), String> {
         let piece = self.validate_move(mv)?;
 
         let (from, to) = mv.get_move();
@@ -427,11 +427,11 @@ impl Board {
             | self.generate_king_moves()
     }
 
-    pub fn generate_moves_vec(&mut self) -> Vec<Move> {
+    pub fn generate_moves_vec(&mut self) -> Vec<ChessMove> {
         macro_rules! extract_moves {
             ($offset:literal, $($piece:expr),+) => {
                 {
-                    let mut moves: Vec<Move> = Vec::with_capacity(218);
+                    let mut moves: Vec<ChessMove> = Vec::with_capacity(218);
                     let opponent_occupancy = self.occupancy[(!self.side_to_move).to_index()];
 
                     $(
@@ -453,24 +453,24 @@ impl Board {
                             let capture_moves = generated_moves & opponent_occupancy;
 
                             // Extend moves with quiet moves
-                            moves.extend(quiet_moves.into_iter().map(|destination| Move::new(square, destination)));
+                            moves.extend(quiet_moves.into_iter().map(|destination| ChessMove::new(square, destination)));
 
                             // Extend moves with capture moves
-                            moves.extend(capture_moves.into_iter().map(|destination| Move::new_capture(square, destination)));
+                            moves.extend(capture_moves.into_iter().map(|destination| ChessMove::new_capture(square, destination)));
 
                             match $piece {
                                 Piece::Pawn => {
                                     moves.extend(self.generate_pawn_pushes().into_iter().flat_map(|destination| {
                                         if self.is_promotion(&destination) {
                                             vec![
-                                                Move::new_promotion(square, destination, Piece::Knight),
-                                                Move::new_promotion(square, destination, Piece::Bishop),
-                                                Move::new_promotion(square, destination, Piece::Rook),
-                                                Move::new_promotion(square, destination, Piece::Queen),
+                                                ChessMove::new_promotion(square, destination, Piece::Knight),
+                                                ChessMove::new_promotion(square, destination, Piece::Bishop),
+                                                ChessMove::new_promotion(square, destination, Piece::Rook),
+                                                ChessMove::new_promotion(square, destination, Piece::Queen),
                                             ]
                                         } else {
                                             vec![
-                                                Move::new(square, destination)
+                                                ChessMove::new(square, destination)
                                             ]
                                         }
                                     }));
@@ -478,26 +478,26 @@ impl Board {
                                     moves.extend(self.generate_pawn_captures().into_iter().flat_map(|destination| {
                                         if self.is_promotion(&destination) {
                                             vec![
-                                                Move::new_capture_promotion(square, destination, Piece::Knight),
-                                                Move::new_capture_promotion(square, destination, Piece::Bishop),
-                                                Move::new_capture_promotion(square, destination, Piece::Rook),
-                                                Move::new_capture_promotion(square, destination, Piece::Queen),
+                                                ChessMove::new_capture_promotion(square, destination, Piece::Knight),
+                                                ChessMove::new_capture_promotion(square, destination, Piece::Bishop),
+                                                ChessMove::new_capture_promotion(square, destination, Piece::Rook),
+                                                ChessMove::new_capture_promotion(square, destination, Piece::Queen),
                                             ]
                                         } else {
                                             vec![
-                                                Move::new_capture(square, destination),
+                                                ChessMove::new_capture(square, destination),
                                             ]
                                         }
                                     }));
 
                                     moves.extend(self.generate_en_passant().into_iter().map(|destination| {
-                                            Move::new_en_passant(square, destination)
+                                            ChessMove::new_en_passant(square, destination)
                                         })
                                     );
                                 }
                                 Piece::King => {
                                     moves.extend(self.generate_castling_moves().into_iter().map(|destination| {
-                                            Move::new_castle(square, destination)
+                                            ChessMove::new_castle(square, destination)
                                         })
                                     );
                                 }

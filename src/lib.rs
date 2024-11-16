@@ -5,7 +5,7 @@ pub mod color;
 pub mod error;
 pub mod file;
 pub mod magic;
-pub mod r#move;
+pub mod chess_move;
 pub mod piece;
 pub mod rank;
 pub mod square;
