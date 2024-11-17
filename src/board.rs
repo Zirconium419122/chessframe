@@ -3,11 +3,11 @@ use std::str::FromStr;
 use crate::{
     bitboard::{BitBoard, EMPTY},
     castling_rights::CastlingRights,
+    chess_move::{ChessMove, MoveType},
     color::Color,
     file::File,
     magic::{get_bishop_moves, get_rook_moves},
     piece::Piece,
-    chess_move::{ChessMove, MoveType},
     rank::Rank,
     square::Square,
 };
@@ -119,8 +119,22 @@ impl Board {
         }
     }
 
+    #[inline]
     pub fn combined(&self) -> BitBoard {
         self.occupancy[0] | self.occupancy[1]
+    }
+
+    #[inline]
+    pub fn en_passant_square(&self) -> Option<BitBoard> {
+        self.en_passant_square
+    }
+
+    fn remove_en_passant(&mut self) {
+        self.en_passant_square = None;
+    }
+
+    fn set_en_passant(&mut self, square: Square) {
+        self.en_passant_square = Some(BitBoard::from_square(square));
     }
 
     pub fn can_castle(&mut self, kingside: bool) -> Result<(), &str> {
@@ -259,9 +273,10 @@ impl Board {
             self.pieces[index].set_bit(to);
         };
 
+        move_piece(index, *from, *to);
+
         match move_type {
             MoveType::Quiet | MoveType::Capture | MoveType::Check => {
-                move_piece(index, *from, *to);
                 self.clear_piece(*to, &!self.side_to_move);
             }
             MoveType::Castle => {
@@ -271,48 +286,40 @@ impl Board {
                 };
 
                 if to == &kingside {
-                    move_piece(index, *from, *to);
                     move_piece(3, kingside.wrapping_right(), kingside.wrapping_left());
-
-                    self.castling_rights.revoke_all(&self.side_to_move);
                 } else if to == &queenside {
-                    move_piece(index, *from, *to);
                     move_piece(
                         3,
                         queenside.wrapping_left().wrapping_left(),
                         queenside.wrapping_right(),
                     );
-
-                    self.castling_rights.revoke_all(&self.side_to_move);
                 }
+
+                self.castling_rights.revoke_all(&self.side_to_move);
             }
             MoveType::EnPassant => {
                 let behind_pawn = to.backwards(&self.side_to_move).unwrap();
-
-                move_piece(index, *from, *to);
                 self.clear_piece(behind_pawn, &!self.side_to_move)
             }
             MoveType::Promotion(piece) => {
-                self.pieces[offset].clear_bit(*from);
+                self.pieces[offset].clear_bit(*to);
                 self.set_piece(piece, &self.side_to_move.clone(), *to);
             }
             MoveType::CapturePromotion(piece) => {
-                self.pieces[offset].clear_bit(*from);
+                self.pieces[offset].clear_bit(*to);
                 self.set_piece(piece, &self.side_to_move.clone(), *to);
                 self.clear_piece(*to, &!self.side_to_move);
             }
         }
 
-        self.en_passant_square = None;
+        self.remove_en_passant();
 
         match piece {
             Piece::Pawn => {
                 if from.get_rank() == self.side_to_move.to_second_rank()
                     && to.get_rank() == self.side_to_move.to_fourth_rank()
                 {
-                    self.en_passant_square = Some(BitBoard::from_square(
-                        to.wrapping_backwards(&self.side_to_move),
-                    ));
+                    self.set_en_passant(to.wrapping_backwards(&self.side_to_move));
                 }
             }
             Piece::King => {

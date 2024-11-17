@@ -1,11 +1,11 @@
 pub mod bitboard;
 pub mod board;
 pub mod castling_rights;
+pub mod chess_move;
 pub mod color;
 pub mod error;
 pub mod file;
 pub mod magic;
-pub mod chess_move;
 pub mod piece;
 pub mod rank;
 pub mod square;

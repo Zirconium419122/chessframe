@@ -1,4 +1,4 @@
-use chess_frame::{piece::Piece, chess_move::ChessMove, square::Square};
+use chess_frame::{chess_move::ChessMove, piece::Piece, square::Square};
 
 #[test]
 fn test_pretty_print() {
