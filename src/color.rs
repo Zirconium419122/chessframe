@@ -11,7 +11,7 @@ pub enum Color {
 impl Not for Color {
     type Output = Color;
 
-    /// Get the opposite color
+    /// Get the opposite color.
     #[inline]
     fn not(self) -> Self::Output {
         match self {
@@ -22,6 +22,7 @@ impl Not for Color {
 }
 
 impl Color {
+    /// Convert `Color` to a `usize`.
     #[inline]
     pub fn to_index(&self) -> usize {
         *self as usize

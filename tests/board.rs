@@ -170,46 +170,6 @@ fn test_make_move() {
 }
 
 #[test]
-#[cfg(feature = "deactivated_tests")]
-fn test_unmake_move() {
-    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    let mut board = Board::from_fen(fen);
-
-    // Test initialy no move to unmake
-    {
-        assert_eq!(board.board_history.len(), 0);
-        assert_eq!(board.unmake_move(), Err("No move to unmake!"));
-    }
-
-    // Test that you can make a move
-    {
-        assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
-        assert_eq!(board.en_passant_square, None);
-
-        assert_eq!(
-            board.make_move(&ChessMove::new(Square::E2, Square::E4)),
-            Ok(())
-        );
-
-        assert_eq!(board.side_to_move, Color::Black);
-        assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
-        assert_eq!(board.en_passant_square, Some(BitBoard(0x100000)));
-    }
-
-    // Test that you can unmake a move
-    {
-        assert_eq!(board.side_to_move, Color::Black);
-        assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
-
-        assert_eq!(board.unmake_move(), Ok(()));
-
-        assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
-    }
-}
-
-#[test]
 fn test_can_castle() {
     let fen = "r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 1 6";
     let mut board = Board::from_fen(fen);

@@ -76,7 +76,7 @@ impl Shr<usize> for BitBoard {
     }
 }
 
-/// For the `BitBoard`, iterate over every `square` set
+/// For the `BitBoard`, iterate over every `Square` set.
 impl Iterator for BitBoard {
     type Item = Square;
 
@@ -110,57 +110,57 @@ impl fmt::Display for BitBoard {
 }
 
 impl BitBoard {
-    /// Construct a new bitboard from a `u64`
+    /// Construct a new bitboard from a `u64`.
     #[inline]
     pub fn new(bits: u64) -> BitBoard {
         BitBoard(bits)
     }
 
-    /// Construct a new `BitBoard` with a `Square` set
+    /// Construct a new `BitBoard` with a `Square` set.
     #[inline]
     pub fn from_square(square: Square) -> BitBoard {
         BitBoard(1 << square.to_int())
     }
 
-    /// Convert a `BitBoard` to a `Square`
+    /// Convert a `BitBoard` to a `Square`.
     #[inline]
     pub fn to_square(&self) -> Square {
         Square::new(self.0.trailing_zeros() as u8)
     }
 
-    /// Set the bit at `square`
+    /// Set the bit at `Square`.
     #[inline]
     pub fn set_bit(&mut self, square: Square) {
         self.0 |= 1 << square.to_int();
     }
 
-    /// Clear the bit at `square`
+    /// Clear the bit at `Square`.
     #[inline]
     pub fn clear_bit(&mut self, square: Square) {
         self.0 &= !(1 << square.to_int());
     }
 
-    /// Check if a bit is set at `Square`
+    /// Check if a bit is set at `Square`.
     #[inline]
     pub fn is_set(&self, square: Square) -> bool {
         (self.0 & (1 << square.to_int())) != 0
     }
 
-    /// Check if a bit is not set at `Square`
+    /// Check if a bit is not set at `Square`.
     #[inline]
     pub fn is_not_set(&self, square: Square) -> bool {
         (self.0 & (1 << square.to_int())) == 0
     }
 
-    /// Check if the `BitBoard` is zero
+    /// Check if the `BitBoard` is zero.
     #[inline]
     pub fn is_zero(&self) -> bool {
-        self.0 == 0
+        self == &EMPTY
     }
 
-    /// Check if the `BitBoard` is not zero
+    /// Check if the `BitBoard` is not zero.
     #[inline]
     pub fn is_not_zero(&self) -> bool {
-        self.0 != 0
+        self != &EMPTY
     }
 }

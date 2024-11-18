@@ -1,6 +1,6 @@
 use crate::color::Color;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CastlingRights {
     pub white_kingside: bool,
     pub white_queenside: bool,

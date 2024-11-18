@@ -31,26 +31,31 @@ impl FromStr for Square {
 }
 
 impl Square {
+    /// Create a new `Square` given an index.
     #[inline]
     pub fn new(square: u8) -> Square {
         Square(square % 64)
     }
 
+    /// Make a `Square` given its rank and file.
     #[inline]
     pub fn make_square(rank: Rank, file: File) -> Square {
         Square((rank.to_index() as u8) << 3 ^ (file.to_index() as u8))
     }
 
+    /// Return the `Rank` given this `Square`.
     #[inline]
     pub fn get_rank(&self) -> Rank {
         Rank::from_index((self.0 >> 3) as usize)
     }
 
+    /// Return the `File` given this `Square`.
     #[inline]
     pub fn get_file(&self) -> File {
         File::from_index((self.0 % 8) as usize)
     }
 
+    /// If there is a square above this one, return it. Otherwise, return `None`.
     #[inline]
     pub fn up(&self) -> Option<Square> {
         if self.get_rank() == Rank::Eighth {
@@ -60,6 +65,7 @@ impl Square {
         }
     }
 
+    /// If there is a square below this one, return it. Otherwise, return `None`.
     #[inline]
     pub fn down(&self) -> Option<Square> {
         if self.get_rank() == Rank::First {
@@ -69,6 +75,7 @@ impl Square {
         }
     }
 
+    /// If there is a square to the left of this one, return it. Otherwise, return `None`.
     #[inline]
     pub fn left(&self) -> Option<Square> {
         if self.get_file() == File::A {
@@ -78,6 +85,7 @@ impl Square {
         }
     }
 
+    /// If there is a square to the right of this one, return it. Otherwise, return `None`.
     #[inline]
     pub fn right(&self) -> Option<Square> {
         if self.get_file() == File::H {
@@ -90,6 +98,7 @@ impl Square {
         }
     }
 
+    /// If there is a square forwards, given a `Color`, go in that direction.
     #[inline]
     pub fn forward(&self, color: &Color) -> Option<Square> {
         match color {
@@ -98,6 +107,7 @@ impl Square {
         }
     }
 
+    /// If there is a square backwards, given a `Color`, go in that direction.
     #[inline]
     pub fn backwards(&self, color: &Color) -> Option<Square> {
         match color {
@@ -106,26 +116,31 @@ impl Square {
         }
     }
 
+    /// If there is a square above this one, return it. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_up(&self) -> Square {
         Square::make_square(self.get_rank().up(), self.get_file())
     }
 
+    /// If there is a square below this one, return it. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_down(&self) -> Square {
         Square::make_square(self.get_rank().down(), self.get_file())
     }
 
+    /// If there is a square to the left of this one, return it. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_left(&self) -> Square {
         Square::make_square(self.get_rank(), self.get_file().left())
     }
 
+    /// If there is a square to the right of this one, return it. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_right(&self) -> Square {
         Square::make_square(self.get_rank(), self.get_file().right())
     }
 
+    /// If there is a square forwards, given a `Color`, go in that direction. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_forward(&self, color: &Color) -> Square {
         match color {
@@ -134,6 +149,7 @@ impl Square {
         }
     }
 
+    /// If there is a square backwards, given a `Color`, go in that direction. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_backwards(&self, color: &Color) -> Square {
         match color {
@@ -142,11 +158,13 @@ impl Square {
         }
     }
 
+    /// Convert this `Square` to an integer (`u8`).
     #[inline]
     pub fn to_int(&self) -> u8 {
         self.0
     }
 
+    /// Convert this `Square` to a `usize`.
     #[inline]
     pub fn to_index(&self) -> usize {
         self.0 as usize
@@ -217,3 +235,70 @@ impl Square {
     pub const G8: Square = Square(62);
     pub const H8: Square = Square(63);
 }
+
+pub const SQUARES: [Square; 64] = [
+    Square::A1,
+    Square::B1,
+    Square::C1,
+    Square::D1,
+    Square::E1,
+    Square::F1,
+    Square::G1,
+    Square::H1,
+    Square::A2,
+    Square::B2,
+    Square::C2,
+    Square::D2,
+    Square::E2,
+    Square::F2,
+    Square::G2,
+    Square::H2,
+    Square::A3,
+    Square::B3,
+    Square::C3,
+    Square::D3,
+    Square::E3,
+    Square::F3,
+    Square::G3,
+    Square::H3,
+    Square::A4,
+    Square::B4,
+    Square::C4,
+    Square::D4,
+    Square::E4,
+    Square::F4,
+    Square::G4,
+    Square::H4,
+    Square::A5,
+    Square::B5,
+    Square::C5,
+    Square::D5,
+    Square::E5,
+    Square::F5,
+    Square::G5,
+    Square::H5,
+    Square::A6,
+    Square::B6,
+    Square::C6,
+    Square::D6,
+    Square::E6,
+    Square::F6,
+    Square::G6,
+    Square::H6,
+    Square::A7,
+    Square::B7,
+    Square::C7,
+    Square::D7,
+    Square::E7,
+    Square::F7,
+    Square::G7,
+    Square::H7,
+    Square::A8,
+    Square::B8,
+    Square::C8,
+    Square::D8,
+    Square::E8,
+    Square::F8,
+    Square::G8,
+    Square::H8,
+];

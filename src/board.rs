@@ -12,7 +12,7 @@ use crate::{
     square::Square,
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Board {
     pub pieces: [BitBoard; 12],   // 6 for white, 6 for black
     pub occupancy: [BitBoard; 2], // white, black occupancy
@@ -30,6 +30,15 @@ impl Default for Board {
 }
 
 impl Board {
+    /// Create a board from a FEN in the form of a `&str`.
+    /// ```
+    /// use chess_frame::board::Board;
+    ///
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    ///
+    /// assert_eq!(board, Board::default());
+    /// ```
     pub fn from_fen(fen: &str) -> Board {
         let mut board = Board {
             pieces: [BitBoard::default(); 12],
@@ -119,11 +128,20 @@ impl Board {
         }
     }
 
+    /// Get the combined bitboard of all pieces on the board.
+    /// ```
+    /// use chess_frame::{bitboard::BitBoard, board::Board};
+    ///
+    /// let board = Board::default();
+    ///
+    /// assert_eq!(board.combined(), BitBoard(0xFFFF00000000FFFF));
+    /// ```
     #[inline]
     pub fn combined(&self) -> BitBoard {
         self.occupancy[0] | self.occupancy[1]
     }
 
+    /// Get the en passant square, if there is one.
     #[inline]
     pub fn en_passant_square(&self) -> Option<BitBoard> {
         self.en_passant_square
@@ -137,6 +155,7 @@ impl Board {
         self.en_passant_square = Some(BitBoard::from_square(square));
     }
 
+    /// Check if one can castle to the given side.
     pub fn can_castle(&mut self, kingside: bool) -> Result<(), &str> {
         let castling_moves = self.generate_castling_moves();
 
@@ -164,6 +183,7 @@ impl Board {
         Ok(())
     }
 
+    /// Infer a `ChessMove` from a string based on the current board state.
     pub fn infer_move(&mut self, mv: &str) -> Result<ChessMove, String> {
         let from = Square::from_str(&mv[0..2]).map_err(|err| err.to_string())?;
         let to = Square::from_str(&mv[2..4]).map_err(|err| err.to_string())?;
@@ -224,6 +244,7 @@ impl Board {
         Err("No piece at from square".to_string())
     }
 
+    /// Checks that a `ChessMove` is a valid move for the current board state. Does not check if the move leaves the king in check.
     pub fn validate_move(&mut self, mv: &ChessMove) -> Result<Piece, &str> {
         let (from, to) = mv.get_move();
         let piece = self.get_piece(*from).ok_or("No piece found on square!")?;
@@ -251,6 +272,7 @@ impl Board {
         Ok(piece)
     }
 
+    /// Make a `ChessMove` on a copy of the current board state.
     pub fn make_move_new(&self, mv: &ChessMove) -> Result<Board, String> {
         let mut board = *self;
 
@@ -259,6 +281,7 @@ impl Board {
         Ok(board)
     }
 
+    /// Make a `ChessMove` on the current board state.
     pub fn make_move(&mut self, mv: &ChessMove) -> Result<(), String> {
         let piece = self.validate_move(mv)?;
 
@@ -301,11 +324,7 @@ impl Board {
                 let behind_pawn = to.backwards(&self.side_to_move).unwrap();
                 self.clear_piece(behind_pawn, &!self.side_to_move)
             }
-            MoveType::Promotion(piece) => {
-                self.pieces[offset].clear_bit(*to);
-                self.set_piece(piece, &self.side_to_move.clone(), *to);
-            }
-            MoveType::CapturePromotion(piece) => {
+            MoveType::Promotion(piece) | MoveType::CapturePromotion(piece) => {
                 self.pieces[offset].clear_bit(*to);
                 self.set_piece(piece, &self.side_to_move.clone(), *to);
                 self.clear_piece(*to, &!self.side_to_move);
@@ -372,6 +391,7 @@ impl Board {
         }
     }
 
+    /// Get the piece at a given square.
     pub fn get_piece(&self, square: Square) -> Option<Piece> {
         let bitboard = BitBoard::from_square(square);
         if self.combined() & bitboard == EMPTY {
@@ -401,12 +421,14 @@ impl Board {
         }
     }
 
+    /// Set the piece at a given square (used during board construction and promotions).
     pub fn set_piece(&mut self, piece: &Piece, color: &Color, square: Square) {
         let bitboard = &mut self.pieces[piece.piece_index(color)];
         bitboard.set_bit(square);
         self.occupancy[color.to_index()].set_bit(square);
     }
 
+    /// Remove the piece at a given square.
     pub fn clear_piece(&mut self, square: Square, color: &Color) {
         let color_index = color.to_index();
         if self.occupancy[color_index].is_not_set(square) {
@@ -425,6 +447,7 @@ impl Board {
         self.occupancy[color_index].clear_bit(square);
     }
 
+    /// Generate all psuedo-legal moves.
     pub fn generate_moves(&self) -> BitBoard {
         self.generate_pawn_moves()
             | self.generate_knight_moves()
@@ -434,6 +457,7 @@ impl Board {
             | self.generate_king_moves()
     }
 
+    /// Generate a vector of psudo-legal `ChessMoves`'s.
     pub fn generate_moves_vec(&mut self) -> Vec<ChessMove> {
         macro_rules! extract_moves {
             ($offset:literal, $($piece:expr),+) => {
@@ -543,14 +567,17 @@ impl Board {
         }
     }
 
+    /// Generate all moves for ray pieces.
     pub fn generate_ray_moves(&self) -> BitBoard {
         self.generate_bishop_moves() | self.generate_rook_moves() | self.generate_queen_moves()
     }
 
+    /// Generate all pawn moves.
     pub fn generate_pawn_moves(&self) -> BitBoard {
         self.generate_pawn_pushes() | self.generate_pawn_captures() | self.generate_en_passant()
     }
 
+    /// Generate all pawn pushes.
     pub fn generate_pawn_pushes(&self) -> BitBoard {
         let empty_squares = !self.combined();
 
@@ -574,6 +601,7 @@ impl Board {
         }
     }
 
+    /// Generate all pawn captures.
     pub fn generate_pawn_captures(&self) -> BitBoard {
         let opponents_pieces = match self.side_to_move {
             Color::White => self.occupancy[1],
@@ -602,6 +630,7 @@ impl Board {
         }
     }
 
+    /// Generate all en passants.
     pub fn generate_en_passant(&self) -> BitBoard {
         if let Some(en_passant) = self.en_passant_square {
             match self.side_to_move {
@@ -627,6 +656,7 @@ impl Board {
         }
     }
 
+    /// Check if a square is a promotion square.
     pub fn is_promotion(&self, square: &Square) -> bool {
         match self.side_to_move {
             Color::White => square.to_int() >= 56, // Rank 8
@@ -634,6 +664,7 @@ impl Board {
         }
     }
 
+    /// Generate all knight moves.
     pub fn generate_knight_moves(&self) -> BitBoard {
         let allied_pieces = match self.side_to_move {
             Color::White => self.occupancy[0],
@@ -661,6 +692,7 @@ impl Board {
         knight_moves
     }
 
+    /// Generate all bishop moves.
     pub fn generate_bishop_moves(&self) -> BitBoard {
         let occupancy: BitBoard = self.combined();
 
@@ -686,6 +718,7 @@ impl Board {
         }
     }
 
+    /// Generate all rook moves.
     pub fn generate_rook_moves(&self) -> BitBoard {
         let occupancy = self.combined();
 
@@ -711,6 +744,7 @@ impl Board {
         }
     }
 
+    /// Generate all queen moves.
     pub fn generate_queen_moves(&self) -> BitBoard {
         let occupancy = self.combined();
 
@@ -738,6 +772,7 @@ impl Board {
         }
     }
 
+    /// Generate all king moves except castling moves.
     pub fn generate_king_moves(&self) -> BitBoard {
         let allied_pieces = match self.side_to_move {
             Color::White => self.occupancy[0],
@@ -765,6 +800,7 @@ impl Board {
         moves
     }
 
+    /// Generate all castling moves.
     pub fn generate_castling_moves(&mut self) -> BitBoard {
         let occupancy = self.combined();
 
