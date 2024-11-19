@@ -26,3 +26,7 @@ pub fn get_rook_moves(square: usize, blockers: BitBoard) -> BitBoard {
     let moves = &ROOK_MOVES_TABLE[square];
     BitBoard(moves[magic_index(*magic, blockers)])
 }
+
+pub fn get_king_moves(square: usize) -> BitBoard {
+    BitBoard(KING_MOVES[square])
+}

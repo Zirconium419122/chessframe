@@ -6,7 +6,7 @@ use crate::{
     chess_move::{ChessMove, MoveType},
     color::Color,
     file::File,
-    magic::{get_bishop_moves, get_rook_moves},
+    magic::{get_bishop_moves, get_king_moves, get_rook_moves},
     piece::Piece,
     rank::Rank,
     square::Square,
@@ -785,15 +785,9 @@ impl Board {
         };
         let mut moves = BitBoard(0);
 
-        moves |= (kings << 7) & !BitBoard(0x8080808080808080); // Mask out the H file
-        moves |= kings << 8;
-        moves |= (kings << 9) & !BitBoard(0x0101010101010101); // Mask out the A file
-        moves |= (kings << 1) & !BitBoard(0x0101010101010101); // Mask out the A file
-
-        moves |= (kings >> 7) & !BitBoard(0x0101010101010101); // Mask out the A file
-        moves |= kings >> 8;
-        moves |= (kings >> 9) & !BitBoard(0x8080808080808080); // Mask out the H file
-        moves |= (kings >> 1) & !BitBoard(0x8080808080808080); // Mask out the H file
+        for square in kings {
+            moves |= get_king_moves(square.to_index());
+        }
 
         moves &= !allied_pieces;
 

@@ -56,6 +56,9 @@ fn main() {
         rook_moves,
     )
     .unwrap();
+
+    let king_moves = generate_king_table();
+    writeln!(file, "pub static KING_MOVES: [u64; 64] = {:?};", king_moves).unwrap();
 }
 
 fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), &'static str> {
@@ -111,6 +114,65 @@ fn magic_index(magic: Magic, blockers: u64) -> usize {
 
 fn generate_magic_candidate(rng: &mut ChaCha8Rng) -> u64 {
     rng.next_u64() & rng.next_u64() & rng.next_u64()
+}
+
+fn generate_bishop_magics_and_moves() -> ([Magic; 64], [Vec<u64>; 64]) {
+    let mut magics = [Magic::default(); 64];
+    let mut moves = [const { Vec::new() }; 64];
+
+    for square in 0..64 {
+        let magic_moves = find_magic(Piece::Bishop, square).unwrap();
+        magics[square] = magic_moves.0;
+        moves[square] = magic_moves.1;
+    }
+
+    (magics, moves)
+}
+
+fn generate_bishop_moves(square: u64, blockers: u64) -> u64 {
+    let mut moves = 0;
+
+    // Northwest (upleft)
+    let mut current = shift_north_west(square);
+    while current != 0 {
+        moves |= current;
+        if current & blockers != 0 {
+            break;
+        }
+        current = shift_north_west(current);
+    }
+
+    // Northeast (upright)
+    let mut current = shift_north_east(square);
+    while current != 0 {
+        moves |= current;
+        if current & blockers != 0 {
+            break;
+        }
+        current = shift_north_east(current);
+    }
+
+    // Southwest (downleft)
+    let mut current = shift_south_west(square);
+    while current != 0 {
+        moves |= current;
+        if current & blockers != 0 {
+            break;
+        }
+        current = shift_south_west(current);
+    }
+
+    // Southeast (downright)
+    let mut current = shift_south_east(square);
+    while current != 0 {
+        moves |= current;
+        if current & blockers != 0 {
+            break;
+        }
+        current = shift_south_east(current);
+    }
+
+    moves
 }
 
 fn generate_rook_mask(square: usize) -> u64 {
@@ -186,27 +248,34 @@ fn generate_rook_moves(square: u64, blockers: u64) -> u64 {
     moves
 }
 
-fn generate_bishop_magics_and_moves() -> ([Magic; 64], [Vec<u64>; 64]) {
-    let mut magics = [Magic::default(); 64];
-    let mut moves = [const { Vec::new() }; 64];
+fn generate_king_table() -> [u64; 64] {
+    let mut table = [0; 64];
 
-    for square in 0..64 {
-        let magic_moves = find_magic(Piece::Bishop, square).unwrap();
-        magics[square] = magic_moves.0;
-        moves[square] = magic_moves.1;
+    for (i, square) in table.iter_mut().enumerate() {
+        *square = generate_king_moves(1 << i);
     }
 
-    (magics, moves)
+    table
 }
 
-fn generate_bishop_moves(square: u64, blockers: u64) -> u64 {
+fn generate_king_moves(square: u64) -> u64 {
     let mut moves = 0;
+    
+    // North (up)
+    let mut current = shift_north(square);
+    while current != 0 {
+        moves |= current;
+        if current != 0 {
+            break;
+        }
+        current = shift_north(current);
+    }
 
-    // Northwest (upleft)
+    // Northweast (upleft)
     let mut current = shift_north_west(square);
     while current != 0 {
         moves |= current;
-        if current & blockers != 0 {
+        if current != 0 {
             break;
         }
         current = shift_north_west(current);
@@ -216,17 +285,27 @@ fn generate_bishop_moves(square: u64, blockers: u64) -> u64 {
     let mut current = shift_north_east(square);
     while current != 0 {
         moves |= current;
-        if current & blockers != 0 {
+        if current != 0 {
             break;
         }
         current = shift_north_east(current);
     }
-
+    
+    // South (down)
+    let mut current = shift_south(square);
+    while current != 0 {
+        moves |= current;
+        if current != 0 {
+            break;
+        }
+        current = shift_south(current);
+    }
+    
     // Southwest (downleft)
     let mut current = shift_south_west(square);
     while current != 0 {
         moves |= current;
-        if current & blockers != 0 {
+        if current != 0 {
             break;
         }
         current = shift_south_west(current);
@@ -236,10 +315,30 @@ fn generate_bishop_moves(square: u64, blockers: u64) -> u64 {
     let mut current = shift_south_east(square);
     while current != 0 {
         moves |= current;
-        if current & blockers != 0 {
+        if current != 0 {
             break;
         }
         current = shift_south_east(current);
+    }
+    
+    // West (left)
+    let mut current = shift_west(square);
+    while current != 0 {
+        moves |= current;
+        if current != 0 {
+            break;
+        }
+        current = shift_west(current);
+    }
+
+    // East (right)
+    let mut current = shift_east(square);
+    while current != 0 {
+        moves |= current;
+        if current != 0 {
+            break;
+        }
+        current = shift_east(current);
     }
 
     moves
