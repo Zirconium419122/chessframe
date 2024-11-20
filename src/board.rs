@@ -272,7 +272,7 @@ impl Board {
         Ok(piece)
     }
 
-    /// Make a `ChessMove` on a copy of the current board state.
+    /// Make a `ChessMove` on a copy of the current `Board`.
     pub fn make_move_new(&self, mv: &ChessMove) -> Result<Board, String> {
         let mut board = *self;
 
@@ -281,7 +281,7 @@ impl Board {
         Ok(board)
     }
 
-    /// Make a `ChessMove` on the current board state.
+    /// Make a `ChessMove` on the current `Board`.
     pub fn make_move(&mut self, mv: &ChessMove) -> Result<(), String> {
         let piece = self.validate_move(mv)?;
 
@@ -317,8 +317,6 @@ impl Board {
                         queenside.wrapping_right(),
                     );
                 }
-
-                self.castling_rights.revoke_all(&self.side_to_move);
             }
             MoveType::EnPassant => {
                 let behind_pawn = to.backwards(&self.side_to_move).unwrap();
@@ -603,10 +601,7 @@ impl Board {
 
     /// Generate all pawn captures.
     pub fn generate_pawn_captures(&self) -> BitBoard {
-        let opponents_pieces = match self.side_to_move {
-            Color::White => self.occupancy[1],
-            Color::Black => self.occupancy[0],
-        };
+        let opponents_pieces = self.occupancy[(!self.side_to_move).to_index()];
 
         match self.side_to_move {
             Color::White => {
@@ -774,15 +769,9 @@ impl Board {
 
     /// Generate all king moves except castling moves.
     pub fn generate_king_moves(&self) -> BitBoard {
-        let allied_pieces = match self.side_to_move {
-            Color::White => self.occupancy[0],
-            Color::Black => self.occupancy[1],
-        };
-
-        let kings = match self.side_to_move {
-            Color::White => self.pieces[5],
-            Color::Black => self.pieces[11],
-        };
+        let allied_pieces = self.occupancy[self.side_to_move.to_index()];
+        let kings = self.pieces[5 + self.side_to_move.to_offset()];
+        
         let mut moves = BitBoard(0);
 
         for square in kings {
