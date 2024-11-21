@@ -17,6 +17,24 @@ impl BitAnd for BitBoard {
     }
 }
 
+impl BitAnd for &BitBoard {
+    type Output = BitBoard;
+
+    #[inline]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        BitBoard(self.0 & rhs.0)
+    }
+}
+
+impl BitAnd<&BitBoard> for BitBoard {
+    type Output = Self;
+
+    #[inline]
+    fn bitand(self, rhs: &Self) -> Self::Output {
+        BitBoard(self.0 & rhs.0)
+    }
+}
+
 impl BitAndAssign for BitBoard {
     #[inline]
     fn bitand_assign(&mut self, rhs: Self) {
@@ -29,6 +47,24 @@ impl BitOr for BitBoard {
 
     #[inline]
     fn bitor(self, rhs: Self) -> Self::Output {
+        BitBoard(self.0 | rhs.0)
+    }
+}
+
+impl BitOr for &BitBoard {
+    type Output = BitBoard;
+
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        BitBoard(self.0 | rhs.0)
+    }
+}
+
+impl BitOr<&BitBoard> for BitBoard {
+    type Output = Self;
+
+    #[inline]
+    fn bitor(self, rhs: &Self) -> Self::Output {
         BitBoard(self.0 | rhs.0)
     }
 }
@@ -49,8 +85,35 @@ impl BitXor for BitBoard {
     }
 }
 
+impl BitXor for &BitBoard {
+    type Output = BitBoard;
+
+    #[inline]
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        BitBoard(self.0 ^ rhs.0)
+    }
+}
+
+impl BitXor<&BitBoard> for BitBoard {
+    type Output = Self;
+
+    #[inline]
+    fn bitxor(self, rhs: &Self) -> Self::Output {
+        BitBoard(self.0 ^ rhs.0)
+    }
+}
+
 impl Not for BitBoard {
     type Output = Self;
+
+    #[inline]
+    fn not(self) -> Self::Output {
+        BitBoard(!self.0)
+    }
+}
+
+impl Not for &BitBoard {
+    type Output = BitBoard;
 
     #[inline]
     fn not(self) -> Self::Output {

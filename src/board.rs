@@ -141,6 +141,20 @@ impl Board {
         self.occupancy[0] | self.occupancy[1]
     }
 
+    /// Get the occupancy bitboard for a particular color.
+    /// ```
+    /// use chess_frame::{bitboard::BitBoard, board::Board, color::Color};
+    ///
+    /// let board = Board::default();
+    ///
+    /// assert_eq!(board.occupancy(Color::White), BitBoard(0x000000000000FFFF));
+    /// assert_eq!(board.occupancy(Color::Black), BitBoard(0xFFFF000000000000));
+    /// ```
+    #[inline]
+    pub fn occupancy(&self, color: Color) -> &BitBoard {
+        unsafe { self.occupancy.get_unchecked(color.to_index()) }
+    }
+
     /// Get the en passant square, if there is one.
     #[inline]
     pub fn en_passant_square(&self) -> Option<BitBoard> {
@@ -199,7 +213,7 @@ impl Board {
             match piece {
                 Piece::Pawn => {
                     if let Some(promotion) = promotion {
-                        if self.occupancy[(!self.side_to_move).to_index()].is_not_set(to) {
+                        if self.occupancy(!self.side_to_move).is_not_set(to) {
                             mv = Some(ChessMove::new_promotion(from, to, promotion));
                         } else {
                             mv = Some(ChessMove::new_capture_promotion(from, to, promotion));
@@ -228,7 +242,7 @@ impl Board {
                 }
             }
 
-            if self.occupancy[(!self.side_to_move).to_index()].is_not_set(to) {
+            if self.occupancy(!self.side_to_move).is_not_set(to) {
                 mv = Some(ChessMove::new(from, to));
             } else {
                 mv = Some(ChessMove::new_capture(from, to));
@@ -461,7 +475,7 @@ impl Board {
             ($offset:literal, $($piece:expr),+) => {
                 {
                     let mut moves: Vec<ChessMove> = Vec::with_capacity(218);
-                    let opponent_occupancy = self.occupancy[(!self.side_to_move).to_index()];
+                    let opponent_occupancy = self.occupancy(!self.side_to_move).clone();
 
                     $(
                         let pieces = self.pieces[$piece as usize + $offset];
@@ -601,7 +615,7 @@ impl Board {
 
     /// Generate all pawn captures.
     pub fn generate_pawn_captures(&self) -> BitBoard {
-        let opponents_pieces = self.occupancy[(!self.side_to_move).to_index()];
+        let opponents_pieces = self.occupancy(!self.side_to_move);
 
         match self.side_to_move {
             Color::White => {
@@ -661,15 +675,9 @@ impl Board {
 
     /// Generate all knight moves.
     pub fn generate_knight_moves(&self) -> BitBoard {
-        let allied_pieces = match self.side_to_move {
-            Color::White => self.occupancy[0],
-            Color::Black => self.occupancy[1],
-        };
+        let allied_pieces = self.occupancy(self.side_to_move);
+        let knights = self.pieces[1 + self.side_to_move.to_offset()];
 
-        let knights = match self.side_to_move {
-            Color::White => self.pieces[1],
-            Color::Black => self.pieces[7],
-        };
         let mut knight_moves = BitBoard(0);
 
         knight_moves |= (knights << 17) & !BitBoard(0x0101010101010101); // Mask out the H file
@@ -689,7 +697,7 @@ impl Board {
 
     /// Generate all bishop moves.
     pub fn generate_bishop_moves(&self) -> BitBoard {
-        let occupancy: BitBoard = self.combined();
+        let occupancy = self.combined();
 
         match self.side_to_move {
             Color::White => {
