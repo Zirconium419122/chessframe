@@ -151,8 +151,18 @@ impl Board {
     /// assert_eq!(board.occupancy(Color::Black), BitBoard(0xFFFF000000000000));
     /// ```
     #[inline]
-    pub fn occupancy(&self, color: Color) -> &BitBoard {
-        unsafe { self.occupancy.get_unchecked(color.to_index()) }
+    pub fn occupancy(&self, color: Color) -> BitBoard {
+        unsafe { *self.occupancy.get_unchecked(color.to_index()) }
+    }
+
+    /// Get the bitboard of a particular piece and color.
+    #[inline]
+    pub fn pieces(&self, piece: Piece, color: Color) -> BitBoard {
+        unsafe {
+            *self
+                .pieces
+                .get_unchecked(piece.to_index() + color.to_offset())
+        }
     }
 
     /// Get the en passant square, if there is one.
@@ -197,7 +207,7 @@ impl Board {
         Ok(())
     }
 
-    /// Infer a `ChessMove` from a string based on the current board state.
+    /// Infer a `ChessMove` from a string based on the current `Board`.
     pub fn infer_move(&mut self, mv: &str) -> Result<ChessMove, String> {
         let from = Square::from_str(&mv[0..2]).map_err(|err| err.to_string())?;
         let to = Square::from_str(&mv[2..4]).map_err(|err| err.to_string())?;
@@ -264,7 +274,7 @@ impl Board {
         let piece = self.get_piece(*from).ok_or("No piece found on square!")?;
 
         let index = piece.to_index() + self.side_to_move.to_offset();
-        let pieces = self.pieces[index];
+        let pieces = self.pieces(piece, self.side_to_move);
 
         self.pieces[index] = BitBoard::from_square(*from);
 
@@ -314,7 +324,7 @@ impl Board {
 
         match move_type {
             MoveType::Quiet | MoveType::Capture | MoveType::Check => {
-                self.clear_piece(*to, &!self.side_to_move);
+                self.clear_piece(*to, !self.side_to_move);
             }
             MoveType::Castle => {
                 let (kingside, queenside) = match self.side_to_move {
@@ -334,12 +344,12 @@ impl Board {
             }
             MoveType::EnPassant => {
                 let behind_pawn = to.backwards(&self.side_to_move).unwrap();
-                self.clear_piece(behind_pawn, &!self.side_to_move)
+                self.clear_piece(behind_pawn, !self.side_to_move)
             }
             MoveType::Promotion(piece) | MoveType::CapturePromotion(piece) => {
                 self.pieces[offset].clear_bit(*to);
                 self.set_piece(piece, &self.side_to_move.clone(), *to);
-                self.clear_piece(*to, &!self.side_to_move);
+                self.clear_piece(*to, !self.side_to_move);
             }
         }
 
@@ -441,9 +451,8 @@ impl Board {
     }
 
     /// Remove the piece at a given square.
-    pub fn clear_piece(&mut self, square: Square, color: &Color) {
-        let color_index = color.to_index();
-        if self.occupancy[color_index].is_not_set(square) {
+    pub fn clear_piece(&mut self, square: Square, color: Color) {
+        if self.occupancy(color).is_not_set(square) {
             return;
         }
 
@@ -456,7 +465,7 @@ impl Board {
             }
         }
 
-        self.occupancy[color_index].clear_bit(square);
+        self.occupancy[color.to_index()].clear_bit(square);
     }
 
     /// Generate all psuedo-legal moves.
@@ -595,18 +604,20 @@ impl Board {
 
         match self.side_to_move {
             Color::White => {
-                let single_push = self.pieces[0] << 8;
+                let single_push = self.pieces(Piece::Pawn, Color::White) << 8;
 
                 let second_rank = BitBoard(0x000000000000FF00);
-                let double_push = ((self.pieces[0] & second_rank) << 16) & (empty_squares << 8);
+                let double_push = ((self.pieces(Piece::Pawn, Color::White) & second_rank) << 16)
+                    & (empty_squares << 8);
 
                 (single_push | double_push) & empty_squares
             }
             Color::Black => {
-                let single_push = self.pieces[6] >> 8;
+                let single_push = self.pieces(Piece::Pawn, Color::Black) >> 8;
 
                 let seventh_rank = BitBoard(0x00FF000000000000);
-                let double_push = ((self.pieces[6] & seventh_rank) >> 16) & (empty_squares >> 8);
+                let double_push = ((self.pieces(Piece::Pawn, Color::Black) & seventh_rank) >> 16)
+                    & (empty_squares >> 8);
 
                 (single_push | double_push) & empty_squares
             }
@@ -619,20 +630,24 @@ impl Board {
 
         match self.side_to_move {
             Color::White => {
-                let northwest_capture =
-                    (self.pieces[0] << 7) & opponents_pieces & !BitBoard(0x8080808080808080); // Mask out the H file
+                let northwest_capture = (self.pieces(Piece::Pawn, Color::White) << 7)
+                    & opponents_pieces
+                    & !BitBoard(0x8080808080808080); // Mask out the H file
 
-                let northeast_capture =
-                    (self.pieces[0] << 9) & opponents_pieces & !BitBoard(0x0101010101010101); // Mask out the A file
+                let northeast_capture = (self.pieces(Piece::Pawn, Color::White) << 9)
+                    & opponents_pieces
+                    & !BitBoard(0x0101010101010101); // Mask out the A file
 
                 northwest_capture | northeast_capture
             }
             Color::Black => {
-                let southwest_capture =
-                    (self.pieces[6] >> 9) & opponents_pieces & !BitBoard(0x8080808080808080); // Mask out the H file
+                let southwest_capture = (self.pieces(Piece::Pawn, Color::Black) >> 9)
+                    & opponents_pieces
+                    & !BitBoard(0x8080808080808080); // Mask out the H file
 
-                let southeast_capture =
-                    (self.pieces[6] >> 7) & opponents_pieces & !BitBoard(0x0101010101010101); // Mask out the A file
+                let southeast_capture = (self.pieces(Piece::Pawn, Color::Black) >> 7)
+                    & opponents_pieces
+                    & !BitBoard(0x0101010101010101); // Mask out the A file
 
                 southwest_capture | southeast_capture
             }
@@ -644,18 +659,22 @@ impl Board {
         if let Some(en_passant) = self.en_passant_square {
             match self.side_to_move {
                 Color::White => {
-                    let west_ep =
-                        (self.pieces[0] << 7) & en_passant & !BitBoard(0x8080808080808080); // Mask out the H file
-                    let east_ep =
-                        (self.pieces[0] << 9) & en_passant & !BitBoard(0x0101010101010101); // Mask out the A file
+                    let west_ep = (self.pieces(Piece::Pawn, Color::White) << 7)
+                        & en_passant
+                        & !BitBoard(0x8080808080808080); // Mask out the H file
+                    let east_ep = (self.pieces(Piece::Pawn, Color::White) << 9)
+                        & en_passant
+                        & !BitBoard(0x0101010101010101); // Mask out the A file
 
                     west_ep | east_ep
                 }
                 Color::Black => {
-                    let west_ep =
-                        (self.pieces[6] >> 9) & en_passant & !BitBoard(0x8080808080808080); // Mask out the H file
-                    let east_ep =
-                        (self.pieces[6] >> 7) & en_passant & !BitBoard(0x0101010101010101); // Mask out the A file
+                    let west_ep = (self.pieces(Piece::Pawn, Color::Black) >> 9)
+                        & en_passant
+                        & !BitBoard(0x8080808080808080); // Mask out the H file
+                    let east_ep = (self.pieces(Piece::Pawn, Color::Black) >> 7)
+                        & en_passant
+                        & !BitBoard(0x0101010101010101); // Mask out the A file
 
                     west_ep | east_ep
                 }
@@ -676,7 +695,7 @@ impl Board {
     /// Generate all knight moves.
     pub fn generate_knight_moves(&self) -> BitBoard {
         let allied_pieces = self.occupancy(self.side_to_move);
-        let knights = self.pieces[1 + self.side_to_move.to_offset()];
+        let knights = self.pieces(Piece::Knight, self.side_to_move);
 
         let mut knight_moves = BitBoard(0);
 
@@ -703,20 +722,20 @@ impl Board {
             Color::White => {
                 let mut moves = BitBoard(0);
 
-                for square in self.pieces[2].into_iter() {
+                for square in self.pieces(Piece::Bishop, Color::White).into_iter() {
                     moves |= get_bishop_moves(square.to_index(), occupancy);
                 }
 
-                moves & !self.occupancy[0]
+                moves & !self.occupancy(Color::White)
             }
             Color::Black => {
                 let mut moves = BitBoard(0);
 
-                for square in self.pieces[8].into_iter() {
+                for square in self.pieces(Piece::Bishop, Color::Black).into_iter() {
                     moves |= get_bishop_moves(square.to_index(), occupancy);
                 }
 
-                moves & !self.occupancy[1]
+                moves & !self.occupancy(Color::Black)
             }
         }
     }
@@ -729,20 +748,20 @@ impl Board {
             Color::White => {
                 let mut moves = BitBoard(0);
 
-                for square in self.pieces[3].into_iter() {
+                for square in self.pieces(Piece::Rook, Color::White).into_iter() {
                     moves |= get_rook_moves(square.to_index(), occupancy);
                 }
 
-                moves & !self.occupancy[0]
+                moves & !self.occupancy(Color::White)
             }
             Color::Black => {
                 let mut moves = BitBoard(0);
 
-                for square in self.pieces[9].into_iter() {
+                for square in self.pieces(Piece::Rook, Color::Black).into_iter() {
                     moves |= get_rook_moves(square.to_index(), occupancy);
                 }
 
-                moves & !self.occupancy[1]
+                moves & !self.occupancy(Color::Black)
             }
         }
     }
@@ -755,22 +774,22 @@ impl Board {
             Color::White => {
                 let mut moves = BitBoard(0);
 
-                for square in self.pieces[4].into_iter() {
+                for square in self.pieces(Piece::Queen, Color::White).into_iter() {
                     moves |= get_bishop_moves(square.to_index(), occupancy);
                     moves |= get_rook_moves(square.to_index(), occupancy);
                 }
 
-                moves & !self.occupancy[0]
+                moves & !self.occupancy(Color::White)
             }
             Color::Black => {
                 let mut moves = BitBoard(0);
 
-                for square in self.pieces[10].into_iter() {
+                for square in self.pieces(Piece::Queen, Color::Black).into_iter() {
                     moves |= get_bishop_moves(square.to_index(), occupancy);
                     moves |= get_rook_moves(square.to_index(), occupancy);
                 }
 
-                moves & !self.occupancy[1]
+                moves & !self.occupancy(Color::Black)
             }
         }
     }
@@ -778,8 +797,8 @@ impl Board {
     /// Generate all king moves except castling moves.
     pub fn generate_king_moves(&self) -> BitBoard {
         let allied_pieces = self.occupancy[self.side_to_move.to_index()];
-        let kings = self.pieces[5 + self.side_to_move.to_offset()];
-        
+        let kings = self.pieces(Piece::King, self.side_to_move);
+
         let mut moves = BitBoard(0);
 
         for square in kings {

@@ -260,7 +260,7 @@ fn generate_king_table() -> [u64; 64] {
 
 fn generate_king_moves(square: u64) -> u64 {
     let mut moves = 0;
-    
+
     // North (up)
     let mut current = shift_north(square);
     while current != 0 {
@@ -290,7 +290,7 @@ fn generate_king_moves(square: u64) -> u64 {
         }
         current = shift_north_east(current);
     }
-    
+
     // South (down)
     let mut current = shift_south(square);
     while current != 0 {
@@ -300,7 +300,7 @@ fn generate_king_moves(square: u64) -> u64 {
         }
         current = shift_south(current);
     }
-    
+
     // Southwest (downleft)
     let mut current = shift_south_west(square);
     while current != 0 {
@@ -320,7 +320,7 @@ fn generate_king_moves(square: u64) -> u64 {
         }
         current = shift_south_east(current);
     }
-    
+
     // West (left)
     let mut current = shift_west(square);
     while current != 0 {
