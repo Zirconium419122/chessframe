@@ -67,6 +67,6 @@ impl Piece {
             Color::White => 0,
             Color::Black => 6,
         };
-        self.clone() as usize + offset
+        *self as usize + offset
     }
 }
