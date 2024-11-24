@@ -18,6 +18,7 @@ struct Magic {
     pub mask: u64,
     pub magic: u64,
     pub shift: u8,
+    pub offset: u32,
 }
 
 fn main() {
@@ -25,7 +26,7 @@ fn main() {
 
     let mut file = File::create("src/tables.rs").unwrap();
 
-    let bishop_magics_and_moves = generate_bishop_magics_and_moves();
+    let bishop_magics_and_moves = flatten_data(generate_bishop_magics_and_moves());
     writeln!(
         file,
         "pub const BISHOP_MAGICS: [Magic; 64] = {:?};",
@@ -33,15 +34,14 @@ fn main() {
     )
     .unwrap();
 
-    let bishop_moves = format!("{:?}", bishop_magics_and_moves.1).replace("[", "&[");
     writeln!(
         file,
-        "pub static BISHOP_MOVES_TABLE: &[&[u64]; 64] = {};",
-        bishop_moves,
+        "pub static BISHOP_MOVES_TABLE: &[u64] = &{:?};",
+        bishop_magics_and_moves.1,
     )
     .unwrap();
 
-    let rook_magics_and_moves = generate_rook_moves_and_magics();
+    let rook_magics_and_moves = flatten_data(generate_rook_moves_and_magics());
     writeln!(
         file,
         "pub const ROOK_MAGICS: [Magic; 64] = {:?};",
@@ -49,16 +49,41 @@ fn main() {
     )
     .unwrap();
 
-    let rook_moves = format!("{:?}", rook_magics_and_moves.1).replace("[", "&[");
     writeln!(
         file,
-        "pub static ROOK_MOVES_TABLE: &[&[u64]; 64] = {};",
-        rook_moves,
+        "pub static ROOK_MOVES_TABLE: &[u64] = &{:?};",
+        rook_magics_and_moves.1,
     )
     .unwrap();
 
     let king_moves = generate_king_table();
     writeln!(file, "pub static KING_MOVES: [u64; 64] = {:?};", king_moves).unwrap();
+}
+
+fn flatten_data(data: ([Magic; 64], [Vec<u64>; 64])) -> ([Magic; 64], Vec<u64>) {
+    let (magic_array, moves_array) = data;
+
+    let mut offset = 0;
+
+    let updated_magic = magic_array
+        .iter()
+        .zip(moves_array.iter())
+        .map(|(magic, moves)| {
+            let mut new_magic = *magic;
+            new_magic.offset = offset;
+            offset += moves.len() as u32;
+            new_magic
+        })
+        .collect::<Vec<Magic>>()
+        .try_into()
+        .unwrap();
+
+    let flattened_moves = moves_array
+        .iter()
+        .flat_map(|moves| moves.clone())
+        .collect::<Vec<u64>>();
+
+    (updated_magic, flattened_moves)
 }
 
 fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), &'static str> {
@@ -76,6 +101,7 @@ fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<u64>), &'static
             mask,
             magic: magic_number,
             shift: 64 - mask.count_ones() as u8,
+            offset: 0,
         };
 
         if let Ok(table) = try_make_table(&piece, square, magic) {

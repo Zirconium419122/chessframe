@@ -98,9 +98,63 @@ fn test_infer_move() {
 }
 
 #[test]
-fn test_make_move() {
+fn test_validate_move() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);
+
+    // Test that you can't push a pawn three squares
+    {
+        let mut board = board.clone();
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+        assert_eq!(board.en_passant_square, None);
+
+        assert_eq!(
+            board.validate_move(&ChessMove::new(Square::E2, Square::E5)),
+            Err("Invalid move!")
+        );
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+        assert_eq!(board.en_passant_square, None);
+    }
+
+    // Test that you can't capture your own pieces
+    {
+        let mut board = board.clone();
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+
+        assert_eq!(
+            board.validate_move(&ChessMove::new_capture(Square::E1, Square::D1)),
+            Err("Invalid move!")
+        );
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+    }
+
+    // Test that castling is not possible from the start position
+    {
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+
+        assert_eq!(
+            board.validate_move(&ChessMove::new(Square::E1, Square::G1)),
+            Err("Invalid move!")
+        );
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+    }
+}
+
+#[test]
+fn test_make_move() {
+    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    let board = Board::from_fen(fen);
 
     // Test that you can push a pawn
     {
@@ -118,54 +172,6 @@ fn test_make_move() {
         assert_eq!(board.side_to_move, Color::Black);
         assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
         assert_eq!(board.en_passant_square, Some(BitBoard(0x100000)));
-    }
-
-    // Test that you can't push a pawn three squares
-    {
-        let mut board = board.clone();
-
-        assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
-        assert_eq!(board.en_passant_square, None);
-
-        assert_eq!(
-            board.make_move(&ChessMove::new(Square::E2, Square::E5)),
-            Err("Invalid move!".to_string())
-        );
-
-        assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
-        assert_eq!(board.en_passant_square, None);
-    }
-
-    // Test that you can't capture your own pieces
-    {
-        let mut board = board.clone();
-
-        assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
-
-        assert_eq!(
-            board.make_move(&ChessMove::new_capture(Square::E1, Square::D1)),
-            Err("Invalid move!".to_string())
-        );
-
-        assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
-    }
-
-    // Test that castling is not possible from the start position
-    {
-        assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
-
-        assert_eq!(
-            board.make_move(&ChessMove::new(Square::E1, Square::G1)),
-            Err("Invalid move!".to_string())
-        );
-
-        assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
     }
 }
 
