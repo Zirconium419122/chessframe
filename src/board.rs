@@ -155,6 +155,12 @@ impl Board {
         unsafe { *self.occupancy.get_unchecked(color.to_index()) }
     }
 
+    /// Get a mutable reference to the occupancy bitboard for a particular color.
+    #[inline]
+    pub fn occupancy_mut(&mut self, color: Color) -> &mut BitBoard {
+        unsafe { self.occupancy.get_unchecked_mut(color.to_index()) }
+    }
+
     /// Get the bitboard of a particular piece and color.
     #[inline]
     pub fn pieces(&self, piece: Piece, color: Color) -> BitBoard {
@@ -377,8 +383,13 @@ impl Board {
         let piece = self.get_piece(*from).ok_or("No piece found on square!")?;
 
         let move_piece = |board: &mut Board, piece: Piece, from: Square, to: Square| {
-            board.pieces_mut(piece, board.side_to_move).clear_bit(from);
-            board.pieces_mut(piece, board.side_to_move).set_bit(to);
+            let pieces_mut = board.pieces_mut(piece, board.side_to_move);
+            pieces_mut.clear_bit(from);
+            pieces_mut.set_bit(to);
+
+            let occupancy_mut = board.occupancy_mut(board.side_to_move);
+            occupancy_mut.clear_bit(from);
+            occupancy_mut.set_bit(to);
         };
 
         move_piece(self, piece, *from, *to);
@@ -416,7 +427,7 @@ impl Board {
                     .clear_bit(*to);
                 self.set_piece(*piece, self.side_to_move, *to);
             }
-            _ => {},
+            _ => {}
         }
 
         self.remove_en_passant();
@@ -444,10 +455,8 @@ impl Board {
                     self.castling_rights.revoke(&self.side_to_move, false);
                 }
             }
-            _ => {},
+            _ => {}
         }
-
-        self.update_occupancy();
 
         self.side_to_move.flip();
 
@@ -458,52 +467,29 @@ impl Board {
         Ok(())
     }
 
-    fn update_occupancy(&mut self) {
-        match self.side_to_move {
-            Color::White => {
-                self.occupancy[0] = self.pieces[0]
-                    | self.pieces[1]
-                    | self.pieces[2]
-                    | self.pieces[3]
-                    | self.pieces[4]
-                    | self.pieces[5]
-            }
-            Color::Black => {
-                self.occupancy[1] = self.pieces[6]
-                    | self.pieces[7]
-                    | self.pieces[8]
-                    | self.pieces[9]
-                    | self.pieces[10]
-                    | self.pieces[11]
-            }
-        }
-    }
-
     /// Get the piece at a given square.
     pub fn get_piece(&self, square: Square) -> Option<Piece> {
         let bitboard = BitBoard::from_square(square);
         if self.combined() & bitboard == EMPTY {
             None
-        } else {
-            if (self.pieces(Piece::Pawn, self.side_to_move)
-                ^ self.pieces(Piece::Knight, self.side_to_move)
-                ^ self.pieces(Piece::Bishop, self.side_to_move))
-                .is_set(square)
-            {
-                if self.pieces(Piece::Pawn, self.side_to_move).is_set(square) {
-                    Some(Piece::Pawn)
-                } else if self.pieces(Piece::Knight, self.side_to_move).is_set(square) {
-                    Some(Piece::Knight)
-                } else {
-                    Some(Piece::Bishop)
-                }
-            } else if self.pieces(Piece::Rook, self.side_to_move).is_set(square) {
-                Some(Piece::Rook)
-            } else if self.pieces(Piece::Queen, self.side_to_move).is_set(square) {
-                Some(Piece::Queen)
+        } else if (self.pieces(Piece::Pawn, self.side_to_move)
+            ^ self.pieces(Piece::Knight, self.side_to_move)
+            ^ self.pieces(Piece::Bishop, self.side_to_move))
+        .is_set(square)
+        {
+            if self.pieces(Piece::Pawn, self.side_to_move).is_set(square) {
+                Some(Piece::Pawn)
+            } else if self.pieces(Piece::Knight, self.side_to_move).is_set(square) {
+                Some(Piece::Knight)
             } else {
-                Some(Piece::King)
+                Some(Piece::Bishop)
             }
+        } else if self.pieces(Piece::Rook, self.side_to_move).is_set(square) {
+            Some(Piece::Rook)
+        } else if self.pieces(Piece::Queen, self.side_to_move).is_set(square) {
+            Some(Piece::Queen)
+        } else {
+            Some(Piece::King)
         }
     }
 
@@ -529,7 +515,7 @@ impl Board {
             }
         }
 
-        self.occupancy[color.to_index()].clear_bit(square);
+        self.occupancy_mut(color).clear_bit(square);
     }
 
     /// Generate all psuedo-legal moves.
