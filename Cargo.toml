@@ -2,6 +2,7 @@
 name = "chess-frame"
 version = "0.0.0"
 edition = "2021"
+build = "src/build.rs"
 
 [dependencies]
 thiserror = "2.0.2"
@@ -11,3 +12,4 @@ rand_chacha = "0.3.1"
 
 [build-dependencies]
 rand_chacha = "0.3.1"
+thiserror = "2.0.2"
