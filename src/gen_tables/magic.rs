@@ -8,7 +8,7 @@ use rand_chacha::{
 
 use crate::{
     bitboard::{BitBoard, EMPTY},
-    square::Square,
+    square::{Square, SQUARES},
 };
 
 #[allow(dead_code)]
@@ -23,6 +23,38 @@ struct Magic {
     pub magic: u64,
     pub shift: u8,
     pub offset: u32,
+}
+
+fn rook_directions() -> [fn(Square) -> Option<Square>; 4] {
+    fn north(square: Square) -> Option<Square> {
+        square.up()
+    }
+    fn east(square: Square) -> Option<Square> {
+        square.right()
+    }
+    fn south(square: Square) -> Option<Square> {
+        square.down()
+    }
+    fn west(square: Square) -> Option<Square> {
+        square.left()
+    }
+    [north, east, south, west]
+}
+
+fn bishop_directions() -> [fn(Square) -> Option<Square>; 4] {
+    fn north_east(square: Square) -> Option<Square> {
+        square.up().map_or(None, |square| square.right())
+    }
+    fn south_east(square: Square) -> Option<Square> {
+        square.down().map_or(None, |square| square.right())
+    }
+    fn south_west(square: Square) -> Option<Square> {
+        square.down().map_or(None, |square| square.left())
+    }
+    fn north_west(square: Square) -> Option<Square> {
+        square.up().map_or(None, |square| square.left())
+    }
+    [north_east, south_east, south_west, north_west]
 }
 
 fn flatten_data(data: ([Magic; 64], [Vec<BitBoard>; 64])) -> ([Magic; 64], Vec<BitBoard>) {
@@ -51,11 +83,9 @@ fn flatten_data(data: ([Magic; 64], [Vec<BitBoard>; 64])) -> ([Magic; 64], Vec<B
     (updated_magic, flattened_moves)
 }
 
-fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<BitBoard>), &'static str> {
+fn find_magic(piece: Piece, square: Square) -> Result<(Magic, Vec<BitBoard>), &'static str> {
     let mask = match piece {
-        Piece::Bishop => {
-            generate_bishop_moves(BitBoard(1 << square), BitBoard(0)) & BitBoard(0x007e7e7e7e7e7e00)
-        }
+        Piece::Bishop => generate_bishop_moves(square, BitBoard(0)) & BitBoard(0x007e7e7e7e7e7e00),
         Piece::Rook => generate_rook_mask(square),
     };
 
@@ -79,14 +109,14 @@ fn find_magic(piece: Piece, square: usize) -> Result<(Magic, Vec<BitBoard>), &'s
     Err("Failed to find magic!")
 }
 
-fn try_make_table(piece: &Piece, square: usize, magic: Magic) -> Result<Vec<BitBoard>, &str> {
+fn try_make_table(piece: &Piece, square: Square, magic: Magic) -> Result<Vec<BitBoard>, &str> {
     let mut table: Vec<BitBoard> =
         vec![BitBoard::default(); 1 << magic.mask.0.count_ones() as usize];
 
     for blockers in subsets(magic.mask) {
         let moves = match piece {
-            Piece::Bishop => generate_bishop_moves(BitBoard(1 << square), blockers),
-            Piece::Rook => generate_rook_moves(BitBoard(1 << square), blockers),
+            Piece::Bishop => generate_bishop_moves(square, blockers),
+            Piece::Rook => generate_rook_moves(square, blockers),
         };
         let table_entry = &mut table[magic_index(magic, blockers)];
 
@@ -111,69 +141,41 @@ fn magic_index(magic: Magic, blockers: BitBoard) -> usize {
     magic.offset as usize + index
 }
 
-fn generate_bishop_magics_and_moves() -> ([Magic; 64], [Vec<BitBoard>; 64]) {
+fn generate_bishop_magics_and_moves() -> ([Magic; 64], Vec<BitBoard>) {
     let mut magics = [Magic::default(); 64];
     let mut moves = [const { Vec::new() }; 64];
 
-    for square in 0..64 {
+    for square in SQUARES {
         let magic_moves = find_magic(Piece::Bishop, square).unwrap();
-        magics[square] = magic_moves.0;
-        moves[square] = magic_moves.1;
+        magics[square.to_index()] = magic_moves.0;
+        moves[square.to_index()] = magic_moves.1;
     }
 
-    (magics, moves)
+    flatten_data((magics, moves))
 }
 
-fn generate_bishop_moves(square: BitBoard, blockers: BitBoard) -> BitBoard {
+fn generate_bishop_moves(square: Square, blockers: BitBoard) -> BitBoard {
     let mut moves = BitBoard(0);
 
-    // Northwest (upleft)
-    let mut current = shift_north_west(square);
-    while current != EMPTY {
-        moves |= current;
-        if current & blockers != EMPTY {
-            break;
-        }
-        current = shift_north_west(current);
-    }
+    for mv in bishop_directions() {
+        let mut next = mv(square);
+        while let Some(current) = next {
+            moves |= BitBoard::from_square(current);
+            next = mv(current);
 
-    // Northeast (upright)
-    let mut current = shift_north_east(square);
-    while current != EMPTY {
-        moves |= current;
-        if current & blockers != EMPTY {
-            break;
+            if BitBoard::from_square(current) & blockers != EMPTY {
+                break;
+            }
         }
-        current = shift_north_east(current);
-    }
-
-    // Southwest (downleft)
-    let mut current = shift_south_west(square);
-    while current != EMPTY {
-        moves |= current;
-        if current & blockers != EMPTY {
-            break;
-        }
-        current = shift_south_west(current);
-    }
-
-    // Southeast (downright)
-    let mut current = shift_south_east(square);
-    while current != EMPTY {
-        moves |= current;
-        if current & blockers != EMPTY {
-            break;
-        }
-        current = shift_south_east(current);
     }
 
     moves
 }
 
-fn generate_rook_mask(square: usize) -> BitBoard {
+fn generate_rook_mask(square: Square) -> BitBoard {
     let mut mask = BitBoard(0);
 
-    let (file, rank) = (square % 8, square / 8);
+    let (file, rank) = (square.to_index() % 8, square.to_index() / 8);
 
     let vertical_mask = BitBoard(0x0001010101010100);
     let horizontal_mask = BitBoard(0x000000000000007E);
@@ -181,65 +183,37 @@ fn generate_rook_mask(square: usize) -> BitBoard {
     mask |= vertical_mask << file;
     mask |= horizontal_mask << (rank * 8);
 
-    mask.clear_bit(Square::new(square as u8));
+    mask.clear_bit(square);
 
     mask
 }
 
-fn generate_rook_moves_and_magics() -> ([Magic; 64], [Vec<BitBoard>; 64]) {
+fn generate_rook_moves_and_magics() -> ([Magic; 64], Vec<BitBoard>) {
     let mut magics = [Magic::default(); 64];
     let mut moves = [const { Vec::new() }; 64];
 
-    for square in 0..64 {
+    for square in SQUARES {
         let magic_moves = find_magic(Piece::Rook, square).unwrap();
-        magics[square] = magic_moves.0;
-        moves[square] = magic_moves.1;
+        magics[square.to_index()] = magic_moves.0;
+        moves[square.to_index()] = magic_moves.1;
     }
 
-    (magics, moves)
+    flatten_data((magics, moves))
 }
 
-fn generate_rook_moves(square: BitBoard, blockers: BitBoard) -> BitBoard {
+fn generate_rook_moves(square: Square, blockers: BitBoard) -> BitBoard {
     let mut moves = BitBoard(0);
 
-    // North (up)
-    let mut current = shift_north(square);
-    while current != EMPTY {
-        moves |= current;
-        if current & blockers != EMPTY {
-            break;
-        }
-        current = shift_north(current);
-    }
+    for mv in rook_directions() {
+        let mut next = mv(square);
+        while let Some(current) = next {
+            moves |= BitBoard::from_square(current);
+            next = mv(current);
 
-    // South (down)
-    let mut current = shift_south(square);
-    while current != EMPTY {
-        moves |= current;
-        if current & blockers != EMPTY {
-            break;
+            if BitBoard::from_square(current) & blockers != EMPTY {
+                break;
+            }
         }
-        current = shift_south(current);
-    }
-
-    // West (left)
-    let mut current = shift_west(square);
-    while current != EMPTY {
-        moves |= current;
-        if current & blockers != EMPTY {
-            break;
-        }
-        current = shift_west(current);
-    }
-
-    // East (right)
-    let mut current = shift_east(square);
-    while current != EMPTY {
-        moves |= current;
-        if current & blockers != EMPTY {
-            break;
-        }
-        current = shift_east(current);
     }
 
     moves
@@ -261,40 +235,8 @@ fn subsets(mask: BitBoard) -> Vec<BitBoard> {
     subsets
 }
 
-fn shift_north(bitboard: BitBoard) -> BitBoard {
-    bitboard << 8
-}
-
-fn shift_north_west(bitboard: BitBoard) -> BitBoard {
-    (bitboard & BitBoard(!0x0101010101010101)) << 7
-}
-
-fn shift_north_east(bitboard: BitBoard) -> BitBoard {
-    (bitboard & BitBoard(!0x8080808080808080)) << 9
-}
-
-fn shift_south(bitboard: BitBoard) -> BitBoard {
-    bitboard >> 8
-}
-
-fn shift_south_west(bitboard: BitBoard) -> BitBoard {
-    (bitboard & BitBoard(!0x0101010101010101)) >> 9
-}
-
-fn shift_south_east(bitboard: BitBoard) -> BitBoard {
-    (bitboard & BitBoard(!0x8080808080808080)) >> 7
-}
-
-fn shift_west(bitboard: BitBoard) -> BitBoard {
-    (bitboard & BitBoard(!0x0101010101010101)) >> 1 // Mask out the H file
-}
-
-fn shift_east(bitboard: BitBoard) -> BitBoard {
-    (bitboard & BitBoard(!0x8080808080808080)) << 1 // Mask out the A file
-}
-
 pub fn write_bishop_moves(f: &mut File) {
-    let bishop_magics_and_moves = flatten_data(generate_bishop_magics_and_moves());
+    let bishop_magics_and_moves = generate_bishop_magics_and_moves();
     writeln!(
         f,
         "pub const BISHOP_MAGICS: [Magic; 64] = {:?};",
@@ -311,7 +253,7 @@ pub fn write_bishop_moves(f: &mut File) {
 }
 
 pub fn write_rook_moves(f: &mut File) {
-    let rook_magics_and_moves = flatten_data(generate_rook_moves_and_magics());
+    let rook_magics_and_moves = generate_rook_moves_and_magics();
     writeln!(
         f,
         "pub const ROOK_MAGICS: [Magic; 64] = {:?};",
