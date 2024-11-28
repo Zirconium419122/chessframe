@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::{color::Color, error::Error, file::File, rank::Rank};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Square(u8);
 
 impl FromStr for Square {

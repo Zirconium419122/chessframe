@@ -16,13 +16,13 @@ fn test_pawn_move_generation() {
         let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         let board = Board::from_fen(fen);
 
-        let pawn_pushes = board.generate_pawn_pushes();
+        let pawn_pushes = board.generate_pawn_moves() & !board.occupancy(!board.side_to_move);
         assert_eq!(pawn_pushes, BitBoard(0x00000000FFFF0000));
 
-        let pawn_captures = board.generate_pawn_captures();
+        let pawn_captures = board.generate_pawn_moves() & board.occupancy(!board.side_to_move);
         assert_eq!(pawn_captures, BitBoard(0));
 
-        let en_passant = board.generate_en_passant();
+        let en_passant = board.generate_pawn_moves() & BitBoard::from_square(board.en_passant_square().unwrap_or_default());
         assert_eq!(en_passant, BitBoard(0));
 
         let pawn_moves = board.generate_pawn_moves();
@@ -34,13 +34,13 @@ fn test_pawn_move_generation() {
         let fen = "rnbqkbnr/1ppppppp/8/P7/8/8/P1PPPPPP/RNBQKBNR b KQkq - 0 2";
         let board = Board::from_fen(fen);
 
-        let pawn_pushes = board.generate_pawn_pushes();
+        let pawn_pushes = board.generate_pawn_moves() & !board.occupancy(!board.side_to_move);
         assert_eq!(pawn_pushes, BitBoard(0x0000fefe00000000));
 
-        let pawn_captures = board.generate_pawn_captures();
+        let pawn_captures = board.generate_pawn_moves() & board.occupancy(!board.side_to_move);
         assert_eq!(pawn_captures, BitBoard(0));
 
-        let en_passant = board.generate_en_passant();
+        let en_passant = board.generate_pawn_moves() & BitBoard::from_square(board.en_passant_square().unwrap_or_default());
         assert_eq!(en_passant, BitBoard(0));
     }
 
@@ -49,13 +49,13 @@ fn test_pawn_move_generation() {
         let fen = "8/p7/1k2Pp2/1P3P2/1K6/8/8/8 w - - 0 1";
         let board = Board::from_fen(fen);
 
-        let pawn_pushes = board.generate_pawn_pushes();
+        let pawn_pushes = board.generate_pawn_moves() & !board.occupancy(!board.side_to_move);
         assert_eq!(pawn_pushes, BitBoard(0x0010000000000000));
 
-        let pawn_captures = board.generate_pawn_captures();
+        let pawn_captures = board.generate_pawn_moves() & board.occupancy(!board.side_to_move);
         assert_eq!(pawn_captures, BitBoard(0));
 
-        let en_passant = board.generate_en_passant();
+        let en_passant = board.generate_pawn_moves() & BitBoard::from_square(board.en_passant_square().unwrap_or_default());
         assert_eq!(en_passant, BitBoard(0));
 
         let pawn_moves = board.generate_pawn_moves();

@@ -1,4 +1,4 @@
-use crate::bitboard::BitBoard;
+use crate::{bitboard::BitBoard, color::Color};
 
 include!("tables.rs");
 
@@ -15,6 +15,14 @@ pub fn magic_index(magic: Magic, blockers: BitBoard) -> usize {
     let hash = blockers.0.wrapping_mul(magic.magic);
     let index = (hash >> magic.shift) as usize;
     magic.offset as usize + index
+}
+
+pub fn get_pawn_moves(square: usize, color: Color) -> BitBoard {
+    PAWN_MOVES[color.to_index()][square]
+}
+
+pub fn get_pawn_attacks(square: usize, color: Color) -> BitBoard {
+    PAWN_ATTACKS[color.to_index()][square]
 }
 
 pub fn get_bishop_moves(square: usize, blockers: BitBoard) -> BitBoard {

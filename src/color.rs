@@ -8,6 +8,8 @@ pub enum Color {
     Black,
 }
 
+pub const COLORS: [Color; 2] = [Color::White, Color::Black];
+
 impl Not for Color {
     type Output = Color;
 
