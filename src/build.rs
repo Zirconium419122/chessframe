@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::gen_tables::{write_pawn_attacks, write_pawn_moves, write_bishop_moves, write_king_moves, write_rook_moves};
+use crate::gen_tables::*;
 
 mod bitboard;
 mod color;
@@ -18,6 +18,8 @@ fn main() {
     write_pawn_moves(&mut file);
 
     write_pawn_attacks(&mut file);
+
+    write_knight_moves(&mut file);
 
     write_bishop_moves(&mut file);
 

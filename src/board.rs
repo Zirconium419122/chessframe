@@ -6,7 +6,7 @@ use crate::{
     chess_move::{ChessMove, MoveType},
     color::Color,
     file::File,
-    magic::{get_bishop_moves, get_king_moves, get_pawn_attacks, get_pawn_moves, get_rook_moves},
+    magic::*,
     piece::Piece,
     rank::Rank,
     square::Square,
@@ -674,24 +674,13 @@ impl Board {
 
     /// Generate all knight moves.
     pub fn generate_knight_moves(&self) -> BitBoard {
-        let allied_pieces = self.occupancy(self.side_to_move);
-        let knights = self.pieces(Piece::Knight, self.side_to_move);
+        let mut moves = BitBoard(0);
+        
+        for square in self.pieces(Piece::Knight, self.side_to_move) {
+            moves |= get_knight_moves(square.to_index());
+        }
 
-        let mut knight_moves = BitBoard(0);
-
-        knight_moves |= (knights << 17) & !BitBoard(0x0101010101010101); // Mask out the H file
-        knight_moves |= (knights << 15) & !BitBoard(0x8080808080808080); // Mask out the A file
-        knight_moves |= (knights >> 15) & !BitBoard(0x0101010101010101); // Mask out the H file
-        knight_moves |= (knights >> 17) & !BitBoard(0x8080808080808080); // Mask out the A file
-
-        knight_moves |= (knights << 10) & !BitBoard(0x0303030303030303); // Mask out the GH file
-        knight_moves |= (knights << 6) & !BitBoard(0xC0C0C0C0C0C0C0C0); // Mask out the AB file
-        knight_moves |= (knights >> 6) & !BitBoard(0x0303030303030303); // Mask out the GH file
-        knight_moves |= (knights >> 10) & !BitBoard(0xC0C0C0C0C0C0C0C0); // Mask out the AB file
-
-        knight_moves &= !allied_pieces;
-
-        knight_moves
+        moves & !self.occupancy(self.side_to_move)
     }
 
     /// Generate all bishop moves.

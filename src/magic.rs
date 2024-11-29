@@ -25,6 +25,10 @@ pub fn get_pawn_attacks(square: usize, color: Color) -> BitBoard {
     PAWN_ATTACKS[color.to_index()][square]
 }
 
+pub fn get_knight_moves(square: usize) -> BitBoard {
+    KNIGHT_MOVES[square]
+}
+
 pub fn get_bishop_moves(square: usize, blockers: BitBoard) -> BitBoard {
     let magic = &BISHOP_MAGICS[square];
     let moves = &BISHOP_MOVES_TABLE[magic_index(*magic, blockers)];
