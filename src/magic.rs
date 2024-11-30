@@ -1,4 +1,4 @@
-use crate::{bitboard::BitBoard, color::Color};
+use crate::{bitboard::BitBoard, color::Color, square::Square};
 
 include!("tables.rs");
 
@@ -17,30 +17,34 @@ pub fn magic_index(magic: Magic, blockers: BitBoard) -> usize {
     magic.offset as usize + index
 }
 
-pub fn get_pawn_moves(square: usize, color: Color) -> BitBoard {
-    PAWN_MOVES[color.to_index()][square]
+pub fn get_pawn_moves(square: Square, color: Color) -> BitBoard {
+    unsafe { *PAWN_MOVES.get_unchecked(color.to_index()).get_unchecked(square.to_index()) }
 }
 
-pub fn get_pawn_attacks(square: usize, color: Color) -> BitBoard {
-    PAWN_ATTACKS[color.to_index()][square]
+pub fn get_pawn_attacks(square: Square, color: Color) -> BitBoard {
+    unsafe { *PAWN_ATTACKS.get_unchecked(color.to_index()).get_unchecked(square.to_index()) }
 }
 
-pub fn get_knight_moves(square: usize) -> BitBoard {
-    KNIGHT_MOVES[square]
+pub fn get_knight_moves(square: Square) -> BitBoard {
+    unsafe { *KNIGHT_MOVES.get_unchecked(square.to_index()) }
 }
 
-pub fn get_bishop_moves(square: usize, blockers: BitBoard) -> BitBoard {
-    let magic = &BISHOP_MAGICS[square];
-    let moves = &BISHOP_MOVES_TABLE[magic_index(*magic, blockers)];
-    *moves
+pub fn get_bishop_moves(square: Square, blockers: BitBoard) -> BitBoard {
+    unsafe {
+        let magic = BISHOP_MAGICS.get_unchecked(square.to_index());
+        let moves = BISHOP_MOVES_TABLE.get_unchecked(magic_index(*magic, blockers));
+        *moves
+    }
 }
 
-pub fn get_rook_moves(square: usize, blockers: BitBoard) -> BitBoard {
-    let magic = &ROOK_MAGICS[square];
-    let moves = &ROOK_MOVES_TABLE[magic_index(*magic, blockers)];
-    *moves
+pub fn get_rook_moves(square: Square, blockers: BitBoard) -> BitBoard {
+    unsafe {
+        let magic = ROOK_MAGICS.get_unchecked(square.to_index());
+        let moves = ROOK_MOVES_TABLE.get_unchecked(magic_index(*magic, blockers));
+        *moves
+    }
 }
 
-pub fn get_king_moves(square: usize) -> BitBoard {
-    KING_MOVES[square]
+pub fn get_king_moves(square: Square) -> BitBoard {
+    unsafe { *KING_MOVES.get_unchecked(square.to_index()) }
 }

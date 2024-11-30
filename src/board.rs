@@ -534,7 +534,9 @@ impl Board {
             ($color:expr, $($piece:expr),+) => {
                 {
                     let mut moves: Vec<ChessMove> = Vec::with_capacity(218);
-                    let opponent_occupancy = self.occupancy(!self.side_to_move).clone();
+                    let allied_pieces = self.occupancy(self.side_to_move);
+                    let opponent_occupancy = self.occupancy(!self.side_to_move);
+                    let blockers = allied_pieces | opponent_occupancy;
 
                     $(
                         let pieces = self.pieces($piece, $color);
@@ -543,13 +545,13 @@ impl Board {
                             *self.pieces_mut($piece, $color) = BitBoard::from_square(src);
 
                             let generated_moves = match $piece {
-                                Piece::Knight => self.generate_knight_moves(),
-                                Piece::Bishop => self.generate_bishop_moves(),
-                                Piece::Rook => self.generate_rook_moves(),
-                                Piece::Queen => self.generate_queen_moves(),
-                                Piece::King => self.generate_king_moves(),
+                                Piece::Knight => get_knight_moves(src),
+                                Piece::Bishop => get_bishop_moves(src, blockers),
+                                Piece::Rook => get_rook_moves(src, blockers),
+                                Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
+                                Piece::King => get_king_moves(src),
                                 _ => BitBoard(0),
-                            };
+                            } & !allied_pieces;
 
                             let quiet_moves = generated_moves & !opponent_occupancy;
                             let capture_moves = generated_moves & opponent_occupancy;
@@ -564,9 +566,9 @@ impl Board {
                                 Piece::Pawn => {
                                     let pawn_moves = {
                                         if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
-                                            (get_pawn_moves(src.to_index(), self.side_to_move) & !self.combined()) | (get_pawn_attacks(src.to_index(), self.side_to_move) & opponent_occupancy)
+                                            (get_pawn_moves(src, self.side_to_move) & !self.combined()) | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy)
                                         } else {
-                                            get_pawn_attacks(src.to_index(), self.side_to_move) & opponent_occupancy
+                                            get_pawn_attacks(src, self.side_to_move) & opponent_occupancy
                                         }
                                     };
                                     
@@ -639,10 +641,10 @@ impl Board {
 
         for square in self.pieces(Piece::Pawn, self.side_to_move) {
             if (BitBoard::from_square(square.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
-                moves |= get_pawn_moves(square.to_index(), self.side_to_move) & !self.combined();
+                moves |= get_pawn_moves(square, self.side_to_move) & !self.combined();
             }
 
-            moves |= get_pawn_attacks(square.to_index(), self.side_to_move) & self.occupancy(!self.side_to_move);
+            moves |= get_pawn_attacks(square, self.side_to_move) & self.occupancy(!self.side_to_move);
             // moves |= get_pawn_attacks(square.to_index(), self.side_to_move) & en_passant_square;
         }
 
@@ -652,16 +654,12 @@ impl Board {
         /// Generate all en passants.
         pub fn generate_en_passant(&self) -> BitBoard {
             if let Some(en_passant) = self.en_passant_square {
-                let mut moves = BitBoard(0);
-
-                for square in self.pieces(Piece::Pawn, self.side_to_move) {
-                    moves |= get_pawn_attacks(square.to_index(), self.side_to_move);
+                if (get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces(Piece::Pawn, self.side_to_move)) != EMPTY {
+                    return BitBoard::from_square(en_passant);
                 }
-
-                moves & BitBoard::from_square(en_passant)
-            } else {
-                BitBoard(0)
             }
+
+            BitBoard(0)
         }
 
     /// Check if a square is a promotion square.
@@ -677,7 +675,7 @@ impl Board {
         let mut moves = BitBoard(0);
         
         for square in self.pieces(Piece::Knight, self.side_to_move) {
-            moves |= get_knight_moves(square.to_index());
+            moves |= get_knight_moves(square);
         }
 
         moves & !self.occupancy(self.side_to_move)
@@ -690,7 +688,7 @@ impl Board {
         let mut moves = BitBoard(0);
 
         for square in self.pieces(Piece::Bishop, self.side_to_move).into_iter() {
-            moves |= get_bishop_moves(square.to_index(), occupancy);
+            moves |= get_bishop_moves(square, occupancy);
         }
 
         moves & !self.occupancy(self.side_to_move)
@@ -703,7 +701,7 @@ impl Board {
         let mut moves = BitBoard(0);
 
         for square in self.pieces(Piece::Rook, self.side_to_move).into_iter() {
-            moves |= get_rook_moves(square.to_index(), occupancy);
+            moves |= get_rook_moves(square, occupancy);
         }
 
         moves & !self.occupancy(self.side_to_move)
@@ -716,8 +714,8 @@ impl Board {
         let mut moves = BitBoard(0);
 
         for square in self.pieces(Piece::Queen, self.side_to_move).into_iter() {
-            moves |= get_bishop_moves(square.to_index(), occupancy);
-            moves |= get_rook_moves(square.to_index(), occupancy);
+            moves |= get_bishop_moves(square, occupancy);
+            moves |= get_rook_moves(square, occupancy);
         }
 
         moves & !self.occupancy(self.side_to_move)
@@ -731,7 +729,7 @@ impl Board {
         let mut moves = BitBoard(0);
 
         for square in kings {
-            moves |= get_king_moves(square.to_index());
+            moves |= get_king_moves(square);
         }
 
         moves &= !allied_pieces;
@@ -761,27 +759,27 @@ impl Board {
 
         let enemy_moves = self.generate_moves();
 
-        if self.castling_rights.can_castle(&!self.side_to_move, true)
+        self.side_to_move.flip();
+
+        if self.castling_rights.can_castle(&self.side_to_move, true)
             && (occupancy & king_side).is_zero()
             && (enemy_moves & (king_side | king)).is_zero()
         {
-            moves |= match !self.side_to_move {
+            moves |= match self.side_to_move {
                 Color::White => BitBoard(0x40),
                 Color::Black => BitBoard(0x4000000000000000),
             }
         }
 
-        if self.castling_rights.can_castle(&!self.side_to_move, false)
+        if self.castling_rights.can_castle(&self.side_to_move, false)
             && (occupancy & queen_side).is_zero()
             && (enemy_moves & (queen_side | king)).is_zero()
         {
-            moves |= match !self.side_to_move {
+            moves |= match self.side_to_move {
                 Color::White => BitBoard(0x04),
                 Color::Black => BitBoard(0x0400000000000000),
             }
         }
-
-        self.side_to_move.flip();
 
         moves
     }
