@@ -31,6 +31,14 @@ impl Color {
     }
 
     #[inline]
+    pub fn to_backrank(&self) -> Rank {
+        match self {
+            Color::White => Rank::First,
+            Color::Black => Rank::Eighth,
+        }
+    }
+
+    #[inline]
     pub fn to_second_rank(&self) -> Rank {
         match self {
             Color::White => Rank::Second,

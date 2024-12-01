@@ -606,26 +606,15 @@ impl Board {
             };
         }
 
-        match self.side_to_move {
-            Color::White => extract_moves!(
-                Color::White,
-                Piece::Pawn,
-                Piece::Knight,
-                Piece::Bishop,
-                Piece::Rook,
-                Piece::Queen,
-                Piece::King
-            ),
-            Color::Black => extract_moves!(
-                Color::Black,
-                Piece::Pawn,
-                Piece::Knight,
-                Piece::Bishop,
-                Piece::Rook,
-                Piece::Queen,
-                Piece::King
-            ),
-        }
+        extract_moves!(
+            self.side_to_move,
+            Piece::Pawn,
+            Piece::Knight,
+            Piece::Bishop,
+            Piece::Rook,
+            Piece::Queen,
+            Piece::King
+        )
     }
 
     /// Generate all moves for ray pieces.
@@ -651,16 +640,16 @@ impl Board {
         moves
     }
 
-        /// Generate all en passants.
-        pub fn generate_en_passant(&self) -> BitBoard {
-            if let Some(en_passant) = self.en_passant_square {
-                if (get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces(Piece::Pawn, self.side_to_move)) != EMPTY {
-                    return BitBoard::from_square(en_passant);
-                }
+    /// Generate all en passants.
+    pub fn generate_en_passant(&self) -> BitBoard {
+        if let Some(en_passant) = self.en_passant_square {
+            if (get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces(Piece::Pawn, self.side_to_move)) != EMPTY {
+                return BitBoard::from_square(en_passant);
             }
-
-            BitBoard(0)
         }
+
+        BitBoard(0)
+    }
 
     /// Check if a square is a promotion square.
     pub fn is_promotion(&self, square: &Square) -> bool {
@@ -741,16 +730,15 @@ impl Board {
     pub fn generate_castling_moves(&mut self) -> BitBoard {
         let occupancy = self.combined();
 
-        let (king_side, queen_side, king) = match self.side_to_move {
+        let king = self.pieces(Piece::King, self.side_to_move);
+        let (king_side, queen_side) = match self.side_to_move {
             Color::White => (
                 BitBoard(0x60),
                 BitBoard(0x0e),
-                self.pieces(Piece::King, Color::White),
             ),
             Color::Black => (
                 BitBoard(0x6000000000000000),
                 BitBoard(0x0e00000000000000),
-                self.pieces(Piece::King, Color::Black),
             ),
         };
         let mut moves = BitBoard(0);
@@ -765,20 +753,14 @@ impl Board {
             && (occupancy & king_side).is_zero()
             && (enemy_moves & (king_side | king)).is_zero()
         {
-            moves |= match self.side_to_move {
-                Color::White => BitBoard(0x40),
-                Color::Black => BitBoard(0x4000000000000000),
-            }
+            moves |= BitBoard::set(self.side_to_move.to_backrank(), File::G);
         }
 
         if self.castling_rights.can_castle(&self.side_to_move, false)
             && (occupancy & queen_side).is_zero()
             && (enemy_moves & (queen_side | king)).is_zero()
         {
-            moves |= match self.side_to_move {
-                Color::White => BitBoard(0x04),
-                Color::Black => BitBoard(0x0400000000000000),
-            }
+            moves |= BitBoard::set(self.side_to_move.to_backrank(), File::C);
         }
 
         moves

@@ -1,7 +1,7 @@
 use core::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Shl, Shr};
 
-use crate::square::Square;
+use crate::{file::File, rank::Rank, square::Square};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct BitBoard(pub u64);
@@ -179,6 +179,12 @@ impl BitBoard {
         BitBoard(bits)
     }
 
+    /// Construct a new `BitBoard` from a `Rank` and `File`.
+    #[inline]
+    pub fn set(rank: Rank, file: File) -> BitBoard {
+        BitBoard::from_square(Square::make_square(rank, file))
+    }
+    
     /// Construct a new `BitBoard` with a `Square` set.
     #[inline]
     pub fn from_square(square: Square) -> BitBoard {
