@@ -539,11 +539,7 @@ impl Board {
                     let blockers = allied_pieces | opponent_occupancy;
 
                     $(
-                        let pieces = self.pieces($piece, $color);
-
-                        for src in pieces.into_iter() {
-                            *self.pieces_mut($piece, $color) = BitBoard::from_square(src);
-
+                        for src in self.pieces($piece, $color).into_iter() {
                             let generated_moves = match $piece {
                                 Piece::Knight => get_knight_moves(src),
                                 Piece::Bishop => get_bishop_moves(src, blockers),
@@ -582,10 +578,6 @@ impl Board {
                                             moves.push(ChessMove::new_capture(src, dest));
                                         }
                                     });
-
-                                    self.generate_en_passant().into_iter().for_each(|dest| {
-                                        moves.push(ChessMove::new_en_passant(src, dest));
-                                    })
                                 }
                                 Piece::King => {
                                     moves.extend(self.generate_castling_moves().into_iter().map(|dest| {
@@ -598,7 +590,13 @@ impl Board {
 
                         }
 
-                        *self.pieces_mut($piece, $color) = pieces;
+                        if let Piece::Pawn = $piece {
+                            if let Some(en_passant) = self.en_passant_square {
+                                for src in get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces(Piece::Pawn, self.side_to_move) {
+                                    moves.push(ChessMove::new_en_passant(src, en_passant));
+                                }
+                            }
+                        }
                     )+
 
                     moves
