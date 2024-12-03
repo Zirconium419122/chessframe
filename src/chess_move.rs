@@ -63,6 +63,13 @@ impl ChessMove {
         &self.move_type
     }
 
+    pub fn get_promotion(&self) -> Option<Piece> {
+        match self.move_type {
+            MoveType::Promotion(piece) | MoveType::CapturePromotion(piece) => Some(piece),
+            _ => None,
+        }
+    }
+
     pub fn new_promotion(from: Square, to: Square, promotion: Piece) -> ChessMove {
         ChessMove {
             from,

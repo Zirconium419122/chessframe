@@ -395,39 +395,34 @@ impl Board {
         move_piece(self, piece, *from, *to);
         self.clear_piece(*to, !self.side_to_move);
 
-        match move_type {
-            MoveType::Castle => {
-                let (kingside, queenside) = match self.side_to_move {
-                    Color::White => (Square::G1, Square::C1),
-                    Color::Black => (Square::G8, Square::C8),
-                };
-
-                if to == &kingside {
-                    move_piece(
-                        self,
-                        Piece::Rook,
-                        kingside.wrapping_right(),
-                        kingside.wrapping_left(),
-                    );
-                } else if to == &queenside {
-                    move_piece(
-                        self,
-                        Piece::Rook,
-                        queenside.wrapping_left().wrapping_left(),
-                        queenside.wrapping_right(),
-                    );
-                }
-            }
-            MoveType::EnPassant => {
-                let behind_pawn = to.backwards(&self.side_to_move).unwrap();
-                self.clear_piece(behind_pawn, !self.side_to_move)
-            }
-            MoveType::Promotion(piece) | MoveType::CapturePromotion(piece) => {
+        if let Piece::Pawn = piece {
+            if let Some(promotion) = mv.get_promotion() {
                 self.pieces_mut(Piece::Pawn, self.side_to_move)
                     .clear_bit(*to);
-                self.set_piece(*piece, self.side_to_move, *to);
+                self.pieces_mut(promotion, self.side_to_move).set_bit(*to);
+            } else if Some(*to) == self.en_passant_square() {
+                let side_to_move = self.side_to_move;
+                self.pieces_mut(Piece::Pawn, !side_to_move).clear_bit(to.wrapping_backwards(&side_to_move));
+                self.occupancy_mut(!side_to_move).clear_bit(to.wrapping_backwards(&side_to_move));
             }
-            _ => {}
+        }
+
+        if let MoveType::Castle = move_type {
+            if to == &Square::make_square(self.side_to_move.to_backrank(), File::G) {
+                move_piece(
+                    self,
+                    Piece::Rook,
+                    Square::make_square(self.side_to_move.to_backrank(), File::H),
+                    Square::make_square(self.side_to_move.to_backrank(), File::F),
+                );
+            } else if to == &Square::make_square(self.side_to_move.to_backrank(), File::C) {
+                move_piece(
+                    self,
+                    Piece::Rook,
+                    Square::make_square(self.side_to_move.to_backrank(), File::A),
+                    Square::make_square(self.side_to_move.to_backrank(), File::D),
+                );
+            }
         }
 
         self.remove_en_passant();
@@ -444,14 +439,9 @@ impl Board {
                 self.castling_rights.revoke_all(&self.side_to_move);
             }
             Piece::Rook => {
-                let (kingside_rook, queenside_rook) = match self.side_to_move {
-                    Color::White => (Square::H1, Square::A1),
-                    Color::Black => (Square::H8, Square::A8),
-                };
-
-                if from == &kingside_rook {
+                if from == &Square::make_square(self.side_to_move.to_backrank(), File::H) {
                     self.castling_rights.revoke(&self.side_to_move, true);
-                } else if from == &queenside_rook {
+                } else if from == &Square::make_square(self.side_to_move.to_backrank(), File::A) {
                     self.castling_rights.revoke(&self.side_to_move, false);
                 }
             }
