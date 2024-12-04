@@ -18,11 +18,19 @@ pub fn magic_index(magic: Magic, blockers: BitBoard) -> usize {
 }
 
 pub fn get_pawn_moves(square: Square, color: Color) -> BitBoard {
-    unsafe { *PAWN_MOVES.get_unchecked(color.to_index()).get_unchecked(square.to_index()) }
+    unsafe {
+        *PAWN_MOVES
+            .get_unchecked(color.to_index())
+            .get_unchecked(square.to_index())
+    }
 }
 
 pub fn get_pawn_attacks(square: Square, color: Color) -> BitBoard {
-    unsafe { *PAWN_ATTACKS.get_unchecked(color.to_index()).get_unchecked(square.to_index()) }
+    unsafe {
+        *PAWN_ATTACKS
+            .get_unchecked(color.to_index())
+            .get_unchecked(square.to_index())
+    }
 }
 
 pub fn get_knight_moves(square: Square) -> BitBoard {

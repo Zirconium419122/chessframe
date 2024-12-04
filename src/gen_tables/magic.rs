@@ -43,16 +43,16 @@ fn rook_directions() -> [fn(Square) -> Option<Square>; 4] {
 
 fn bishop_directions() -> [fn(Square) -> Option<Square>; 4] {
     fn north_east(square: Square) -> Option<Square> {
-        square.up().map_or(None, |square| square.right())
+        square.up().and_then(|square| square.right())
     }
     fn south_east(square: Square) -> Option<Square> {
-        square.down().map_or(None, |square| square.right())
+        square.down().and_then(|square| square.right())
     }
     fn south_west(square: Square) -> Option<Square> {
-        square.down().map_or(None, |square| square.left())
+        square.down().and_then(|square| square.left())
     }
     fn north_west(square: Square) -> Option<Square> {
-        square.up().map_or(None, |square| square.left())
+        square.up().and_then(|square| square.left())
     }
     [north_east, south_east, south_west, north_west]
 }

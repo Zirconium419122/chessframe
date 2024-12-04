@@ -22,7 +22,8 @@ fn test_pawn_move_generation() {
         let pawn_captures = board.generate_pawn_moves() & board.occupancy(!board.side_to_move);
         assert_eq!(pawn_captures, BitBoard(0));
 
-        let en_passant = board.generate_pawn_moves() & BitBoard::from_square(board.en_passant_square().unwrap_or_default());
+        let en_passant = board.generate_pawn_moves()
+            & BitBoard::from_square(board.en_passant_square().unwrap_or_default());
         assert_eq!(en_passant, BitBoard(0));
 
         let pawn_moves = board.generate_pawn_moves();
@@ -40,7 +41,8 @@ fn test_pawn_move_generation() {
         let pawn_captures = board.generate_pawn_moves() & board.occupancy(!board.side_to_move);
         assert_eq!(pawn_captures, BitBoard(0));
 
-        let en_passant = board.generate_pawn_moves() & BitBoard::from_square(board.en_passant_square().unwrap_or_default());
+        let en_passant = board.generate_pawn_moves()
+            & BitBoard::from_square(board.en_passant_square().unwrap_or_default());
         assert_eq!(en_passant, BitBoard(0));
     }
 
@@ -55,7 +57,8 @@ fn test_pawn_move_generation() {
         let pawn_captures = board.generate_pawn_moves() & board.occupancy(!board.side_to_move);
         assert_eq!(pawn_captures, BitBoard(0));
 
-        let en_passant = board.generate_pawn_moves() & BitBoard::from_square(board.en_passant_square().unwrap_or_default());
+        let en_passant = board.generate_pawn_moves()
+            & BitBoard::from_square(board.en_passant_square().unwrap_or_default());
         assert_eq!(en_passant, BitBoard(0));
 
         let pawn_moves = board.generate_pawn_moves();

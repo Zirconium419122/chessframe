@@ -395,6 +395,27 @@ impl Board {
         move_piece(self, piece, *from, *to);
         self.clear_piece(*to, !self.side_to_move);
 
+        const CASTLE_ROOK_START: [File; 8] = [
+            File::A,
+            File::A,
+            File::A,
+            File::A,
+            File::H,
+            File::H,
+            File::H,
+            File::H,
+        ];
+        const CASTLE_ROOK_END: [File; 8] = [
+            File::D,
+            File::D,
+            File::D,
+            File::D,
+            File::F,
+            File::F,
+            File::F,
+            File::F,
+        ];
+
         if let Piece::Pawn = piece {
             if let Some(promotion) = mv.get_promotion() {
                 self.pieces_mut(Piece::Pawn, self.side_to_move)
@@ -402,27 +423,23 @@ impl Board {
                 self.pieces_mut(promotion, self.side_to_move).set_bit(*to);
             } else if Some(*to) == self.en_passant_square() {
                 let side_to_move = self.side_to_move;
-                self.pieces_mut(Piece::Pawn, !side_to_move).clear_bit(to.wrapping_backwards(&side_to_move));
-                self.occupancy_mut(!side_to_move).clear_bit(to.wrapping_backwards(&side_to_move));
+                self.pieces_mut(Piece::Pawn, !side_to_move)
+                    .clear_bit(to.wrapping_backwards(&side_to_move));
+                self.occupancy_mut(!side_to_move)
+                    .clear_bit(to.wrapping_backwards(&side_to_move));
             }
         }
 
         if let MoveType::Castle = move_type {
-            if to == &Square::make_square(self.side_to_move.to_backrank(), File::G) {
-                move_piece(
-                    self,
-                    Piece::Rook,
-                    Square::make_square(self.side_to_move.to_backrank(), File::H),
-                    Square::make_square(self.side_to_move.to_backrank(), File::F),
-                );
-            } else if to == &Square::make_square(self.side_to_move.to_backrank(), File::C) {
-                move_piece(
-                    self,
-                    Piece::Rook,
-                    Square::make_square(self.side_to_move.to_backrank(), File::A),
-                    Square::make_square(self.side_to_move.to_backrank(), File::D),
-                );
-            }
+            let index = to.get_file().to_index();
+            let start = Square::make_square(self.side_to_move.to_backrank(), unsafe {
+                *CASTLE_ROOK_START.get_unchecked(index)
+            });
+            let end = Square::make_square(self.side_to_move.to_backrank(), unsafe {
+                *CASTLE_ROOK_END.get_unchecked(index)
+            });
+
+            move_piece(self, Piece::Rook, start, end);
         }
 
         self.remove_en_passant();
@@ -487,7 +504,7 @@ impl Board {
     pub fn set_piece(&mut self, piece: Piece, color: Color, square: Square) {
         let bitboard = self.pieces_mut(piece, color);
         bitboard.set_bit(square);
-        self.occupancy[color.to_index()].set_bit(square);
+        self.occupancy_mut(color).set_bit(square);
     }
 
     /// Remove the piece at a given square.
@@ -557,7 +574,7 @@ impl Board {
                                             get_pawn_attacks(src, self.side_to_move) & opponent_occupancy
                                         }
                                     };
-                                    
+
                                     pawn_moves.into_iter().for_each(|dest| {
                                         if self.is_promotion(&dest) {
                                             moves.push(ChessMove::new_capture_promotion(src, dest, Piece::Knight));
@@ -617,11 +634,15 @@ impl Board {
         // let en_passant_square = self.en_passant_square().unwrap_or_default();
 
         for square in self.pieces(Piece::Pawn, self.side_to_move) {
-            if (BitBoard::from_square(square.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
+            if (BitBoard::from_square(square.wrapping_forward(&self.side_to_move))
+                & !self.combined())
+                != EMPTY
+            {
                 moves |= get_pawn_moves(square, self.side_to_move) & !self.combined();
             }
 
-            moves |= get_pawn_attacks(square, self.side_to_move) & self.occupancy(!self.side_to_move);
+            moves |=
+                get_pawn_attacks(square, self.side_to_move) & self.occupancy(!self.side_to_move);
             // moves |= get_pawn_attacks(square.to_index(), self.side_to_move) & en_passant_square;
         }
 
@@ -631,7 +652,10 @@ impl Board {
     /// Generate all en passants.
     pub fn generate_en_passant(&self) -> BitBoard {
         if let Some(en_passant) = self.en_passant_square {
-            if (get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces(Piece::Pawn, self.side_to_move)) != EMPTY {
+            if (get_pawn_attacks(en_passant, !self.side_to_move)
+                & self.pieces(Piece::Pawn, self.side_to_move))
+                != EMPTY
+            {
                 return BitBoard::from_square(en_passant);
             }
         }
@@ -650,7 +674,7 @@ impl Board {
     /// Generate all knight moves.
     pub fn generate_knight_moves(&self) -> BitBoard {
         let mut moves = BitBoard(0);
-        
+
         for square in self.pieces(Piece::Knight, self.side_to_move) {
             moves |= get_knight_moves(square);
         }
@@ -720,14 +744,8 @@ impl Board {
 
         let king = self.pieces(Piece::King, self.side_to_move);
         let (king_side, queen_side) = match self.side_to_move {
-            Color::White => (
-                BitBoard(0x60),
-                BitBoard(0x0e),
-            ),
-            Color::Black => (
-                BitBoard(0x6000000000000000),
-                BitBoard(0x0e00000000000000),
-            ),
+            Color::White => (BitBoard(0x60), BitBoard(0x0e)),
+            Color::Black => (BitBoard(0x6000000000000000), BitBoard(0x0e00000000000000)),
         };
         let mut moves = BitBoard(0);
 

@@ -184,7 +184,7 @@ impl BitBoard {
     pub fn set(rank: Rank, file: File) -> BitBoard {
         BitBoard::from_square(Square::make_square(rank, file))
     }
-    
+
     /// Construct a new `BitBoard` with a `Square` set.
     #[inline]
     pub fn from_square(square: Square) -> BitBoard {
