@@ -9,11 +9,11 @@ fn perft(board: &mut Board, depth: usize, divide: bool) -> usize {
 
     for mv in board.generate_moves_vec() {
         if let Ok(ref mut board) = board.make_move_new(&mv) {
-            let perft = perft(board, depth - 1, false);
-            count += perft;
+            let perft_results = perft(board, depth - 1, false);
+            count += perft_results;
 
             if divide {
-                println!("{}: {}", mv, perft);
+                println!("{}: {}", mv, perft_results);
             }
         }
     }
@@ -61,7 +61,7 @@ fn test_perft_depth_5() {
     assert_eq!(perft(&mut board, 5, false), 4865609);
 }
 
-// These test should only be run in release mode as the debug version is much slower
+// These test should only be run in release mode as during debug profile it's much slower
 #[test]
 #[cfg(not(debug_assertions))]
 fn test_perft_depth_6() {

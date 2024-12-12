@@ -22,8 +22,7 @@ pub fn generate_pawn_moves() {
                                 src.wrapping_forward(color).wrapping_forward(color),
                             )
                 } else if let Some(dest) = src.forward(color) {
-                    PAWN_MOVES[color.to_index()][src.to_index()] =
-                        BitBoard::from_square(dest)
+                    PAWN_MOVES[color.to_index()][src.to_index()] = BitBoard::from_square(dest)
                 }
             }
         }

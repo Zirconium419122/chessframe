@@ -14,7 +14,7 @@ use crate::{
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Board {
-    pub pieces: [BitBoard; 12],   // 6 for white, 6 for black
+    pub pieces: [BitBoard; 6],    // 6 for white, 6 for black
     pub occupancy: [BitBoard; 2], // white, black occupancy
     pub side_to_move: Color,
     pub castling_rights: CastlingRights,
@@ -41,7 +41,7 @@ impl Board {
     /// ```
     pub fn from_fen(fen: &str) -> Board {
         let mut board = Board {
-            pieces: [BitBoard::default(); 12],
+            pieces: [BitBoard::default(); 6],
             occupancy: [BitBoard::default(); 2],
             side_to_move: Color::White,
             castling_rights: CastlingRights::default(),
@@ -161,23 +161,22 @@ impl Board {
         unsafe { self.occupancy.get_unchecked_mut(color.to_index()) }
     }
 
+    /// Get the bitboard of a particular piece type.
+    #[inline]
+    pub fn pieces(&self, piece: Piece) -> BitBoard {
+        unsafe { *self.pieces.get_unchecked(piece.to_index()) }
+    }
+
     /// Get the bitboard of a particular piece and color.
     #[inline]
-    pub fn pieces(&self, piece: Piece, color: Color) -> BitBoard {
-        unsafe {
-            *self
-                .pieces
-                .get_unchecked(piece.to_index() + color.to_offset())
-        }
+    pub fn pieces_color(&self, piece: Piece, color: Color) -> BitBoard {
+        unsafe { *self.pieces.get_unchecked(piece.to_index()) & self.occupancy(color) }
     }
 
     /// Get a mutable reference to a particular piece and color.
     #[inline]
-    pub fn pieces_mut(&mut self, piece: Piece, color: Color) -> &mut BitBoard {
-        unsafe {
-            self.pieces
-                .get_unchecked_mut(piece.to_index() + color.to_offset())
-        }
+    pub fn pieces_mut(&mut self, piece: Piece) -> &mut BitBoard {
+        unsafe { self.pieces.get_unchecked_mut(piece.to_index()) }
     }
 
     /// Get the en passant square, if there is one.
@@ -192,6 +191,15 @@ impl Board {
 
     fn set_en_passant(&mut self, square: Square) {
         self.en_passant_square = Some(square);
+    }
+
+    pub fn remove_castling_rights(&mut self, castling_rights: CastlingRights) {
+        self.castling_rights = self.castling_rights.remove(castling_rights);
+    }
+
+    fn xor(&mut self, bitboard: BitBoard, piece: Piece, color: Color) {
+        *self.pieces_mut(piece) ^= bitboard;
+        *self.occupancy_mut(color) ^= bitboard;
     }
 
     /// Check if one can castle to the given side.
@@ -288,9 +296,9 @@ impl Board {
         let (from, to) = mv.get_move();
         let piece = self.get_piece(*from).ok_or("No piece found on square!")?;
 
-        let pieces = self.pieces(piece, self.side_to_move);
+        let pieces = self.pieces(piece);
 
-        *self.pieces_mut(piece, self.side_to_move) = BitBoard::from_square(*from);
+        *self.pieces_mut(piece) = BitBoard::from_square(*from);
 
         let piece_moves = match piece {
             Piece::Pawn => self.generate_pawn_moves(),
@@ -301,7 +309,7 @@ impl Board {
             Piece::King => self.generate_king_moves() | self.generate_castling_moves(),
         };
 
-        *self.pieces_mut(piece, self.side_to_move) = pieces;
+        *self.pieces_mut(piece) = pieces;
 
         if piece_moves.is_not_set(*to) {
             return Err("Invalid move!");
@@ -380,20 +388,30 @@ impl Board {
         let (from, to) = mv.get_move();
         let move_type = mv.get_move_type();
 
+        let from_bitboard = BitBoard::from_square(*from);
+        let to_bitboard = BitBoard::from_square(*to);
+
         let piece = self.get_piece(*from).ok_or("No piece found on square!")?;
 
-        let move_piece = |board: &mut Board, piece: Piece, from: Square, to: Square| {
-            let pieces_mut = board.pieces_mut(piece, board.side_to_move);
-            pieces_mut.clear_bit(from);
-            pieces_mut.set_bit(to);
-
-            let occupancy_mut = board.occupancy_mut(board.side_to_move);
-            occupancy_mut.clear_bit(from);
-            occupancy_mut.set_bit(to);
+        let move_piece = |board: &mut Board, piece: Piece, from: BitBoard, to: BitBoard| {
+            board.xor(from, piece, board.side_to_move);
+            board.xor(to, piece, board.side_to_move);
         };
 
-        move_piece(self, piece, *from, *to);
-        self.clear_piece(*to, !self.side_to_move);
+        if let Some(captured) = self.get_piece(*to) {
+            self.xor(to_bitboard, captured, !self.side_to_move);
+        }
+        move_piece(self, piece, from_bitboard, to_bitboard);
+
+        self.remove_castling_rights(CastlingRights::square_to_castle_rights(
+            &!self.side_to_move,
+            *to,
+        ));
+
+        self.remove_castling_rights(CastlingRights::square_to_castle_rights(
+            &self.side_to_move,
+            *from,
+        ));
 
         const CASTLE_ROOK_START: [File; 8] = [
             File::A,
@@ -418,24 +436,24 @@ impl Board {
 
         if let Piece::Pawn = piece {
             if let Some(promotion) = mv.get_promotion() {
-                self.pieces_mut(Piece::Pawn, self.side_to_move)
-                    .clear_bit(*to);
-                self.pieces_mut(promotion, self.side_to_move).set_bit(*to);
+                self.xor(BitBoard::from_square(*to), Piece::Pawn, self.side_to_move);
+                self.xor(BitBoard::from_square(*to), promotion, self.side_to_move);
             } else if Some(*to) == self.en_passant_square() {
                 let side_to_move = self.side_to_move;
-                self.pieces_mut(Piece::Pawn, !side_to_move)
-                    .clear_bit(to.wrapping_backwards(&side_to_move));
-                self.occupancy_mut(!side_to_move)
-                    .clear_bit(to.wrapping_backwards(&side_to_move));
+                self.xor(
+                    BitBoard::from_square(to.wrapping_backwards(&side_to_move)),
+                    Piece::Pawn,
+                    !side_to_move,
+                );
             }
         }
 
         if let MoveType::Castle = move_type {
             let index = to.get_file().to_index();
-            let start = Square::make_square(self.side_to_move.to_backrank(), unsafe {
+            let start = BitBoard::set(self.side_to_move.to_backrank(), unsafe {
                 *CASTLE_ROOK_START.get_unchecked(index)
             });
-            let end = Square::make_square(self.side_to_move.to_backrank(), unsafe {
+            let end = BitBoard::set(self.side_to_move.to_backrank(), unsafe {
                 *CASTLE_ROOK_END.get_unchecked(index)
             });
 
@@ -444,30 +462,19 @@ impl Board {
 
         self.remove_en_passant();
 
-        match piece {
-            Piece::Pawn => {
-                if from.get_rank() == self.side_to_move.to_second_rank()
-                    && to.get_rank() == self.side_to_move.to_fourth_rank()
-                {
-                    self.set_en_passant(to.wrapping_backwards(&self.side_to_move));
-                }
+        if let Piece::Pawn = piece {
+            if from.get_rank() == self.side_to_move.to_second_rank()
+                && to.get_rank() == self.side_to_move.to_fourth_rank()
+            {
+                self.set_en_passant(to.wrapping_backwards(&self.side_to_move));
             }
-            Piece::King => {
-                self.castling_rights.revoke_all(&self.side_to_move);
-            }
-            Piece::Rook => {
-                if from == &Square::make_square(self.side_to_move.to_backrank(), File::H) {
-                    self.castling_rights.revoke(&self.side_to_move, true);
-                } else if from == &Square::make_square(self.side_to_move.to_backrank(), File::A) {
-                    self.castling_rights.revoke(&self.side_to_move, false);
-                }
-            }
-            _ => {}
         }
 
         self.side_to_move.flip();
 
-        if (self.generate_moves() & self.pieces(Piece::King, !self.side_to_move)).is_not_zero() {
+        if (self.generate_moves() & self.pieces_color(Piece::King, !self.side_to_move))
+            .is_not_zero()
+        {
             return Err("Cannot move pinned piece!".to_string());
         }
 
@@ -479,21 +486,22 @@ impl Board {
         let bitboard = BitBoard::from_square(square);
         if self.combined() & bitboard == EMPTY {
             None
-        } else if (self.pieces(Piece::Pawn, self.side_to_move)
-            ^ self.pieces(Piece::Knight, self.side_to_move)
-            ^ self.pieces(Piece::Bishop, self.side_to_move))
-        .is_set(square)
+        } else if (self.pieces(Piece::Pawn)
+            | self.pieces(Piece::Knight)
+            | self.pieces(Piece::Bishop))
+            & bitboard
+            != EMPTY
         {
-            if self.pieces(Piece::Pawn, self.side_to_move).is_set(square) {
+            if self.pieces(Piece::Pawn) & bitboard != EMPTY {
                 Some(Piece::Pawn)
-            } else if self.pieces(Piece::Knight, self.side_to_move).is_set(square) {
+            } else if self.pieces(Piece::Knight) & bitboard != EMPTY {
                 Some(Piece::Knight)
             } else {
                 Some(Piece::Bishop)
             }
-        } else if self.pieces(Piece::Rook, self.side_to_move).is_set(square) {
+        } else if self.pieces(Piece::Rook) & bitboard != EMPTY {
             Some(Piece::Rook)
-        } else if self.pieces(Piece::Queen, self.side_to_move).is_set(square) {
+        } else if self.pieces(Piece::Queen) & bitboard != EMPTY {
             Some(Piece::Queen)
         } else {
             Some(Piece::King)
@@ -502,7 +510,7 @@ impl Board {
 
     /// Set the piece at a given square (used during board construction and promotions).
     pub fn set_piece(&mut self, piece: Piece, color: Color, square: Square) {
-        let bitboard = self.pieces_mut(piece, color);
+        let bitboard = self.pieces_mut(piece);
         bitboard.set_bit(square);
         self.occupancy_mut(color).set_bit(square);
     }
@@ -513,11 +521,9 @@ impl Board {
             return;
         }
 
-        let offset = color.to_offset();
-
         for i in 0..6 {
-            if self.pieces[i + offset].is_set(square) {
-                self.pieces[i + offset].clear_bit(square);
+            if (self.pieces[i] & self.occupancy(color)).is_set(square) {
+                self.pieces[i].clear_bit(square);
                 break;
             }
         }
@@ -546,7 +552,7 @@ impl Board {
                     let blockers = allied_pieces | opponent_occupancy;
 
                     $(
-                        for src in self.pieces($piece, $color).into_iter() {
+                        for src in self.pieces_color($piece, $color).into_iter() {
                             let generated_moves = match $piece {
                                 Piece::Knight => get_knight_moves(src),
                                 Piece::Bishop => get_bishop_moves(src, blockers),
@@ -567,15 +573,26 @@ impl Board {
 
                             match $piece {
                                 Piece::Pawn => {
-                                    let pawn_moves = {
+                                    let pawn_quiets = {
                                         if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
-                                            (get_pawn_moves(src, self.side_to_move) & !self.combined()) | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy)
+                                            get_pawn_moves(src, self.side_to_move) & !self.combined()
                                         } else {
-                                            get_pawn_attacks(src, self.side_to_move) & opponent_occupancy
+                                            BitBoard::default()
                                         }
                                     };
+                                    let pawn_captures = get_pawn_attacks(src, self.side_to_move) & opponent_occupancy;
 
-                                    pawn_moves.into_iter().for_each(|dest| {
+                                    pawn_quiets.into_iter().for_each(|dest| {
+                                        if self.is_promotion(&dest) {
+                                            moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
+                                            moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
+                                            moves.push(ChessMove::new_promotion(src, dest, Piece::Rook));
+                                            moves.push(ChessMove::new_promotion(src, dest, Piece::Queen));
+                                        } else {
+                                            moves.push(ChessMove::new(src, dest));
+                                        }
+                                    });
+                                    pawn_captures.into_iter().for_each(|dest| {
                                         if self.is_promotion(&dest) {
                                             moves.push(ChessMove::new_capture_promotion(src, dest, Piece::Knight));
                                             moves.push(ChessMove::new_capture_promotion(src, dest, Piece::Bishop));
@@ -599,7 +616,7 @@ impl Board {
 
                         if let Piece::Pawn = $piece {
                             if let Some(en_passant) = self.en_passant_square {
-                                for src in get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces(Piece::Pawn, self.side_to_move) {
+                                for src in get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces_color(Piece::Pawn, self.side_to_move) {
                                     moves.push(ChessMove::new_en_passant(src, en_passant));
                                 }
                             }
@@ -633,7 +650,7 @@ impl Board {
 
         // let en_passant_square = self.en_passant_square().unwrap_or_default();
 
-        for square in self.pieces(Piece::Pawn, self.side_to_move) {
+        for square in self.pieces_color(Piece::Pawn, self.side_to_move) {
             if (BitBoard::from_square(square.wrapping_forward(&self.side_to_move))
                 & !self.combined())
                 != EMPTY
@@ -653,7 +670,7 @@ impl Board {
     pub fn generate_en_passant(&self) -> BitBoard {
         if let Some(en_passant) = self.en_passant_square {
             if (get_pawn_attacks(en_passant, !self.side_to_move)
-                & self.pieces(Piece::Pawn, self.side_to_move))
+                & self.pieces_color(Piece::Pawn, self.side_to_move))
                 != EMPTY
             {
                 return BitBoard::from_square(en_passant);
@@ -675,7 +692,7 @@ impl Board {
     pub fn generate_knight_moves(&self) -> BitBoard {
         let mut moves = BitBoard(0);
 
-        for square in self.pieces(Piece::Knight, self.side_to_move) {
+        for square in self.pieces_color(Piece::Knight, self.side_to_move) {
             moves |= get_knight_moves(square);
         }
 
@@ -688,7 +705,10 @@ impl Board {
 
         let mut moves = BitBoard(0);
 
-        for square in self.pieces(Piece::Bishop, self.side_to_move).into_iter() {
+        for square in self
+            .pieces_color(Piece::Bishop, self.side_to_move)
+            .into_iter()
+        {
             moves |= get_bishop_moves(square, occupancy);
         }
 
@@ -701,7 +721,10 @@ impl Board {
 
         let mut moves = BitBoard(0);
 
-        for square in self.pieces(Piece::Rook, self.side_to_move).into_iter() {
+        for square in self
+            .pieces_color(Piece::Rook, self.side_to_move)
+            .into_iter()
+        {
             moves |= get_rook_moves(square, occupancy);
         }
 
@@ -714,7 +737,10 @@ impl Board {
 
         let mut moves = BitBoard(0);
 
-        for square in self.pieces(Piece::Queen, self.side_to_move).into_iter() {
+        for square in self
+            .pieces_color(Piece::Queen, self.side_to_move)
+            .into_iter()
+        {
             moves |= get_bishop_moves(square, occupancy);
             moves |= get_rook_moves(square, occupancy);
         }
@@ -725,7 +751,7 @@ impl Board {
     /// Generate all king moves except castling moves.
     pub fn generate_king_moves(&self) -> BitBoard {
         let allied_pieces = self.occupancy(self.side_to_move);
-        let kings = self.pieces(Piece::King, self.side_to_move);
+        let kings = self.pieces_color(Piece::King, self.side_to_move);
 
         let mut moves = BitBoard(0);
 
@@ -742,7 +768,7 @@ impl Board {
     pub fn generate_castling_moves(&mut self) -> BitBoard {
         let occupancy = self.combined();
 
-        let king = self.pieces(Piece::King, self.side_to_move);
+        let king = self.pieces_color(Piece::King, self.side_to_move);
         let (king_side, queen_side) = match self.side_to_move {
             Color::White => (BitBoard(0x60), BitBoard(0x0e)),
             Color::Black => (BitBoard(0x6000000000000000), BitBoard(0x0e00000000000000)),

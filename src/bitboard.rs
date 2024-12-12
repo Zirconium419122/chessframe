@@ -1,5 +1,5 @@
 use core::fmt;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Shl, Shr};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr};
 
 use crate::{file::File, rank::Rank, square::Square};
 
@@ -100,6 +100,20 @@ impl BitXor<&BitBoard> for BitBoard {
     #[inline]
     fn bitxor(self, rhs: &Self) -> Self::Output {
         BitBoard(self.0 ^ rhs.0)
+    }
+}
+
+impl BitXorAssign for BitBoard {
+    #[inline]
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0;
+    }
+}
+
+impl BitXorAssign<&BitBoard> for BitBoard {
+    #[inline]
+    fn bitxor_assign(&mut self, rhs: &Self) {
+        self.0 ^= rhs.0;
     }
 }
 
