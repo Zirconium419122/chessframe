@@ -56,3 +56,7 @@ pub fn get_rook_moves(square: Square, blockers: BitBoard) -> BitBoard {
 pub fn get_king_moves(square: Square) -> BitBoard {
     unsafe { *KING_MOVES.get_unchecked(square.to_index()) }
 }
+
+pub fn get_castle_moves() -> BitBoard {
+    CASTLE_MOVES
+}
