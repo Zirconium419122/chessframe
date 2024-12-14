@@ -246,24 +246,14 @@ impl Board {
             match piece {
                 Piece::Pawn => {
                     if let Some(promotion) = promotion {
-                        if self.occupancy(!self.side_to_move).is_not_set(to) {
-                            mv = Some(ChessMove::new_promotion(from, to, promotion));
-                        } else {
-                            mv = Some(ChessMove::new_capture_promotion(from, to, promotion));
-                        }
+                        mv = Some(ChessMove::new_promotion(from, to, promotion));
                     }
                 }
                 Piece::King => {
-                    let king = match self.side_to_move {
-                        Color::White => Square::E1,
-                        Color::Black => Square::E8,
-                    };
+                    let move_bitboard = BitBoard::from_square(from) | BitBoard::from_square(to);
 
-                    if from == king
-                        && (to == king.wrapping_right().wrapping_right()
-                            || to == king.wrapping_left().wrapping_left())
-                    {
-                        mv = Some(ChessMove::new_castle(from, to));
+                    if (move_bitboard & get_castle_moves()) == move_bitboard {
+                        mv = Some(ChessMove::new(from, to));
                     }
                 }
                 _ => (),
@@ -275,11 +265,7 @@ impl Board {
                 }
             }
 
-            if self.occupancy(!self.side_to_move).is_not_set(to) {
-                mv = Some(ChessMove::new(from, to));
-            } else {
-                mv = Some(ChessMove::new_capture(from, to));
-            }
+            mv = Some(ChessMove::new(from, to));
 
             if let Some(mv) = mv {
                 if self.validate_move(&mv).is_ok() {
@@ -559,27 +545,19 @@ impl Board {
                                 _ => BitBoard(0),
                             } & !allied_pieces;
 
-                            let quiet_moves = generated_moves & !opponent_occupancy;
-                            let capture_moves = generated_moves & opponent_occupancy;
-
-                            // Extend moves with quiet moves
-                            moves.extend(quiet_moves.into_iter().map(|dest| ChessMove::new(src, dest)));
-
-                            // Extend moves with capture moves
-                            moves.extend(capture_moves.into_iter().map(|dest| ChessMove::new_capture(src, dest)));
+                            // Extend moves with quiet and capture moves
+                            moves.extend(generated_moves.into_iter().map(|dest| ChessMove::new(src, dest)));
 
                             match $piece {
                                 Piece::Pawn => {
-                                    let pawn_quiets = {
+                                    let pawn_moves = {
                                         if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
                                             get_pawn_moves(src, self.side_to_move) & !self.combined()
                                         } else {
                                             BitBoard::default()
                                         }
-                                    };
-                                    let pawn_captures = get_pawn_attacks(src, self.side_to_move) & opponent_occupancy;
-
-                                    pawn_quiets.into_iter().for_each(|dest| {
+                                    } | get_pawn_attacks(src, self.side_to_move) & opponent_occupancy;
+                                    pawn_moves.into_iter().for_each(|dest| {
                                         if self.is_promotion(&dest) {
                                             moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
                                             moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
@@ -589,20 +567,10 @@ impl Board {
                                             moves.push(ChessMove::new(src, dest));
                                         }
                                     });
-                                    pawn_captures.into_iter().for_each(|dest| {
-                                        if self.is_promotion(&dest) {
-                                            moves.push(ChessMove::new_capture_promotion(src, dest, Piece::Knight));
-                                            moves.push(ChessMove::new_capture_promotion(src, dest, Piece::Bishop));
-                                            moves.push(ChessMove::new_capture_promotion(src, dest, Piece::Rook));
-                                            moves.push(ChessMove::new_capture_promotion(src, dest, Piece::Queen));
-                                        } else {
-                                            moves.push(ChessMove::new_capture(src, dest));
-                                        }
-                                    });
                                 }
                                 Piece::King => {
                                     moves.extend(self.generate_castling_moves().into_iter().map(|dest| {
-                                            ChessMove::new_castle(src, dest)
+                                            ChessMove::new(src, dest)
                                         })
                                     );
                                 }
@@ -614,7 +582,7 @@ impl Board {
                         if let Piece::Pawn = $piece {
                             if let Some(en_passant) = self.en_passant_square {
                                 for src in get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces_color(Piece::Pawn, self.side_to_move) {
-                                    moves.push(ChessMove::new_en_passant(src, en_passant));
+                                    moves.push(ChessMove::new(src, en_passant));
                                 }
                             }
                         }

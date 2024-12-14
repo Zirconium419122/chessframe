@@ -6,7 +6,7 @@ use crate::{piece::Piece, square::Square};
 pub struct ChessMove {
     pub from: Square,
     pub to: Square,
-    pub move_type: MoveType,
+    pub promotion: Option<Piece>,
 }
 
 impl fmt::Display for ChessMove {
@@ -23,19 +23,16 @@ impl fmt::Display for ChessMove {
         let file_from_char = (file_from as u8 + b'a') as char;
         let file_to_char = (file_to as u8 + b'a') as char;
 
-        match &self.move_type {
-            MoveType::Promotion(piece) | MoveType::CapturePromotion(piece) => {
-                return write!(
-                    f,
-                    "{}{}{}{}{}",
-                    file_from_char,
-                    rank_from,
-                    file_to_char,
-                    rank_to,
-                    piece.to_fen()
-                );
-            }
-            _ => (),
+        if let Some(promotion) = self.promotion {
+            return write!(
+                f,
+                "{}{}{}{}{}",
+                file_from_char,
+                rank_from,
+                file_to_char,
+                rank_to,
+                promotion.to_fen()
+            );
         }
 
         write!(
@@ -51,7 +48,7 @@ impl ChessMove {
         ChessMove {
             from,
             to,
-            move_type: MoveType::Quiet,
+            promotion: None,
         }
     }
 
@@ -59,58 +56,23 @@ impl ChessMove {
         (&self.from, &self.to)
     }
 
-    pub fn get_move_type(&self) -> &MoveType {
-        &self.move_type
-    }
-
     pub fn get_promotion(&self) -> Option<Piece> {
-        match self.move_type {
-            MoveType::Promotion(piece) | MoveType::CapturePromotion(piece) => Some(piece),
-            _ => None,
-        }
+        self.promotion
     }
 
     pub fn new_promotion(from: Square, to: Square, promotion: Piece) -> ChessMove {
         ChessMove {
             from,
             to,
-            move_type: MoveType::Promotion(promotion),
-        }
-    }
-
-    pub fn new_capture(from: Square, to: Square) -> ChessMove {
-        ChessMove {
-            from,
-            to,
-            move_type: MoveType::Capture,
-        }
-    }
-
-    pub fn new_capture_promotion(from: Square, to: Square, promotion: Piece) -> ChessMove {
-        ChessMove {
-            from,
-            to,
-            move_type: MoveType::CapturePromotion(promotion),
-        }
-    }
-
-    pub fn new_en_passant(from: Square, to: Square) -> ChessMove {
-        ChessMove {
-            from,
-            to,
-            move_type: MoveType::EnPassant,
-        }
-    }
-
-    pub fn new_castle(from: Square, to: Square) -> ChessMove {
-        ChessMove {
-            from,
-            to,
-            move_type: MoveType::Castle,
+            promotion: Some(promotion),
         }
     }
 }
 
+#[deprecated(
+    since = "0.0.0",
+    note = "MoveType has been phased out of the make_move and generate_moves_vec methods and is therefore not needed any longer for move handling."
+)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum MoveType {
     Quiet,

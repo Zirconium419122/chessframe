@@ -31,33 +31,33 @@ fn test_from_fen_starting_position() {
     // White pawns
     for file in 0..8 {
         // Rank 2 (index 8-15)
-        assert!(board.pieces[Piece::Pawn.piece_index(&Color::White)].is_set(Square::new(8 + file)));
+        assert!(board.pieces_color(Piece::Pawn, Color::White).is_set(Square::new(8 + file)));
     }
     // Black pawns
     for file in 0..8 {
         // Rank 7 (index 48-55)
-        assert!(board.pieces[Piece::Pawn.piece_index(&Color::Black)].is_set(Square::new(48 + file)));
+        assert!(board.pieces_color(Piece::Pawn, Color::Black).is_set(Square::new(48 + file)));
     }
 
     // Test White pieces
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(Square::A1)); // a1
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(Square::B1)); // b1
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(Square::C1)); // c1
-    assert!(board.pieces[Piece::Queen.piece_index(&Color::White)].is_set(Square::D1)); // d1
-    assert!(board.pieces[Piece::King.piece_index(&Color::White)].is_set(Square::E1)); // e1
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::White)].is_set(Square::F1)); // f1
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::White)].is_set(Square::G1)); // g1
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::White)].is_set(Square::H1)); // h1
+    assert!(board.pieces_color(Piece::Rook, Color::White).is_set(Square::A1)); // a1
+    assert!(board.pieces_color(Piece::Knight, Color::White).is_set(Square::B1)); // b1
+    assert!(board.pieces_color(Piece::Bishop, Color::White).is_set(Square::C1)); // c1
+    assert!(board.pieces_color(Piece::Queen, Color::White).is_set(Square::D1)); // d1
+    assert!(board.pieces_color(Piece::King, Color::White).is_set(Square::E1)); // e1
+    assert!(board.pieces_color(Piece::Bishop, Color::White).is_set(Square::F1)); // f1
+    assert!(board.pieces_color(Piece::Knight, Color::White).is_set(Square::G1)); // g1
+    assert!(board.pieces_color(Piece::Rook, Color::White).is_set(Square::H1)); // h1
 
     // Test Black pieces
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(Square::A8)); // a8
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(Square::B8)); // b8
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(Square::C8)); // c8
-    assert!(board.pieces[Piece::Queen.piece_index(&Color::Black)].is_set(Square::D8)); // d8
-    assert!(board.pieces[Piece::King.piece_index(&Color::Black)].is_set(Square::E8)); // e8
-    assert!(board.pieces[Piece::Bishop.piece_index(&Color::Black)].is_set(Square::F8)); // f8
-    assert!(board.pieces[Piece::Knight.piece_index(&Color::Black)].is_set(Square::G8)); // g8
-    assert!(board.pieces[Piece::Rook.piece_index(&Color::Black)].is_set(Square::H8)); // h8
+    assert!(board.pieces_color(Piece::Rook, Color::Black).is_set(Square::A8)); // a8
+    assert!(board.pieces_color(Piece::Knight, Color::Black).is_set(Square::B8)); // b8
+    assert!(board.pieces_color(Piece::Bishop, Color::Black).is_set(Square::C8)); // c8
+    assert!(board.pieces_color(Piece::Queen, Color::Black).is_set(Square::D8)); // d8
+    assert!(board.pieces_color(Piece::King, Color::Black).is_set(Square::E8)); // e8
+    assert!(board.pieces_color(Piece::Bishop, Color::Black).is_set(Square::F8)); // f8
+    assert!(board.pieces_color(Piece::Knight, Color::Black).is_set(Square::G8)); // g8
+    assert!(board.pieces_color(Piece::Rook, Color::Black).is_set(Square::H8)); // h8
 
     // Test side to move
     assert_eq!(board.side_to_move, Color::White);
@@ -107,7 +107,7 @@ fn test_validate_move() {
         let mut board = board.clone();
 
         assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+        assert_eq!(board.pieces_color(Piece::Pawn, Color::White), BitBoard(0x000000000000FF00));
         assert_eq!(board.en_passant_square, None);
 
         assert_eq!(
@@ -116,7 +116,7 @@ fn test_validate_move() {
         );
 
         assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+        assert_eq!(board.pieces_color(Piece::Pawn, Color::White), BitBoard(0x000000000000FF00));
         assert_eq!(board.en_passant_square, None);
     }
 
@@ -125,21 +125,21 @@ fn test_validate_move() {
         let mut board = board.clone();
 
         assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+        assert_eq!(board.pieces_color(Piece::King, Color::White), BitBoard(0x000000000000010));
 
         assert_eq!(
-            board.validate_move(&ChessMove::new_capture(Square::E1, Square::D1)),
+            board.validate_move(&ChessMove::new(Square::E1, Square::D1)),
             Err("Invalid move!")
         );
 
         assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+        assert_eq!(board.pieces_color(Piece::King, Color::White), BitBoard(0x000000000000010));
     }
 
     // Test that castling is not possible from the start position
     {
         assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+        assert_eq!(board.pieces_color(Piece::King, Color::White), BitBoard(0x000000000000010));
 
         assert_eq!(
             board.validate_move(&ChessMove::new(Square::E1, Square::G1)),
@@ -147,7 +147,7 @@ fn test_validate_move() {
         );
 
         assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+        assert_eq!(board.pieces_color(Piece::King, Color::White), BitBoard(0x000000000000010));
     }
 }
 
@@ -161,7 +161,7 @@ fn test_make_move() {
         let mut board = board.clone();
 
         assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[0], BitBoard(0x000000000000FF00));
+        assert_eq!(board.pieces_color(Piece::Pawn, Color::White), BitBoard(0x000000000000FF00));
         assert_eq!(board.en_passant_square, None);
 
         assert_eq!(
@@ -170,7 +170,7 @@ fn test_make_move() {
         );
 
         assert_eq!(board.side_to_move, Color::Black);
-        assert_eq!(board.pieces[0], BitBoard(0x00000001000EF00));
+        assert_eq!(board.pieces_color(Piece::Pawn, Color::White), BitBoard(0x00000001000EF00));
         assert_eq!(board.en_passant_square, Some(Square::E3));
     }
 }
@@ -184,28 +184,28 @@ fn test_can_castle() {
         let mut board = board.clone();
 
         assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+        assert_eq!(board.pieces_color(Piece::King, Color::White), BitBoard(0x000000000000010));
 
         assert_eq!(board.can_castle(true), Ok(()));
 
         assert_eq!(board.side_to_move, Color::White);
-        assert_eq!(board.pieces[5], BitBoard(0x000000000000010));
+        assert_eq!(board.pieces_color(Piece::King, Color::White), BitBoard(0x000000000000010));
     }
 
     assert_eq!(
-        board.make_move(&ChessMove::new_castle(Square::E1, Square::G1)),
+        board.make_move(&ChessMove::new(Square::E1, Square::G1)),
         Ok(())
     );
-    assert_eq!(board.pieces[5], BitBoard(0x000000000000040));
-    assert_eq!(board.pieces[3], BitBoard(0x000000000000021));
+    assert_eq!(board.pieces_color(Piece::King, Color::White), BitBoard(0x000000000000040));
+    assert_eq!(board.pieces_color(Piece::Rook, Color::White), BitBoard(0x000000000000021));
 
     {
         assert_eq!(board.side_to_move, Color::Black);
-        assert_eq!(board.pieces[11], BitBoard(0x1000000000000000));
+        assert_eq!(board.pieces_color(Piece::King, Color::Black), BitBoard(0x1000000000000000));
 
         assert_eq!(board.can_castle(true), Ok(()));
 
         assert_eq!(board.side_to_move, Color::Black);
-        assert_eq!(board.pieces[11], BitBoard(0x1000000000000000));
+        assert_eq!(board.pieces_color(Piece::King, Color::Black), BitBoard(0x1000000000000000));
     }
 }
