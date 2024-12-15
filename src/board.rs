@@ -243,20 +243,16 @@ impl Board {
         if let Some(piece) = self.get_piece(from) {
             let mut mv: Option<ChessMove> = None;
 
-            match piece {
-                Piece::Pawn => {
-                    if let Some(promotion) = promotion {
-                        mv = Some(ChessMove::new_promotion(from, to, promotion));
-                    }
-                }
-                Piece::King => {
-                    let move_bitboard = BitBoard::from_square(from) | BitBoard::from_square(to);
+            if let Some(promotion) = promotion {
+                mv = Some(ChessMove::new_promotion(from, to, promotion));
+            }
 
-                    if (move_bitboard & get_castle_moves()) == move_bitboard {
-                        mv = Some(ChessMove::new(from, to));
-                    }
+            if let Piece::King = piece {
+                let move_bitboard = BitBoard::from_square(from) | BitBoard::from_square(to);
+
+                if (move_bitboard & get_castle_moves()) == move_bitboard {
+                    mv = Some(ChessMove::new(from, to));
                 }
-                _ => (),
             }
 
             if let Some(mv) = mv {
@@ -375,14 +371,9 @@ impl Board {
 
         let from_bitboard = BitBoard::from_square(*from);
         let to_bitboard = BitBoard::from_square(*to);
-        let move_bitboard = from_bitboard | to_bitboard;
+        let move_bitboard = from_bitboard ^ to_bitboard;
 
         let piece = self.get_piece(*from).ok_or("No piece found on square!")?;
-
-        let move_piece = |board: &mut Board, piece: Piece, from: BitBoard, to: BitBoard| {
-            board.xor(from, piece, board.side_to_move);
-            board.xor(to, piece, board.side_to_move);
-        };
 
         let en_passant_square = self.en_passant_square();
         self.remove_en_passant();
@@ -390,7 +381,7 @@ impl Board {
         if let Some(captured) = self.get_piece(*to) {
             self.xor(to_bitboard, captured, !self.side_to_move);
         }
-        move_piece(self, piece, from_bitboard, to_bitboard);
+        self.xor(move_bitboard, piece, self.side_to_move);
 
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
             &!self.side_to_move,
@@ -450,7 +441,7 @@ impl Board {
                 *CASTLE_ROOK_END.get_unchecked(index)
             });
 
-            move_piece(self, Piece::Rook, start, end);
+            self.xor(start ^ end, Piece::Rook, self.side_to_move);
         }
 
         self.side_to_move.flip();
@@ -470,8 +461,8 @@ impl Board {
         if self.combined() & bitboard == EMPTY {
             None
         } else if (self.pieces(Piece::Pawn)
-            | self.pieces(Piece::Knight)
-            | self.pieces(Piece::Bishop))
+            ^ self.pieces(Piece::Knight)
+            ^ self.pieces(Piece::Bishop))
             & bitboard
             != EMPTY
         {
@@ -541,42 +532,33 @@ impl Board {
                                 Piece::Bishop => get_bishop_moves(src, blockers),
                                 Piece::Rook => get_rook_moves(src, blockers),
                                 Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
-                                Piece::King => get_king_moves(src),
+                                Piece::King => get_king_moves(src) | self.generate_castling_moves(),
                                 _ => BitBoard(0),
                             } & !allied_pieces;
 
                             // Extend moves with quiet and capture moves
                             moves.extend(generated_moves.into_iter().map(|dest| ChessMove::new(src, dest)));
 
-                            match $piece {
-                                Piece::Pawn => {
-                                    let pawn_moves = {
-                                        if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
-                                            get_pawn_moves(src, self.side_to_move) & !self.combined()
-                                        } else {
-                                            BitBoard::default()
-                                        }
-                                    } | get_pawn_attacks(src, self.side_to_move) & opponent_occupancy;
-                                    pawn_moves.into_iter().for_each(|dest| {
-                                        if self.is_promotion(&dest) {
-                                            moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
-                                            moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
-                                            moves.push(ChessMove::new_promotion(src, dest, Piece::Rook));
-                                            moves.push(ChessMove::new_promotion(src, dest, Piece::Queen));
-                                        } else {
-                                            moves.push(ChessMove::new(src, dest));
-                                        }
-                                    });
-                                }
-                                Piece::King => {
-                                    moves.extend(self.generate_castling_moves().into_iter().map(|dest| {
-                                            ChessMove::new(src, dest)
-                                        })
-                                    );
-                                }
-                                _ => {},
-                            }
+                            if let Piece::Pawn = $piece {
+                                let pawn_moves = {
+                                    if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
+                                        get_pawn_moves(src, self.side_to_move) & !self.combined()
+                                    } else {
+                                        BitBoard::default()
+                                    }
+                                } | get_pawn_attacks(src, self.side_to_move) & opponent_occupancy;
 
+                                pawn_moves.into_iter().for_each(|dest| {
+                                    if self.is_promotion(&dest) {
+                                        moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
+                                        moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
+                                        moves.push(ChessMove::new_promotion(src, dest, Piece::Rook));
+                                        moves.push(ChessMove::new_promotion(src, dest, Piece::Queen));
+                                    } else {
+                                        moves.push(ChessMove::new(src, dest));
+                                    }
+                                });
+                            }
                         }
 
                         if let Piece::Pawn = $piece {
@@ -732,12 +714,12 @@ impl Board {
 
     /// Generate all castling moves.
     pub fn generate_castling_moves(&mut self) -> BitBoard {
-        let occupancy = self.combined();
+        let combined = self.combined();
 
         let king = self.pieces_color(Piece::King, self.side_to_move);
         let (king_side, queen_side) = match self.side_to_move {
-            Color::White => (BitBoard(0x60), BitBoard(0x0e)),
-            Color::Black => (BitBoard(0x6000000000000000), BitBoard(0x0e00000000000000)),
+            Color::White => const { (BitBoard(0x60), BitBoard(0x0e)) },
+            Color::Black => const { (BitBoard(0x6000000000000000), BitBoard(0x0e00000000000000)) },
         };
         let mut moves = BitBoard(0);
 
@@ -748,14 +730,14 @@ impl Board {
         self.side_to_move.flip();
 
         if self.castling_rights.can_castle(&self.side_to_move, true)
-            && (occupancy & king_side).is_zero()
+            && (combined & king_side).is_zero()
             && (enemy_moves & (king_side | king)).is_zero()
         {
             moves |= BitBoard::set(self.side_to_move.to_backrank(), File::G);
         }
 
         if self.castling_rights.can_castle(&self.side_to_move, false)
-            && (occupancy & queen_side).is_zero()
+            && (combined & queen_side).is_zero()
             && (enemy_moves & (queen_side | king)).is_zero()
         {
             moves |= BitBoard::set(self.side_to_move.to_backrank(), File::C);
