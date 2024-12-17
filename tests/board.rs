@@ -71,12 +71,6 @@ fn test_from_fen_starting_position() {
     // Test en passant square
     // Since en passant target square is "-", it should be none or unset
     assert!(board.en_passant_square.is_none());
-
-    // Test halfmove clock
-    assert_eq!(board.half_move_clock, 0);
-
-    // Test fullmove number
-    assert_eq!(board.full_move_clock, 1);
 }
 
 #[test]

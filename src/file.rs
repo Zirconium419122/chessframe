@@ -23,7 +23,7 @@ impl FromStr for File {
             return Err(Error::InvalidFile);
         }
 
-        match s.chars().next().unwrap() {
+        match unsafe { s.chars().next().unwrap_unchecked() } {
             'a' => Ok(File::A),
             'b' => Ok(File::B),
             'c' => Ok(File::C),

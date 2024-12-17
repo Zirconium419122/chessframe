@@ -19,8 +19,6 @@ pub struct Board {
     pub side_to_move: Color,
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<Square>,
-    pub half_move_clock: u32,
-    pub full_move_clock: u32,
 }
 
 impl Default for Board {
@@ -46,8 +44,6 @@ impl Board {
             side_to_move: Color::White,
             castling_rights: CastlingRights::default(),
             en_passant_square: None,
-            half_move_clock: 0,
-            full_move_clock: 1,
         };
 
         let parts: Vec<&str> = fen.split_whitespace().collect();
@@ -64,10 +60,6 @@ impl Board {
         board.castling_rights = CastlingRights::from_fen(parts[2]);
 
         board.parse_en_passant(parts[3]);
-
-        board.half_move_clock = parts[4].parse().expect("Invalid halfmove clock");
-
-        board.full_move_clock = parts[5].parse().expect("Invalid fullmove clock");
 
         board
     }
@@ -236,7 +228,7 @@ impl Board {
         let to = Square::from_str(&mv[2..4]).map_err(|err| err.to_string())?;
         let promotion: Option<Piece> = match &mv.len() {
             4 => None,
-            5 => Some(Piece::from(mv.chars().last().unwrap())),
+            5 => Some(Piece::from(unsafe { mv.chars().last().unwrap_unchecked() })),
             _ => return Err("Invalid move notation!".to_string()),
         };
 
@@ -482,27 +474,11 @@ impl Board {
         }
     }
 
-    /// Set the piece at a given square (used during board construction and promotions).
+    /// Set the piece at a given square (used during board construction).
     pub fn set_piece(&mut self, piece: Piece, color: Color, square: Square) {
         let bitboard = self.pieces_mut(piece);
         bitboard.set_bit(square);
         self.occupancy_mut(color).set_bit(square);
-    }
-
-    /// Remove the piece at a given square.
-    pub fn clear_piece(&mut self, square: Square, color: Color) {
-        if self.occupancy(color).is_not_set(square) {
-            return;
-        }
-
-        for i in 0..6 {
-            if (self.pieces[i] & self.occupancy(color)).is_set(square) {
-                self.pieces[i].clear_bit(square);
-                break;
-            }
-        }
-
-        self.occupancy_mut(color).clear_bit(square);
     }
 
     /// Generate all psuedo-legal moves.
@@ -560,15 +536,13 @@ impl Board {
                                 });
                             }
                         }
-
-                        if let Piece::Pawn = $piece {
-                            if let Some(en_passant) = self.en_passant_square {
-                                for src in get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces_color(Piece::Pawn, self.side_to_move) {
-                                    moves.push(ChessMove::new(src, en_passant));
-                                }
-                            }
-                        }
                     )+
+
+                    if let Some(en_passant) = self.en_passant_square {
+                        for src in get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces_color(Piece::Pawn, self.side_to_move) {
+                            moves.push(ChessMove::new(src, en_passant));
+                        }
+                    }
 
                     moves
                 }
@@ -595,8 +569,6 @@ impl Board {
     pub fn generate_pawn_moves(&self) -> BitBoard {
         let mut moves = BitBoard(0);
 
-        let en_passant_square = self.en_passant_square().unwrap_or_default();
-
         for square in self.pieces_color(Piece::Pawn, self.side_to_move) {
             if (BitBoard::from_square(square.wrapping_forward(&self.side_to_move))
                 & !self.combined())
@@ -607,8 +579,7 @@ impl Board {
 
             moves |=
                 get_pawn_attacks(square, self.side_to_move) & self.occupancy(!self.side_to_move);
-            moves |= get_pawn_attacks(square, self.side_to_move)
-                & BitBoard::from_square(en_passant_square);
+            moves |= get_pawn_attacks(square, self.side_to_move);
         }
 
         moves

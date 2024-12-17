@@ -23,7 +23,7 @@ impl FromStr for Rank {
             return Err(Error::InvalidRank);
         }
 
-        match s.chars().next().unwrap() {
+        match unsafe { s.chars().next().unwrap_unchecked() } {
             '1' => Ok(Rank::First),
             '2' => Ok(Rank::Second),
             '3' => Ok(Rank::Third),

@@ -13,7 +13,7 @@ impl FromStr for Square {
             return Err(Error::InvalidSquare);
         }
 
-        let chars: [char; 2] = s.chars().collect::<Vec<char>>().try_into().unwrap();
+        let chars: [char; 2] = unsafe { s.chars().collect::<Vec<char>>().try_into().unwrap_unchecked() };
         match chars[0] {
             'a'..='h' => {}
             _ => return Err(Error::InvalidSquare),
