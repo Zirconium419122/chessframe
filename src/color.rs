@@ -2,6 +2,7 @@ use std::ops::Not;
 
 use crate::rank::Rank;
 
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     White,

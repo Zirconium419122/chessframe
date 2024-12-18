@@ -1,48 +1,37 @@
 use crate::{color::Color, file::File, square::Square};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct CastlingRights {
-    pub white_kingside: bool,
-    pub white_queenside: bool,
-    pub black_kingside: bool,
-    pub black_queenside: bool,
-}
+pub struct CastlingRights(u8);
 
 impl Default for CastlingRights {
-    fn default() -> Self {
-        Self {
-            white_kingside: true,
-            white_queenside: true,
-            black_kingside: true,
-            black_queenside: true,
-        }
+    fn default() -> CastlingRights {
+        CastlingRights(0b1111)
     }
 }
 
 impl CastlingRights {
+    const KINGSIDE: u8 = 0b0001;
+    const QUEENSIDE: u8 = 0b0010;
+    const OFFSET: u8 = 2;
+
     pub fn new() -> CastlingRights {
-        CastlingRights {
-            white_kingside: false,
-            white_queenside: false,
-            black_kingside: false,
-            black_queenside: false,
-        }
+        CastlingRights(0b0000)
     }
 
     pub fn from_fen(fen: &str) -> Self {
-        let mut castling_rights = CastlingRights::default();
-
-        if !fen.contains('K') {
-            castling_rights.white_kingside = false;
+        let mut castling_rights = CastlingRights::new();
+        
+        if fen.contains('K') {
+            castling_rights = castling_rights.add(&Color::White, true);
         }
-        if !fen.contains('Q') {
-            castling_rights.white_queenside = false;
+        if fen.contains('Q') {
+            castling_rights = castling_rights.add(&Color::White, false);
         }
-        if !fen.contains('k') {
-            castling_rights.black_kingside = false;
+        if fen.contains('k') {
+            castling_rights = castling_rights.add(&Color::Black, true);
         }
-        if !fen.contains('q') {
-            castling_rights.black_queenside = false;
+        if fen.contains('q') {
+            castling_rights = castling_rights.add(&Color::Black, false);
         }
 
         castling_rights
@@ -62,56 +51,38 @@ impl CastlingRights {
 
     #[rustfmt::skip]
     pub fn remove(&self, remove: CastlingRights) -> CastlingRights {
-        let mut castling_rights = *self;
-
-        castling_rights.white_kingside = if remove.white_kingside { false } else { castling_rights.white_kingside };
-        castling_rights.white_queenside = if remove.white_queenside { false } else { castling_rights.white_queenside };
-        castling_rights.black_kingside = if remove.black_kingside { false } else { castling_rights.black_kingside };
-        castling_rights.black_queenside = if remove.black_queenside { false } else { castling_rights.black_queenside };
-
-        castling_rights
+        CastlingRights(self.0 & !remove.0)
     }
 
     pub fn can_castle(&self, color: &Color, kingside: bool) -> bool {
-        match (color, kingside) {
-            (Color::White, true) => self.white_kingside,
-            (Color::White, false) => self.white_queenside,
-            (Color::Black, true) => self.black_kingside,
-            (Color::Black, false) => self.black_queenside,
-        }
+        let offset = if color == &Color::Black { CastlingRights::OFFSET } else { 0 };
+        let castle_right = if kingside { CastlingRights::KINGSIDE } else { CastlingRights::QUEENSIDE };
+
+        (self.0 & (castle_right << offset)) != 0
     }
 
     pub fn add(&mut self, color: &Color, kingside: bool) -> CastlingRights {
         let mut castling_rights = *self;
-        match (color, kingside) {
-            (Color::White, true) => castling_rights.white_kingside = true,
-            (Color::White, false) => castling_rights.white_queenside = true,
-            (Color::Black, true) => castling_rights.black_kingside = true,
-            (Color::Black, false) => castling_rights.black_queenside = true,
-        }
+
+        let offset = if color == &Color::Black { CastlingRights::OFFSET } else { 0 };
+        let castle_right = if kingside { CastlingRights::KINGSIDE } else { CastlingRights::QUEENSIDE };
+
+        castling_rights.0 |= castle_right << offset;
 
         castling_rights
     }
 
     pub fn revoke(&mut self, color: &Color, kingside: bool) {
-        match (color, kingside) {
-            (Color::White, true) => self.white_kingside = false,
-            (Color::White, false) => self.white_queenside = false,
-            (Color::Black, true) => self.black_kingside = false,
-            (Color::Black, false) => self.black_queenside = false,
-        }
+        let mut castling_rights = *self;
+
+        let offset = if color == &Color::Black { CastlingRights::OFFSET } else { 0 };
+        let castle_right = if kingside { CastlingRights::KINGSIDE } else { CastlingRights::QUEENSIDE };
+
+        castling_rights.0 &= !(castle_right << offset);
     }
 
     pub fn revoke_all(&mut self, color: &Color) {
-        match color {
-            Color::White => {
-                self.white_kingside = false;
-                self.white_queenside = false;
-            }
-            Color::Black => {
-                self.black_kingside = false;
-                self.black_queenside = false;
-            }
-        }
+        self.revoke(color, true);
+        self.revoke(color, false);
     }
 }
