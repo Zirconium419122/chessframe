@@ -15,6 +15,10 @@ fn main() {
 
     let mut file = File::create("src/tables.rs").unwrap();
 
+    write_files(&mut file);
+
+    write_ranks(&mut file);
+
     write_pawn_moves(&mut file);
 
     write_pawn_attacks(&mut file);

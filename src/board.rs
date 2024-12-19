@@ -182,7 +182,13 @@ impl Board {
     }
 
     fn set_en_passant(&mut self, square: Square) {
-        self.en_passant_square = Some(square);
+        if get_adjacent_files(square.get_file())
+            & get_rank(square.wrapping_backwards(&!self.side_to_move).get_rank())
+            & self.pieces_color(Piece::Pawn, !self.side_to_move)
+            != EMPTY
+        {
+            self.en_passant_square = Some(square);
+        }
     }
 
     pub fn remove_castling_rights(&mut self, castling_rights: CastlingRights) {
@@ -314,7 +320,7 @@ impl Board {
     /// let board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
     ///
-    /// assert_eq!(board.make_move_new(&mv), Ok(Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")));
+    /// assert_eq!(board.make_move_new(&mv), Ok(Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")));
     /// ```
     ///
     /// # Notes

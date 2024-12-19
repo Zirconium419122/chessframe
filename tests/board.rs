@@ -165,7 +165,7 @@ fn test_make_move() {
 
         assert_eq!(board.side_to_move, Color::Black);
         assert_eq!(board.pieces_color(Piece::Pawn, Color::White), BitBoard(0x00000001000EF00));
-        assert_eq!(board.en_passant_square, Some(Square::E3));
+        assert_eq!(board.en_passant_square, None);
     }
 }
 
