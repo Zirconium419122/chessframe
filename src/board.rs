@@ -344,7 +344,7 @@ impl Board {
     ///
     /// # Returns
     /// - `Ok(())` if the move is successfully made.
-    /// - `Err(String)` if the move is invalid, such as attempting to move a pinned piece.
+    /// - `Err(&str)` if the move is invalid, such as attempting to move a pinned piece.
     ///
     /// # Errors
     /// - Returns an error if the resulting board state places or leaves the king in check.

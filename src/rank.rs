@@ -68,7 +68,7 @@ impl Rank {
 
     /// Convert this `Rank` into a `usize` between 0 and 7.
     #[inline]
-    pub fn to_index(&self) -> usize {
-        *self as usize
+    pub fn to_index(self) -> usize {
+        self as usize
     }
 }

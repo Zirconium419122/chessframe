@@ -207,7 +207,7 @@ impl BitBoard {
 
     /// Convert a `BitBoard` to a `Square`.
     #[inline]
-    pub fn to_square(&self) -> Square {
+    pub fn to_square(self) -> Square {
         Square::new(self.0.trailing_zeros() as u8)
     }
 

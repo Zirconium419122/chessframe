@@ -160,13 +160,13 @@ impl Square {
 
     /// Convert this `Square` to an integer (`u8`).
     #[inline]
-    pub fn to_int(&self) -> u8 {
+    pub fn to_int(self) -> u8 {
         self.0
     }
 
     /// Convert this `Square` to a `usize`.
     #[inline]
-    pub fn to_index(&self) -> usize {
+    pub fn to_index(self) -> usize {
         self.0 as usize
     }
 

@@ -27,12 +27,12 @@ impl Not for Color {
 impl Color {
     /// Convert `Color` to a `usize`.
     #[inline]
-    pub fn to_index(&self) -> usize {
-        *self as usize
+    pub fn to_index(self) -> usize {
+        self as usize
     }
 
     #[inline]
-    pub fn to_backrank(&self) -> Rank {
+    pub fn to_backrank(self) -> Rank {
         match self {
             Color::White => Rank::First,
             Color::Black => Rank::Eighth,
@@ -40,7 +40,7 @@ impl Color {
     }
 
     #[inline]
-    pub fn to_second_rank(&self) -> Rank {
+    pub fn to_second_rank(self) -> Rank {
         match self {
             Color::White => Rank::Second,
             Color::Black => Rank::Seventh,
@@ -48,7 +48,7 @@ impl Color {
     }
 
     #[inline]
-    pub fn to_fourth_rank(&self) -> Rank {
+    pub fn to_fourth_rank(self) -> Rank {
         match self {
             Color::White => Rank::Fourth,
             Color::Black => Rank::Fifth,
@@ -61,7 +61,7 @@ impl Color {
     }
 
     #[inline]
-    pub fn to_offset(&self) -> usize {
+    pub fn to_offset(self) -> usize {
         match self {
             Color::White => 0,
             Color::Black => 6,
