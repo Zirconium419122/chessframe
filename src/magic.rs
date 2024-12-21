@@ -35,7 +35,7 @@ pub fn get_pawn_attacks(square: Square, color: Color) -> BitBoard {
             .get_unchecked(square.to_index())
     }
 }
-    
+
 #[inline]
 pub fn get_knight_moves(square: Square) -> BitBoard {
     unsafe { *KNIGHT_MOVES.get_unchecked(square.to_index()) }

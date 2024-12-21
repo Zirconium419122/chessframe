@@ -1,7 +1,10 @@
 use std::fs::File;
 use std::io::Write;
 
-use crate::{bitboard::{BitBoard, EMPTY}, square::SQUARES};
+use crate::{
+    bitboard::{BitBoard, EMPTY},
+    square::SQUARES,
+};
 
 static mut RANKS: [BitBoard; 8] = [EMPTY; 8];
 
@@ -20,11 +23,6 @@ pub fn write_ranks(f: &mut File) {
     generate_ranks();
 
     unsafe {
-        writeln!(
-            f,
-            "pub const RANKS: [BitBoard; 8] = {:?};",
-            RANKS,
-        )
-        .unwrap();
+        writeln!(f, "pub const RANKS: [BitBoard; 8] = {:?};", RANKS,).unwrap();
     }
 }

@@ -20,7 +20,7 @@ impl CastlingRights {
 
     pub fn from_fen(fen: &str) -> Self {
         let mut castling_rights = CastlingRights::new();
-        
+
         if fen.contains('K') {
             castling_rights = castling_rights.add(&Color::White, true);
         }
@@ -49,11 +49,11 @@ impl CastlingRights {
         }
     }
 
-    #[rustfmt::skip]
     pub fn remove(&self, remove: CastlingRights) -> CastlingRights {
         CastlingRights(self.0 & !remove.0)
     }
 
+    #[rustfmt::skip]
     pub fn can_castle(&self, color: &Color, kingside: bool) -> bool {
         let offset = if color == &Color::Black { CastlingRights::OFFSET } else { 0 };
         let castle_right = if kingside { CastlingRights::KINGSIDE } else { CastlingRights::QUEENSIDE };
@@ -61,6 +61,7 @@ impl CastlingRights {
         (self.0 & (castle_right << offset)) != 0
     }
 
+    #[rustfmt::skip]
     pub fn add(&mut self, color: &Color, kingside: bool) -> CastlingRights {
         let mut castling_rights = *self;
 
@@ -72,6 +73,7 @@ impl CastlingRights {
         castling_rights
     }
 
+    #[rustfmt::skip]
     pub fn revoke(&mut self, color: &Color, kingside: bool) {
         let mut castling_rights = *self;
 

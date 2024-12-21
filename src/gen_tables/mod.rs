@@ -1,8 +1,8 @@
+mod files;
 mod king;
 mod knight;
 mod magic;
 mod pawn;
-mod files;
 mod ranks;
 
 pub use self::files::write_files;
