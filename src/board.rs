@@ -443,13 +443,17 @@ impl Board {
             self.xor(start ^ end, Piece::Rook, self.side_to_move);
         }
 
-        self.side_to_move.flip();
-
-        if (self.generate_moves() & self.pieces_color(Piece::King, !self.side_to_move))
+        if self
+            .get_attackers(
+                self.pieces_color(Piece::King, self.side_to_move)
+                    .to_square(),
+            )
             .is_not_zero()
         {
             return Err(Error::CannotMovePinned);
         }
+
+        self.side_to_move.flip();
 
         Ok(())
     }
@@ -569,6 +573,21 @@ impl Board {
     /// Generate all moves for ray pieces.
     pub fn generate_ray_moves(&self) -> BitBoard {
         self.generate_bishop_moves() | self.generate_rook_moves() | self.generate_queen_moves()
+    }
+
+    /// Get attackers for a given square.
+    #[rustfmt::skip]
+    pub fn get_attackers(&self, square: Square) -> BitBoard {
+        let mut attackers = BitBoard(0);
+        let combined = self.combined();
+
+        attackers |= get_pawn_attacks(square, self.side_to_move) & self.pieces_color(Piece::Pawn, !self.side_to_move);
+        attackers |= get_knight_moves(square) & self.pieces_color(Piece::Knight, !self.side_to_move);
+        attackers |= get_bishop_moves(square, combined) & (self.pieces_color(Piece::Bishop, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move));
+        attackers |= get_rook_moves(square, combined) & (self.pieces_color(Piece::Rook, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move));
+        attackers |= get_king_moves(square) & self.pieces_color(Piece::King, !self.side_to_move);
+
+        attackers
     }
 
     /// Generate all pawn moves.
@@ -697,22 +716,27 @@ impl Board {
             Color::Black => (BLACK_KING_SIDE, BLACK_QUEEN_SIDE),
         };
 
-        self.side_to_move.flip();
+        let no_attackers_kingside = (king_side | king)
+            .into_iter()
+            .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
+            == EMPTY;
+        let no_attackers_queenside = (queen_side | king)
+            .into_iter()
+            .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
+            == EMPTY;
 
-        let enemy_moves = self.generate_moves();
-
-        self.side_to_move.flip();
-
-        let can_castle_kingside = self.castling_rights.can_castle(&self.side_to_move, true);
-        let can_castle_queenside = self.castling_rights.can_castle(&self.side_to_move, false);
+        let can_castle_kingside =
+            no_attackers_kingside && self.castling_rights.can_castle(&self.side_to_move, true);
+        let can_castle_queenside =
+            no_attackers_queenside && self.castling_rights.can_castle(&self.side_to_move, false);
 
         let mut moves = BitBoard(0);
 
-        if can_castle_kingside && self.is_castling_path_clear(king_side, enemy_moves, king) {
+        if can_castle_kingside && self.is_castling_path_clear(king_side) {
             moves |= BitBoard::set(self.side_to_move.to_backrank(), File::G);
         }
 
-        if can_castle_queenside && self.is_castling_path_clear(queen_side, enemy_moves, king) {
+        if can_castle_queenside && self.is_castling_path_clear(queen_side) {
             moves |= BitBoard::set(self.side_to_move.to_backrank(), File::C);
         }
 
@@ -720,12 +744,7 @@ impl Board {
     }
 
     #[inline]
-    fn is_castling_path_clear(
-        &self,
-        path: BitBoard,
-        enemy_moves: BitBoard,
-        king: BitBoard,
-    ) -> bool {
-        (self.combined() & path).is_zero() && (enemy_moves & (path | king)).is_zero()
+    fn is_castling_path_clear(&self, path: BitBoard) -> bool {
+        (self.combined() & path).is_zero()
     }
 }
