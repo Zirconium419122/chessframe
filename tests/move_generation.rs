@@ -3,7 +3,7 @@ use chess_frame::{bitboard::BitBoard, board::*};
 #[test]
 fn test_generate_moves_vec() {
     let fen = "8/p7/1k2Pp2/1P3P2/1K6/8/8/8 w - - 0 1";
-    let mut board = Board::from_fen(fen);
+    let board = Board::from_fen(fen);
 
     let moves = board.generate_moves_vec();
     assert_eq!(moves.len(), 8)
@@ -211,7 +211,7 @@ fn test_castling_move_generation() {
     // Test that there are castling moves from the start position
     {
         let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        let mut board = Board::from_fen(fen);
+        let board = Board::from_fen(fen);
 
         let castling_moves = board.generate_castling_moves();
         assert_eq!(castling_moves, BitBoard(0));
@@ -220,7 +220,7 @@ fn test_castling_move_generation() {
     // Test that there are castling moves from a opening position
     {
         let fen = "r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 1 6";
-        let mut board = Board::from_fen(fen);
+        let board = Board::from_fen(fen);
 
         let castling_moves = board.generate_castling_moves();
         assert_eq!(castling_moves, BitBoard(0x40));

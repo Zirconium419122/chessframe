@@ -503,7 +503,7 @@ impl Board {
     }
 
     /// Generate a vector of psudo-legal `ChessMoves`'s.
-    pub fn generate_moves_vec(&mut self) -> Vec<ChessMove> {
+    pub fn generate_moves_vec(&self) -> Vec<ChessMove> {
         macro_rules! extract_moves {
             ($($piece:expr),+) => {
                 {
@@ -531,7 +531,7 @@ impl Board {
                                     if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
                                         get_pawn_moves(src, self.side_to_move) & !self.combined()
                                     } else {
-                                        BitBoard::default()
+                                        EMPTY
                                     }
                                 } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy);
 
@@ -578,7 +578,7 @@ impl Board {
     /// Get attackers for a given square.
     #[rustfmt::skip]
     pub fn get_attackers(&self, square: Square) -> BitBoard {
-        let mut attackers = BitBoard(0);
+        let mut attackers = BitBoard::default();
         let combined = self.combined();
 
         attackers |= get_pawn_attacks(square, self.side_to_move) & self.pieces_color(Piece::Pawn, !self.side_to_move);
@@ -592,7 +592,7 @@ impl Board {
 
     /// Generate all pawn moves.
     pub fn generate_pawn_moves(&self) -> BitBoard {
-        let mut moves = BitBoard(0);
+        let mut moves = BitBoard::default();
 
         for square in self.pieces_color(Piece::Pawn, self.side_to_move) {
             if (BitBoard::from_square(square.wrapping_forward(&self.side_to_move))
@@ -620,7 +620,7 @@ impl Board {
             }
         }
 
-        BitBoard(0)
+        EMPTY
     }
 
     /// Check if a square is a promotion square.
@@ -633,7 +633,7 @@ impl Board {
 
     /// Generate all knight moves.
     pub fn generate_knight_moves(&self) -> BitBoard {
-        let mut moves = BitBoard(0);
+        let mut moves = BitBoard::default();
 
         for square in self.pieces_color(Piece::Knight, self.side_to_move) {
             moves |= get_knight_moves(square);
@@ -646,7 +646,7 @@ impl Board {
     pub fn generate_bishop_moves(&self) -> BitBoard {
         let occupancy = self.combined();
 
-        let mut moves = BitBoard(0);
+        let mut moves = BitBoard::default();
 
         for square in self
             .pieces_color(Piece::Bishop, self.side_to_move)
@@ -662,7 +662,7 @@ impl Board {
     pub fn generate_rook_moves(&self) -> BitBoard {
         let occupancy = self.combined();
 
-        let mut moves = BitBoard(0);
+        let mut moves = BitBoard::default();
 
         for square in self
             .pieces_color(Piece::Rook, self.side_to_move)
@@ -678,7 +678,7 @@ impl Board {
     pub fn generate_queen_moves(&self) -> BitBoard {
         let occupancy = self.combined();
 
-        let mut moves = BitBoard(0);
+        let mut moves = BitBoard::default();
 
         for square in self
             .pieces_color(Piece::Queen, self.side_to_move)
@@ -693,7 +693,7 @@ impl Board {
 
     /// Generate all king moves except castling moves.
     pub fn generate_king_moves(&self) -> BitBoard {
-        let mut moves = BitBoard(0);
+        let mut moves = BitBoard::default();
 
         for square in self.pieces_color(Piece::King, self.side_to_move) {
             moves |= get_king_moves(square);
@@ -703,7 +703,7 @@ impl Board {
     }
 
     /// Generate all castling moves.
-    pub fn generate_castling_moves(&mut self) -> BitBoard {
+    pub fn generate_castling_moves(&self) -> BitBoard {
         let king = self.pieces_color(Piece::King, self.side_to_move);
 
         const WHITE_KING_SIDE: BitBoard = BitBoard(0x60);
@@ -730,21 +730,18 @@ impl Board {
         let can_castle_queenside =
             no_attackers_queenside && self.castling_rights.can_castle(&self.side_to_move, false);
 
-        let mut moves = BitBoard(0);
+        let combined = self.combined();
 
-        if can_castle_kingside && self.is_castling_path_clear(king_side) {
+        let mut moves = BitBoard::default();
+
+        if can_castle_kingside && (combined & king_side).is_zero() {
             moves |= BitBoard::set(self.side_to_move.to_backrank(), File::G);
         }
 
-        if can_castle_queenside && self.is_castling_path_clear(queen_side) {
+        if can_castle_queenside && (combined & queen_side).is_zero() {
             moves |= BitBoard::set(self.side_to_move.to_backrank(), File::C);
         }
 
         moves
-    }
-
-    #[inline]
-    fn is_castling_path_clear(&self, path: BitBoard) -> bool {
-        (self.combined() & path).is_zero()
     }
 }
