@@ -17,6 +17,7 @@ use crate::{
 pub struct Board {
     pub pieces: [BitBoard; 6],    // 6 for white, 6 for black
     pub occupancy: [BitBoard; 2], // white, black occupancy
+    pub combined: BitBoard,       // combined occupancy
     pub side_to_move: Color,
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<Square>,
@@ -42,6 +43,7 @@ impl Board {
         let mut board = Board {
             pieces: [BitBoard::default(); 6],
             occupancy: [BitBoard::default(); 2],
+            combined: BitBoard::default(),
             side_to_move: Color::White,
             castling_rights: CastlingRights::default(),
             en_passant_square: None,
@@ -51,6 +53,8 @@ impl Board {
         assert_eq!(parts.len(), 6);
 
         board.parse_pieces(parts[0]);
+
+        board.combined = board.occupancy(Color::White) | board.occupancy(Color::Black);
 
         board.side_to_move = match parts[1] {
             "w" => Color::White,
@@ -131,7 +135,13 @@ impl Board {
     /// ```
     #[inline]
     pub fn combined(&self) -> BitBoard {
-        self.occupancy(Color::White) | self.occupancy(Color::Black)
+        self.combined
+    }
+
+    /// Get a mutable reference to the combined bitboard.
+    #[inline]
+    pub fn combined_mut(&mut self) -> &mut BitBoard {
+        &mut self.combined
     }
 
     /// Get the occupancy bitboard for a particular color.
@@ -155,6 +165,13 @@ impl Board {
     }
 
     /// Get the bitboard of a particular piece type.
+    /// ```
+    /// use chess_frame::{bitboard::BitBoard, board::Board, piece::Piece};
+    ///
+    /// let board = Board::default();
+    ///
+    /// assert_eq!(board.pieces(Piece::Pawn), BitBoard(0x00FF00000000FF00));
+    /// ```
     #[inline]
     pub fn pieces(&self, piece: Piece) -> BitBoard {
         unsafe { *self.pieces.get_unchecked(piece.to_index()) }
@@ -199,6 +216,7 @@ impl Board {
     fn xor(&mut self, bitboard: BitBoard, piece: Piece, color: Color) {
         *self.pieces_mut(piece) ^= bitboard;
         *self.occupancy_mut(color) ^= bitboard;
+        *self.combined_mut() ^= bitboard;
     }
 
     /// Check if one can castle to the given side.
@@ -504,70 +522,58 @@ impl Board {
 
     /// Generate a vector of psudo-legal `ChessMoves`'s.
     pub fn generate_moves_vec(&self) -> Vec<ChessMove> {
-        macro_rules! extract_moves {
-            ($($piece:expr),+) => {
-                {
-                    let mut moves: Vec<ChessMove> = Vec::with_capacity(218);
-                    let allied_pieces = self.occupancy(self.side_to_move);
-                    let opponent_occupancy = self.occupancy(!self.side_to_move);
-                    let blockers = allied_pieces | opponent_occupancy;
+        let mut moves: Vec<ChessMove> = Vec::with_capacity(218);
 
-                    $(
-                        for src in self.pieces_color($piece, self.side_to_move).into_iter() {
-                            let generated_moves = match $piece {
-                                Piece::Knight => get_knight_moves(src),
-                                Piece::Bishop => get_bishop_moves(src, blockers),
-                                Piece::Rook => get_rook_moves(src, blockers),
-                                Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
-                                Piece::King => get_king_moves(src) | self.generate_castling_moves(),
-                                _ => BitBoard(0),
-                            } & !allied_pieces;
+        let allied_pieces = self.occupancy(self.side_to_move);
+        let opponent_occupancy = self.occupancy(!self.side_to_move);
+        let blockers = self.combined();
 
-                            // Extend moves with quiet and capture moves
-                            moves.extend(generated_moves.into_iter().map(|dest| ChessMove::new(src, dest)));
-
-                            if let Piece::Pawn = $piece {
-                                let pawn_moves = {
-                                    if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
-                                        get_pawn_moves(src, self.side_to_move) & !self.combined()
-                                    } else {
-                                        EMPTY
-                                    }
-                                } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy);
-
-                                pawn_moves.into_iter().for_each(|dest| {
-                                    if self.is_promotion(&dest) {
-                                        moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
-                                        moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
-                                        moves.push(ChessMove::new_promotion(src, dest, Piece::Rook));
-                                        moves.push(ChessMove::new_promotion(src, dest, Piece::Queen));
-                                    } else {
-                                        moves.push(ChessMove::new(src, dest));
-                                    }
-                                });
-                            }
-                        }
-                    )+
-
-                    if let Some(en_passant) = self.en_passant_square {
-                        for src in get_pawn_attacks(en_passant, !self.side_to_move) & self.pieces_color(Piece::Pawn, self.side_to_move) {
-                            moves.push(ChessMove::new(src, en_passant));
-                        }
-                    }
-
-                    moves
-                }
-            };
+        for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen, Piece::King] {
+            for src in self.pieces_color(piece, self.side_to_move).into_iter() {
+                let generated_moves = match piece {
+                    Piece::Knight => get_knight_moves(src),
+                    Piece::Bishop => get_bishop_moves(src, blockers),
+                    Piece::Rook => get_rook_moves(src, blockers),
+                    Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
+                    Piece::King => get_king_moves(src) | self.generate_castling_moves(),
+                    _ => unreachable!(),
+                } & !allied_pieces;
+    
+                // Extend moves with quiet and capture moves
+                moves.extend(generated_moves.into_iter().map(|dest| ChessMove::new(src, dest)));
+            }
         }
 
-        extract_moves!(
-            Piece::Pawn,
-            Piece::Knight,
-            Piece::Bishop,
-            Piece::Rook,
-            Piece::Queen,
-            Piece::King
-        )
+        for src in self.pieces_color(Piece::Pawn, self.side_to_move).into_iter() {
+            let pawn_moves = {
+                if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
+                    get_pawn_moves(src, self.side_to_move) & !self.combined()
+                } else {
+                    EMPTY
+                }
+            } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy);
+
+            pawn_moves.into_iter().for_each(|dest| {
+                if self.is_promotion(&dest) {
+                    moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
+                    moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
+                    moves.push(ChessMove::new_promotion(src, dest, Piece::Rook));
+                    moves.push(ChessMove::new_promotion(src, dest, Piece::Queen));
+                } else {
+                    moves.push(ChessMove::new(src, dest));
+                }
+            });
+        }
+
+        if let Some(en_passant) = self.en_passant_square {
+            for src in get_pawn_attacks(en_passant, !self.side_to_move)
+                & self.pieces_color(Piece::Pawn, self.side_to_move)
+            {
+                moves.push(ChessMove::new(src, en_passant));
+            }
+        }
+
+        moves
     }
 
     /// Generate all moves for ray pieces.
@@ -581,10 +587,13 @@ impl Board {
         let mut attackers = BitBoard::default();
         let combined = self.combined();
 
+        let bishops = self.pieces_color(Piece::Bishop, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move);
+        let rooks = self.pieces_color(Piece::Rook, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move);
+
         attackers |= get_pawn_attacks(square, self.side_to_move) & self.pieces_color(Piece::Pawn, !self.side_to_move);
         attackers |= get_knight_moves(square) & self.pieces_color(Piece::Knight, !self.side_to_move);
-        attackers |= get_bishop_moves(square, combined) & (self.pieces_color(Piece::Bishop, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move));
-        attackers |= get_rook_moves(square, combined) & (self.pieces_color(Piece::Rook, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move));
+        attackers |= get_bishop_moves(square, combined) & bishops;
+        attackers |= get_rook_moves(square, combined) & rooks;
         attackers |= get_king_moves(square) & self.pieces_color(Piece::King, !self.side_to_move);
 
         attackers
@@ -716,19 +725,23 @@ impl Board {
             Color::Black => (BLACK_KING_SIDE, BLACK_QUEEN_SIDE),
         };
 
-        let no_attackers_kingside = (king_side | king)
+        if self.get_attackers(king.to_square()) != EMPTY {
+            return EMPTY;
+        }
+
+        let no_attackers_kingside = king_side
             .into_iter()
             .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
             == EMPTY;
-        let no_attackers_queenside = (queen_side | king)
+        let no_attackers_queenside = queen_side
             .into_iter()
             .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
             == EMPTY;
 
-        let can_castle_kingside =
-            no_attackers_kingside && self.castling_rights.can_castle(&self.side_to_move, true);
-        let can_castle_queenside =
-            no_attackers_queenside && self.castling_rights.can_castle(&self.side_to_move, false);
+        let can_castle_kingside = no_attackers_kingside
+            && self.castling_rights.can_castle(&self.side_to_move, true);
+        let can_castle_queenside = no_attackers_queenside
+            && self.castling_rights.can_castle(&self.side_to_move, false);
 
         let combined = self.combined();
 
