@@ -63,7 +63,7 @@ impl File {
     /// Get the file to the left of this one. If this is `File::H` wrap around.
     #[inline]
     pub fn right(&self) -> File {
-        File::from_index(self.to_index() + 1)
+        File::from_index(unsafe { self.to_index().unchecked_add(1) })
     }
 
     /// Convert this `File` into a `usize` between 0 and 7.

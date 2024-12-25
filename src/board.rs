@@ -528,7 +528,13 @@ impl Board {
         let opponent_occupancy = self.occupancy(!self.side_to_move);
         let blockers = self.combined();
 
-        for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen, Piece::King] {
+        for piece in [
+            Piece::Knight,
+            Piece::Bishop,
+            Piece::Rook,
+            Piece::Queen,
+            Piece::King,
+        ] {
             for src in self.pieces_color(piece, self.side_to_move).into_iter() {
                 let generated_moves = match piece {
                     Piece::Knight => get_knight_moves(src),
@@ -538,15 +544,25 @@ impl Board {
                     Piece::King => get_king_moves(src) | self.generate_castling_moves(),
                     _ => unreachable!(),
                 } & !allied_pieces;
-    
+
                 // Extend moves with quiet and capture moves
-                moves.extend(generated_moves.into_iter().map(|dest| ChessMove::new(src, dest)));
+                moves.extend(
+                    generated_moves
+                        .into_iter()
+                        .map(|dest| ChessMove::new(src, dest)),
+                );
             }
         }
 
-        for src in self.pieces_color(Piece::Pawn, self.side_to_move).into_iter() {
+        for src in self
+            .pieces_color(Piece::Pawn, self.side_to_move)
+            .into_iter()
+        {
             let pawn_moves = {
-                if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move)) & !self.combined()) != EMPTY {
+                if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move))
+                    & !self.combined())
+                    != EMPTY
+                {
                     get_pawn_moves(src, self.side_to_move) & !self.combined()
                 } else {
                     EMPTY
@@ -587,8 +603,10 @@ impl Board {
         let mut attackers = BitBoard::default();
         let combined = self.combined();
 
-        let bishops = self.pieces_color(Piece::Bishop, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move);
-        let rooks = self.pieces_color(Piece::Rook, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move);
+        let bishops = self.pieces_color(Piece::Bishop, !self.side_to_move)
+            | self.pieces_color(Piece::Queen, !self.side_to_move);
+        let rooks = self.pieces_color(Piece::Rook, !self.side_to_move)
+            | self.pieces_color(Piece::Queen, !self.side_to_move);
 
         attackers |= get_pawn_attacks(square, self.side_to_move) & self.pieces_color(Piece::Pawn, !self.side_to_move);
         attackers |= get_knight_moves(square) & self.pieces_color(Piece::Knight, !self.side_to_move);
@@ -729,6 +747,15 @@ impl Board {
             return EMPTY;
         }
 
+        let combined = self.combined();
+
+        let empty_kingside = (combined & king_side) == EMPTY;
+        let empty_queenside = (combined & queen_side) == EMPTY;
+
+        if !empty_kingside && !empty_queenside {
+            return EMPTY;
+        }
+
         let no_attackers_kingside = king_side
             .into_iter()
             .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
@@ -738,20 +765,20 @@ impl Board {
             .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
             == EMPTY;
 
-        let can_castle_kingside = no_attackers_kingside
+        let can_castle_kingside = empty_kingside
+            && no_attackers_kingside
             && self.castling_rights.can_castle(&self.side_to_move, true);
-        let can_castle_queenside = no_attackers_queenside
+        let can_castle_queenside = empty_queenside
+            && no_attackers_queenside
             && self.castling_rights.can_castle(&self.side_to_move, false);
-
-        let combined = self.combined();
 
         let mut moves = BitBoard::default();
 
-        if can_castle_kingside && (combined & king_side).is_zero() {
+        if can_castle_kingside {
             moves |= BitBoard::set(self.side_to_move.to_backrank(), File::G);
         }
 
-        if can_castle_queenside && (combined & queen_side).is_zero() {
+        if can_castle_queenside {
             moves |= BitBoard::set(self.side_to_move.to_backrank(), File::C);
         }
 

@@ -1,15 +1,15 @@
 use chess_frame::board::Board;
 
 fn perft(board: &Board, depth: usize, divide: bool) -> usize {
-    if depth == 0 {
-        return 1;
-    }
-
     let mut count = 0;
 
     for mv in board.generate_moves_vec() {
         if let Ok(ref board) = board.make_move_new(&mv) {
-            let perft_results = perft(board, depth - 1, false);
+            let perft_results = if depth == 1 {
+                1
+            } else {
+                perft(board, depth - 1, false)
+            };
             count += perft_results;
 
             if divide {

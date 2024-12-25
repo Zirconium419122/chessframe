@@ -63,7 +63,7 @@ impl Rank {
     /// Get the rank above this one. If the rank is `Eighth` wrap around.
     #[inline]
     pub fn up(&self) -> Rank {
-        Rank::from_index(self.to_index() + 1)
+        Rank::from_index(unsafe { self.to_index().unchecked_add(1) })
     }
 
     /// Convert this `Rank` into a `usize` between 0 and 7.
