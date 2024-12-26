@@ -11,6 +11,9 @@ pub enum Error {
     #[error("The string specified does not contain a valid file")]
     InvalidFile,
 
+    #[error("The string specified does not contain a valid move")]
+    InvalidMove,
+
     #[error("Cannot move pinned piece!")]
     CannotMovePinned,
 

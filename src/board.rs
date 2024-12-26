@@ -117,9 +117,9 @@ impl Board {
 
     fn parse_en_passant(&mut self, en_passant: &str) {
         if en_passant != "-" {
-            let file = en_passant.chars().nth(0).unwrap() as u8 - b'a';
-            let rank = en_passant.chars().nth(1).unwrap().to_digit(10).unwrap() as u8 - 1;
-            let square = Square::new(8 * rank + file);
+            let file = unsafe { (en_passant.chars().nth(0).unwrap_unchecked() as u8).unchecked_sub(b'a') };
+            let rank = unsafe { (en_passant.chars().nth(1).unwrap_unchecked().to_digit(10).unwrap_unchecked() as u8).unchecked_sub(1) };
+            let square = Square::new(rank << 3 + file);
 
             self.set_en_passant(square);
         }
@@ -225,20 +225,20 @@ impl Board {
 
         match self.side_to_move {
             Color::White => {
-                if kingside && (castling_moves & BitBoard(0x40)).is_zero() {
+                if kingside && (castling_moves & BitBoard::from_square(Square::G1)).is_zero() {
                     return Err("Cannot castle kingside");
                 }
 
-                if !kingside && (castling_moves & BitBoard(0x04)).is_zero() {
+                if !kingside && (castling_moves & BitBoard::from_square(Square::C1)).is_zero() {
                     return Err("Cannot castle queenside");
                 }
             }
             Color::Black => {
-                if kingside && (castling_moves & BitBoard(0x4000000000000000)).is_zero() {
+                if kingside && (castling_moves & BitBoard::from_square(Square::G8)).is_zero() {
                     return Err("Cannot castle kingside");
                 }
 
-                if !kingside && (castling_moves & BitBoard(0x0400000000000000)).is_zero() {
+                if !kingside && (castling_moves & BitBoard::from_square(Square::C1)).is_zero() {
                     return Err("Cannot castle queenside");
                 }
             }
@@ -248,13 +248,13 @@ impl Board {
     }
 
     /// Infer a `ChessMove` from a string based on the current `Board`.
-    pub fn infer_move(&mut self, mv: &str) -> Result<ChessMove, String> {
-        let from = Square::from_str(&mv[0..2]).map_err(|err| err.to_string())?;
-        let to = Square::from_str(&mv[2..4]).map_err(|err| err.to_string())?;
+    pub fn infer_move(&mut self, mv: &str) -> Result<ChessMove, Error> {
+        let from = Square::from_str(&mv[0..2])?;
+        let to = Square::from_str(&mv[2..4])?;
         let promotion: Option<Piece> = match &mv.len() {
             4 => None,
             5 => Some(Piece::from(unsafe { mv.chars().last().unwrap_unchecked() })),
-            _ => return Err("Invalid move notation!".to_string()),
+            _ => return Err(Error::InvalidMove),
         };
 
         if let Some(piece) = self.get_piece(from) {
@@ -287,7 +287,7 @@ impl Board {
             }
         }
 
-        Err("No piece at from square".to_string())
+        Err(Error::NoPieceOnSquare)
     }
 
     /// Checks that a `ChessMove` is a valid move for the current board state. Does not check if the move leaves the king in check.
@@ -545,12 +545,9 @@ impl Board {
                     _ => unreachable!(),
                 } & !allied_pieces;
 
-                // Extend moves with quiet and capture moves
-                moves.extend(
-                    generated_moves
-                        .into_iter()
-                        .map(|dest| ChessMove::new(src, dest)),
-                );
+                generated_moves
+                    .into_iter()
+                    .for_each(|dest| moves.push(ChessMove::new(src, dest)));
             }
         }
 

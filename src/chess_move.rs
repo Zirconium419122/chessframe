@@ -12,11 +12,11 @@ pub struct ChessMove {
 impl fmt::Display for ChessMove {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let (rank_from, file_from) = (
-            self.from.get_rank().to_index() + 1,
+            unsafe { self.from.get_rank().to_index().unchecked_add(1) },
             self.from.get_file().to_index(),
         );
         let (rank_to, file_to) = (
-            self.to.get_rank().to_index() + 1,
+            unsafe { self.to.get_rank().to_index().unchecked_add(1) },
             self.to.get_file().to_index(),
         );
 

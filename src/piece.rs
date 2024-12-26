@@ -40,7 +40,7 @@ impl From<char> for Piece {
 }
 
 impl Piece {
-    pub fn to_fen(&self) -> char {
+    pub fn to_fen(self) -> char {
         match self {
             Piece::Pawn => 'p',
             Piece::Knight => 'n',
@@ -51,15 +51,8 @@ impl Piece {
         }
     }
 
-    pub fn to_index(&self) -> usize {
-        match self {
-            Piece::Pawn => 0,
-            Piece::Knight => 1,
-            Piece::Bishop => 2,
-            Piece::Rook => 3,
-            Piece::Queen => 4,
-            Piece::King => 5,
-        }
+    pub fn to_index(self) -> usize {
+        self as usize
     }
 
     pub fn piece_index(&self, color: &Color) -> usize {
