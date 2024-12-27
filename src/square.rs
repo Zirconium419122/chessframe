@@ -105,7 +105,7 @@ impl Square {
 
     /// If there is a square forwards, given a `Color`, go in that direction.
     #[inline]
-    pub fn forward(&self, color: &Color) -> Option<Square> {
+    pub fn forward(&self, color: Color) -> Option<Square> {
         match color {
             Color::White => self.up(),
             Color::Black => self.down(),
@@ -114,7 +114,7 @@ impl Square {
 
     /// If there is a square backwards, given a `Color`, go in that direction.
     #[inline]
-    pub fn backwards(&self, color: &Color) -> Option<Square> {
+    pub fn backward(&self, color: Color) -> Option<Square> {
         match color {
             Color::White => self.down(),
             Color::Black => self.up(),
@@ -147,7 +147,7 @@ impl Square {
 
     /// If there is a square forwards, given a `Color`, go in that direction. Otherwise, wrap around.
     #[inline]
-    pub fn wrapping_forward(&self, color: &Color) -> Square {
+    pub fn wrapping_forward(&self, color: Color) -> Square {
         match color {
             Color::White => self.wrapping_up(),
             Color::Black => self.wrapping_down(),
@@ -156,7 +156,7 @@ impl Square {
 
     /// If there is a square backwards, given a `Color`, go in that direction. Otherwise, wrap around.
     #[inline]
-    pub fn wrapping_backwards(&self, color: &Color) -> Square {
+    pub fn wrapping_backward(&self, color: Color) -> Square {
         match color {
             Color::White => self.wrapping_down(),
             Color::Black => self.wrapping_up(),

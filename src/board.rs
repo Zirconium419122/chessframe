@@ -117,8 +117,17 @@ impl Board {
 
     fn parse_en_passant(&mut self, en_passant: &str) {
         if en_passant != "-" {
-            let file = unsafe { (en_passant.chars().nth(0).unwrap_unchecked() as u8).unchecked_sub(b'a') };
-            let rank = unsafe { (en_passant.chars().nth(1).unwrap_unchecked().to_digit(10).unwrap_unchecked() as u8).unchecked_sub(1) };
+            let file =
+                unsafe { (en_passant.chars().nth(0).unwrap_unchecked() as u8).unchecked_sub(b'a') };
+            let rank = unsafe {
+                (en_passant
+                    .chars()
+                    .nth(1)
+                    .unwrap_unchecked()
+                    .to_digit(10)
+                    .unwrap_unchecked() as u8)
+                    .unchecked_sub(1)
+            };
             let square = Square::new(rank << 3 + file);
 
             self.set_en_passant(square);
@@ -201,7 +210,7 @@ impl Board {
 
     fn set_en_passant(&mut self, square: Square) {
         if get_adjacent_files(square.get_file())
-            & get_rank(square.wrapping_backwards(&!self.side_to_move).get_rank())
+            & get_rank(square.wrapping_backward(!self.side_to_move).get_rank())
             & self.pieces_color(Piece::Pawn, !self.side_to_move)
             != EMPTY
         {
@@ -223,25 +232,14 @@ impl Board {
     pub fn can_castle(&mut self, kingside: bool) -> Result<(), &str> {
         let castling_moves = self.generate_castling_moves();
 
-        match self.side_to_move {
-            Color::White => {
-                if kingside && (castling_moves & BitBoard::from_square(Square::G1)).is_zero() {
-                    return Err("Cannot castle kingside");
-                }
-
-                if !kingside && (castling_moves & BitBoard::from_square(Square::C1)).is_zero() {
-                    return Err("Cannot castle queenside");
-                }
-            }
-            Color::Black => {
-                if kingside && (castling_moves & BitBoard::from_square(Square::G8)).is_zero() {
-                    return Err("Cannot castle kingside");
-                }
-
-                if !kingside && (castling_moves & BitBoard::from_square(Square::C1)).is_zero() {
-                    return Err("Cannot castle queenside");
-                }
-            }
+        if kingside
+            && (castling_moves & BitBoard::set(self.side_to_move.to_backrank(), File::G)).is_zero()
+        {
+            return Err("Cannot castle kingside");
+        } else if (castling_moves & BitBoard::set(self.side_to_move.to_backrank(), File::C))
+            .is_zero()
+        {
+            return Err("Cannot castle queenside");
         }
 
         Ok(())
@@ -440,11 +438,11 @@ impl Board {
             } else if from.get_rank() == self.side_to_move.to_second_rank()
                 && to.get_rank() == self.side_to_move.to_fourth_rank()
             {
-                self.set_en_passant(to.wrapping_backwards(&self.side_to_move));
+                self.set_en_passant(to.wrapping_backward(self.side_to_move));
             } else if Some(*to) == en_passant_square {
                 let side_to_move = self.side_to_move;
                 self.xor(
-                    BitBoard::from_square(to.wrapping_backwards(&side_to_move)),
+                    BitBoard::from_square(to.wrapping_backward(side_to_move)),
                     Piece::Pawn,
                     !side_to_move,
                 );
@@ -556,7 +554,7 @@ impl Board {
             .into_iter()
         {
             let pawn_moves = {
-                if (BitBoard::from_square(src.wrapping_forward(&self.side_to_move))
+                if (BitBoard::from_square(src.wrapping_forward(self.side_to_move))
                     & !self.combined())
                     != EMPTY
                 {
@@ -619,7 +617,7 @@ impl Board {
         let mut moves = BitBoard::default();
 
         for square in self.pieces_color(Piece::Pawn, self.side_to_move) {
-            if (BitBoard::from_square(square.wrapping_forward(&self.side_to_move))
+            if (BitBoard::from_square(square.wrapping_forward(self.side_to_move))
                 & !self.combined())
                 != EMPTY
             {
