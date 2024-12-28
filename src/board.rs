@@ -236,7 +236,7 @@ impl Board {
             && (castling_moves & BitBoard::set(self.side_to_move.to_backrank(), File::G)).is_zero()
         {
             return Err("Cannot castle kingside");
-        } else if (castling_moves & BitBoard::set(self.side_to_move.to_backrank(), File::C))
+        } else if !kingside && (castling_moves & BitBoard::set(self.side_to_move.to_backrank(), File::C))
             .is_zero()
         {
             return Err("Cannot castle queenside");
@@ -263,7 +263,7 @@ impl Board {
             }
 
             if let Piece::King = piece {
-                let move_bitboard = BitBoard::from_square(from) | BitBoard::from_square(to);
+                let move_bitboard = BitBoard::from_square(from) ^ BitBoard::from_square(to);
 
                 if (move_bitboard & get_castle_moves()) == move_bitboard {
                     mv = Some(ChessMove::new(from, to));
@@ -291,11 +291,11 @@ impl Board {
     /// Checks that a `ChessMove` is a valid move for the current board state. Does not check if the move leaves the king in check.
     pub fn validate_move(&mut self, mv: &ChessMove) -> Result<Piece, &str> {
         let (from, to) = mv.get_move();
-        let piece = self.get_piece(*from).ok_or("No piece found on square!")?;
+        let piece = self.get_piece(from).ok_or("No piece found on square!")?;
 
         let pieces = self.pieces(piece);
 
-        *self.pieces_mut(piece) = BitBoard::from_square(*from);
+        *self.pieces_mut(piece) = BitBoard::from_square(from);
 
         let piece_moves = match piece {
             Piece::Pawn => self.generate_pawn_moves(),
@@ -308,7 +308,7 @@ impl Board {
 
         *self.pieces_mut(piece) = pieces;
 
-        if piece_moves.is_not_set(*to) {
+        if piece_moves.is_not_set(to) {
             return Err("Invalid move!");
         }
 
@@ -384,28 +384,28 @@ impl Board {
     pub fn make_move(&mut self, mv: &ChessMove) -> Result<(), Error> {
         let (from, to) = mv.get_move();
 
-        let from_bitboard = BitBoard::from_square(*from);
-        let to_bitboard = BitBoard::from_square(*to);
+        let from_bitboard = BitBoard::from_square(from);
+        let to_bitboard = BitBoard::from_square(to);
         let move_bitboard = from_bitboard ^ to_bitboard;
 
-        let piece = self.get_piece(*from).ok_or(Error::NoPieceOnSquare)?;
+        let piece = self.get_piece(from).ok_or(Error::NoPieceOnSquare)?;
 
         let en_passant_square = self.en_passant_square();
         self.remove_en_passant();
 
-        if let Some(captured) = self.get_piece(*to) {
+        if let Some(captured) = self.get_piece(to) {
             self.xor(to_bitboard, captured, !self.side_to_move);
         }
         self.xor(move_bitboard, piece, self.side_to_move);
 
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
             &!self.side_to_move,
-            *to,
+            to,
         ));
 
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
             &self.side_to_move,
-            *from,
+            from,
         ));
 
         let castle = piece == Piece::King && (move_bitboard & get_castle_moves()) == move_bitboard;
@@ -433,13 +433,13 @@ impl Board {
 
         if let Piece::Pawn = piece {
             if let Some(promotion) = mv.get_promotion() {
-                self.xor(BitBoard::from_square(*to), Piece::Pawn, self.side_to_move);
-                self.xor(BitBoard::from_square(*to), promotion, self.side_to_move);
+                self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
+                self.xor(BitBoard::from_square(to), promotion, self.side_to_move);
             } else if from.get_rank() == self.side_to_move.to_second_rank()
                 && to.get_rank() == self.side_to_move.to_fourth_rank()
             {
                 self.set_en_passant(to.wrapping_backward(self.side_to_move));
-            } else if Some(*to) == en_passant_square {
+            } else if Some(to) == en_passant_square {
                 let side_to_move = self.side_to_move;
                 self.xor(
                     BitBoard::from_square(to.wrapping_backward(side_to_move)),
@@ -469,7 +469,7 @@ impl Board {
             return Err(Error::CannotMovePinned);
         }
 
-        self.side_to_move.flip();
+        self.side_to_move = !self.side_to_move;
 
         Ok(())
     }
@@ -738,19 +738,19 @@ impl Board {
             Color::Black => (BLACK_KING_SIDE, BLACK_QUEEN_SIDE),
         };
 
-        if self.get_attackers(king.to_square()) != EMPTY {
-            return EMPTY;
-        }
-
         let combined = self.combined();
-
+        
         let empty_kingside = (combined & king_side) == EMPTY;
         let empty_queenside = (combined & queen_side) == EMPTY;
-
+        
         if !empty_kingside && !empty_queenside {
             return EMPTY;
         }
 
+        if self.get_attackers(king.to_square()) != EMPTY {
+            return EMPTY;
+        }
+        
         let no_attackers_kingside = king_side
             .into_iter()
             .fold(EMPTY, |acc, square| acc | self.get_attackers(square))

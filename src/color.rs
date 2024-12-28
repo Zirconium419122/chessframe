@@ -56,11 +56,6 @@ impl Color {
     }
 
     #[inline]
-    pub fn flip(&mut self) {
-        *self = !*self;
-    }
-
-    #[inline]
     pub fn to_offset(self) -> usize {
         match self {
             Color::White => 0,

@@ -52,8 +52,8 @@ impl ChessMove {
         }
     }
 
-    pub fn get_move(&self) -> (&Square, &Square) {
-        (&self.from, &self.to)
+    pub fn get_move(&self) -> (Square, Square) {
+        (self.from, self.to)
     }
 
     pub fn get_promotion(&self) -> Option<Piece> {
