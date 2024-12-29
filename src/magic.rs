@@ -83,3 +83,8 @@ pub fn get_adjacent_files(file: File) -> BitBoard {
 pub fn get_rank(rank: Rank) -> BitBoard {
     unsafe { *RANKS.get_unchecked(rank.to_index()) }
 }
+
+#[inline]
+pub fn get_between(start: Square, end: Square) -> BitBoard {
+    unsafe { *BETWEEN.get_unchecked(start.to_index()).get_unchecked(end.to_index()) }
+}

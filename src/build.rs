@@ -19,6 +19,8 @@ fn main() {
 
     write_ranks(&mut file);
 
+    write_between(&mut file);
+
     write_pawn_moves(&mut file);
 
     write_pawn_attacks(&mut file);
