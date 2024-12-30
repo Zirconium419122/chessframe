@@ -4,7 +4,7 @@ use crate::{
     bitboard::{BitBoard, EMPTY},
     castling_rights::CastlingRights,
     chess_move::ChessMove,
-    color::Color,
+    color::{Color, COLORS},
     error::Error,
     file::File,
     magic::*,
@@ -18,6 +18,7 @@ pub struct Board {
     pub pieces: [BitBoard; 6],    // 6 for white, 6 for black
     pub occupancy: [BitBoard; 2], // white, black occupancy
     pub combined: BitBoard,       // combined occupancy
+    pub pinned: BitBoard,
     pub side_to_move: Color,
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<Square>,
@@ -44,6 +45,7 @@ impl Board {
             pieces: [BitBoard::default(); 6],
             occupancy: [BitBoard::default(); 2],
             combined: BitBoard::default(),
+            pinned: BitBoard::default(),
             side_to_move: Color::White,
             castling_rights: CastlingRights::default(),
             en_passant_square: None,
@@ -55,6 +57,20 @@ impl Board {
         board.parse_pieces(parts[0]);
 
         board.combined = board.occupancy(Color::White) | board.occupancy(Color::Black);
+
+        for color in COLORS {
+            let king_square = board.pieces_color(Piece::King, color).to_square();
+            let attackers = (get_bishop_moves(king_square, EMPTY) & (board.pieces_color(Piece::Bishop, !color) | board.pieces_color(Piece::Queen, !color)))
+                | (get_rook_moves(king_square, EMPTY) & (board.pieces_color(Piece::Rook, !color) | board.pieces_color(Piece::Queen, !color)));
+
+            for square in attackers {
+                let between = get_between(square, king_square) & board.occupancy(color);
+                if between.count_ones() == 1 {
+                    board.pinned ^= between;
+                    dbg!(board.pinned);
+                }
+            }
+        }
 
         board.side_to_move = match parts[1] {
             "w" => Color::White,
@@ -467,6 +483,17 @@ impl Board {
             .is_not_zero()
         {
             return Err(Error::CannotMovePinned);
+        }
+
+        let king_square = self.pieces_color(Piece::King, self.side_to_move).to_square();
+        let attackers = (get_bishop_moves(king_square, EMPTY) & (self.pieces_color(Piece::Bishop, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move)))
+            | (get_rook_moves(king_square, EMPTY) & (self.pieces_color(Piece::Rook, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move)));
+
+        for square in attackers {
+            let between = get_between(square, king_square) & self.occupancy(self.side_to_move);
+            if between.count_ones() == 1 {
+                self.pinned ^= between;
+            }
         }
 
         self.side_to_move = !self.side_to_move;

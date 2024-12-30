@@ -1,5 +1,5 @@
 use chess_frame::{
-    bitboard::BitBoard, board::*, chess_move::ChessMove, color::Color, piece::Piece, square::Square,
+    bitboard::{BitBoard, EMPTY}, board::*, chess_move::ChessMove, color::Color, piece::Piece, square::Square,
 };
 
 #[test]
@@ -192,6 +192,18 @@ fn test_make_move() {
         );
         assert_eq!(board.en_passant_square, None);
     }
+}
+
+#[test]
+fn test_pinned_bitboard() {
+    let fen = "r1bqk2r/pppp1ppp/2n2n2/4p3/1bB1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 1 5";
+    let mut board = Board::from_fen(fen);
+
+    assert_eq!(board.pinned, EMPTY);
+
+    board.make_move(&ChessMove::new(Square::B1, Square::C3)).unwrap();
+
+    assert_eq!(board.pinned, BitBoard(0x40000));
 }
 
 #[test]

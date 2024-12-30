@@ -211,6 +211,12 @@ impl BitBoard {
         Square::new(self.0.trailing_zeros() as u8)
     }
 
+    /// Get the number of set bits in the `BitBoard`.
+    #[inline]
+    pub fn count_ones(&self) -> u32 {
+        self.0.count_ones()
+    }
+
     /// Set the bit at `Square`.
     #[inline]
     pub fn set_bit(&mut self, square: Square) {
