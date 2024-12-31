@@ -19,6 +19,7 @@ pub struct Board {
     pub occupancy: [BitBoard; 2], // white, black occupancy
     pub combined: BitBoard,       // combined occupancy
     pub pinned: BitBoard,
+    pub check: bool,
     pub side_to_move: Color,
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<Square>,
@@ -46,6 +47,7 @@ impl Board {
             occupancy: [BitBoard::default(); 2],
             combined: BitBoard::default(),
             pinned: BitBoard::default(),
+            check: false,
             side_to_move: Color::White,
             castling_rights: CastlingRights::default(),
             en_passant_square: None,
@@ -64,13 +66,17 @@ impl Board {
                 | (get_rook_moves(king_square, EMPTY) & (board.pieces_color(Piece::Rook, !color) | board.pieces_color(Piece::Queen, !color)));
 
             for square in attackers {
-                let between = get_between(square, king_square) & board.occupancy(color);
+                let between = get_between(square, king_square) & board.combined();
                 if between.count_ones() == 1 {
-                    board.pinned ^= between;
-                    dbg!(board.pinned);
+                    board.pinned ^= between & board.occupancy(color);
+                } else if between.count_ones() == 0 {
+                    board.check = true;
                 }
             }
         }
+
+        let knights = get_knight_moves(board.pieces_color(Piece::King, board.side_to_move).to_square()) & board.pieces_color(Piece::Knight, !board.side_to_move);
+        board.check = knights.count_ones() > 0;
 
         board.side_to_move = match parts[1] {
             "w" => Color::White,
@@ -400,6 +406,8 @@ impl Board {
     pub fn make_move(&mut self, mv: &ChessMove) -> Result<(), Error> {
         let (from, to) = mv.get_move();
 
+        self.check = false;
+
         let from_bitboard = BitBoard::from_square(from);
         let to_bitboard = BitBoard::from_square(to);
         let move_bitboard = from_bitboard ^ to_bitboard;
@@ -424,6 +432,8 @@ impl Board {
             from,
         ));
 
+        let king_square = self.pieces_color(Piece::King, !self.side_to_move).to_square();
+        
         let castle = piece == Piece::King && (move_bitboard & get_castle_moves()) == move_bitboard;
 
         const CASTLE_ROOK_START: [File; 8] = [
@@ -447,14 +457,21 @@ impl Board {
             File::F,
         ];
 
-        if let Piece::Pawn = piece {
-            if let Some(promotion) = mv.get_promotion() {
+        if let Piece::Knight = piece {
+            self.check = get_knight_moves(king_square) & to_bitboard != EMPTY;
+        } else if let Piece::Pawn = piece {
+            if let Some(Piece::Knight) = mv.get_promotion() {
+                self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
+                self.xor(BitBoard::from_square(to), Piece::Knight, self.side_to_move);
+                self.check = get_knight_moves(king_square) & to_bitboard != EMPTY;
+            } else if let Some(promotion) = mv.get_promotion() {
                 self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
                 self.xor(BitBoard::from_square(to), promotion, self.side_to_move);
             } else if from.get_rank() == self.side_to_move.to_second_rank()
                 && to.get_rank() == self.side_to_move.to_fourth_rank()
             {
                 self.set_en_passant(to.wrapping_backward(self.side_to_move));
+                self.check = get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY;
             } else if Some(to) == en_passant_square {
                 let side_to_move = self.side_to_move;
                 self.xor(
@@ -462,6 +479,9 @@ impl Board {
                     Piece::Pawn,
                     !side_to_move,
                 );
+                self.check = get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY;
+            } else {
+                self.check = get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY;
             }
         } else if castle {
             let index = to.get_file().to_index();
@@ -475,6 +495,18 @@ impl Board {
             self.xor(start ^ end, Piece::Rook, self.side_to_move);
         }
 
+        let attackers = (get_bishop_moves(king_square, EMPTY) & (self.pieces_color(Piece::Bishop, self.side_to_move) | self.pieces_color(Piece::Queen, self.side_to_move)))
+            | (get_rook_moves(king_square, EMPTY) & (self.pieces_color(Piece::Rook, self.side_to_move) | self.pieces_color(Piece::Queen, self.side_to_move)));
+
+        for square in attackers {
+            let between = get_between(square, king_square) & self.combined();
+            if between.count_ones() == 1 {
+                self.pinned ^= between & self.occupancy(self.side_to_move);
+            } else if between == EMPTY {
+                self.check = true;
+            }
+        }
+        
         if self
             .get_attackers(
                 self.pieces_color(Piece::King, self.side_to_move)
@@ -483,17 +515,6 @@ impl Board {
             .is_not_zero()
         {
             return Err(Error::CannotMovePinned);
-        }
-
-        let king_square = self.pieces_color(Piece::King, self.side_to_move).to_square();
-        let attackers = (get_bishop_moves(king_square, EMPTY) & (self.pieces_color(Piece::Bishop, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move)))
-            | (get_rook_moves(king_square, EMPTY) & (self.pieces_color(Piece::Rook, !self.side_to_move) | self.pieces_color(Piece::Queen, !self.side_to_move)));
-
-        for square in attackers {
-            let between = get_between(square, king_square) & self.occupancy(self.side_to_move);
-            if between.count_ones() == 1 {
-                self.pinned ^= between;
-            }
         }
 
         self.side_to_move = !self.side_to_move;

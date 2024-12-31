@@ -21,6 +21,8 @@ fn main() {
 
     write_between(&mut file);
 
+    write_tangent(&mut file);
+
     write_pawn_moves(&mut file);
 
     write_pawn_attacks(&mut file);

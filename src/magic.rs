@@ -88,3 +88,8 @@ pub fn get_rank(rank: Rank) -> BitBoard {
 pub fn get_between(start: Square, end: Square) -> BitBoard {
     unsafe { *BETWEEN.get_unchecked(start.to_index()).get_unchecked(end.to_index()) }
 }
+
+#[inline]
+pub fn get_tangent(start: Square, end: Square) -> BitBoard {
+    unsafe { *TANGENT.get_unchecked(start.to_index()).get_unchecked(end.to_index()) }
+}
