@@ -19,7 +19,7 @@ pub struct Board {
     pub occupancy: [BitBoard; 2], // white, black occupancy
     pub combined: BitBoard,       // combined occupancy
     pub pinned: BitBoard,
-    pub check: bool,
+    pub check: u8,
     pub side_to_move: Color,
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<Square>,
@@ -47,7 +47,7 @@ impl Board {
             occupancy: [BitBoard::default(); 2],
             combined: BitBoard::default(),
             pinned: BitBoard::default(),
-            check: false,
+            check: 0,
             side_to_move: Color::White,
             castling_rights: CastlingRights::default(),
             en_passant_square: None,
@@ -60,6 +60,9 @@ impl Board {
 
         board.combined = board.occupancy(Color::White) | board.occupancy(Color::Black);
 
+        let knights = get_knight_moves(board.pieces_color(Piece::King, board.side_to_move).to_square()) & board.pieces_color(Piece::Knight, !board.side_to_move);
+        board.check = (knights.count_ones() > 0) as u8;
+
         for color in COLORS {
             let king_square = board.pieces_color(Piece::King, color).to_square();
             let attackers = (get_bishop_moves(king_square, EMPTY) & (board.pieces_color(Piece::Bishop, !color) | board.pieces_color(Piece::Queen, !color)))
@@ -70,13 +73,10 @@ impl Board {
                 if between.count_ones() == 1 {
                     board.pinned ^= between & board.occupancy(color);
                 } else if between.count_ones() == 0 {
-                    board.check = true;
+                    board.check += 1;
                 }
             }
         }
-
-        let knights = get_knight_moves(board.pieces_color(Piece::King, board.side_to_move).to_square()) & board.pieces_color(Piece::Knight, !board.side_to_move);
-        board.check = knights.count_ones() > 0;
 
         board.side_to_move = match parts[1] {
             "w" => Color::White,
@@ -406,7 +406,7 @@ impl Board {
     pub fn make_move(&mut self, mv: &ChessMove) -> Result<(), Error> {
         let (from, to) = mv.get_move();
 
-        self.check = false;
+        self.check = 0;
 
         let from_bitboard = BitBoard::from_square(from);
         let to_bitboard = BitBoard::from_square(to);
@@ -458,12 +458,12 @@ impl Board {
         ];
 
         if let Piece::Knight = piece {
-            self.check = get_knight_moves(king_square) & to_bitboard != EMPTY;
+            self.check = (get_knight_moves(king_square) & to_bitboard != EMPTY) as u8;
         } else if let Piece::Pawn = piece {
             if let Some(Piece::Knight) = mv.get_promotion() {
                 self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
                 self.xor(BitBoard::from_square(to), Piece::Knight, self.side_to_move);
-                self.check = get_knight_moves(king_square) & to_bitboard != EMPTY;
+                self.check = (get_knight_moves(king_square) & to_bitboard != EMPTY) as u8;
             } else if let Some(promotion) = mv.get_promotion() {
                 self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
                 self.xor(BitBoard::from_square(to), promotion, self.side_to_move);
@@ -471,7 +471,7 @@ impl Board {
                 && to.get_rank() == self.side_to_move.to_fourth_rank()
             {
                 self.set_en_passant(to.wrapping_backward(self.side_to_move));
-                self.check = get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY;
+                self.check = (get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY) as u8;
             } else if Some(to) == en_passant_square {
                 let side_to_move = self.side_to_move;
                 self.xor(
@@ -479,9 +479,9 @@ impl Board {
                     Piece::Pawn,
                     !side_to_move,
                 );
-                self.check = get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY;
+                self.check = (get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY) as u8;
             } else {
-                self.check = get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY;
+                self.check = (get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY) as u8;
             }
         } else if castle {
             let index = to.get_file().to_index();
@@ -503,7 +503,7 @@ impl Board {
             if between.count_ones() == 1 {
                 self.pinned ^= between & self.occupancy(self.side_to_move);
             } else if between == EMPTY {
-                self.check = true;
+                self.check += 1;
             }
         }
         
@@ -574,61 +574,71 @@ impl Board {
         let opponent_occupancy = self.occupancy(!self.side_to_move);
         let blockers = self.combined();
 
-        for piece in [
-            Piece::Knight,
-            Piece::Bishop,
-            Piece::Rook,
-            Piece::Queen,
-            Piece::King,
-        ] {
-            for src in self.pieces_color(piece, self.side_to_move).into_iter() {
-                let generated_moves = match piece {
-                    Piece::Knight => get_knight_moves(src),
-                    Piece::Bishop => get_bishop_moves(src, blockers),
-                    Piece::Rook => get_rook_moves(src, blockers),
-                    Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
-                    Piece::King => get_king_moves(src) | self.generate_castling_moves(),
-                    _ => unreachable!(),
-                } & !allied_pieces;
+        if self.check < 2 {
+            for piece in [
+                Piece::Knight,
+                Piece::Bishop,
+                Piece::Rook,
+                Piece::Queen,
+                Piece::King,
+            ] {
+                for src in self.pieces_color(piece, self.side_to_move).into_iter() {
+                    let generated_moves = match piece {
+                        Piece::Knight => get_knight_moves(src),
+                        Piece::Bishop => get_bishop_moves(src, blockers),
+                        Piece::Rook => get_rook_moves(src, blockers),
+                        Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
+                        Piece::King => get_king_moves(src) | if self.check < 1 { self.generate_castling_moves() } else { EMPTY },
+                        _ => unreachable!(),
+                    } & !allied_pieces;
+    
+                    generated_moves
+                        .into_iter()
+                        .for_each(|dest| moves.push(ChessMove::new(src, dest)));
+                }
+            }
+    
+            for src in self
+                .pieces_color(Piece::Pawn, self.side_to_move)
+                .into_iter()
+            {
+                let pawn_moves = {
+                    if (BitBoard::from_square(src.wrapping_forward(self.side_to_move))
+                        & !self.combined())
+                        != EMPTY
+                    {
+                        get_pawn_moves(src, self.side_to_move) & !self.combined()
+                    } else {
+                        EMPTY
+                    }
+                } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy);
+    
+                pawn_moves.into_iter().for_each(|dest| {
+                    if self.is_promotion(&dest) {
+                        moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
+                        moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
+                        moves.push(ChessMove::new_promotion(src, dest, Piece::Rook));
+                        moves.push(ChessMove::new_promotion(src, dest, Piece::Queen));
+                    } else {
+                        moves.push(ChessMove::new(src, dest));
+                    }
+                });
+            }
+    
+            if let Some(en_passant) = self.en_passant_square {
+                for src in get_pawn_attacks(en_passant, !self.side_to_move)
+                    & self.pieces_color(Piece::Pawn, self.side_to_move)
+                {
+                    moves.push(ChessMove::new(src, en_passant));
+                }
+            }
+        } else {
+            for src in self.pieces_color(Piece::King, self.side_to_move).into_iter() {
+                let generated_moves = get_king_moves(src) & !allied_pieces;
 
                 generated_moves
                     .into_iter()
                     .for_each(|dest| moves.push(ChessMove::new(src, dest)));
-            }
-        }
-
-        for src in self
-            .pieces_color(Piece::Pawn, self.side_to_move)
-            .into_iter()
-        {
-            let pawn_moves = {
-                if (BitBoard::from_square(src.wrapping_forward(self.side_to_move))
-                    & !self.combined())
-                    != EMPTY
-                {
-                    get_pawn_moves(src, self.side_to_move) & !self.combined()
-                } else {
-                    EMPTY
-                }
-            } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy);
-
-            pawn_moves.into_iter().for_each(|dest| {
-                if self.is_promotion(&dest) {
-                    moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
-                    moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
-                    moves.push(ChessMove::new_promotion(src, dest, Piece::Rook));
-                    moves.push(ChessMove::new_promotion(src, dest, Piece::Queen));
-                } else {
-                    moves.push(ChessMove::new(src, dest));
-                }
-            });
-        }
-
-        if let Some(en_passant) = self.en_passant_square {
-            for src in get_pawn_attacks(en_passant, !self.side_to_move)
-                & self.pieces_color(Piece::Pawn, self.side_to_move)
-            {
-                moves.push(ChessMove::new(src, en_passant));
             }
         }
 
@@ -642,6 +652,7 @@ impl Board {
 
     /// Get attackers for a given square.
     #[rustfmt::skip]
+    #[inline]
     pub fn get_attackers(&self, square: Square) -> BitBoard {
         let mut attackers = BitBoard::default();
         let combined = self.combined();
@@ -680,6 +691,7 @@ impl Board {
     }
 
     /// Generate all en passants.
+    #[inline]
     pub fn generate_en_passant(&self) -> BitBoard {
         if let Some(en_passant) = self.en_passant_square {
             if (get_pawn_attacks(en_passant, !self.side_to_move)
@@ -694,6 +706,7 @@ impl Board {
     }
 
     /// Check if a square is a promotion square.
+    #[inline]
     pub fn is_promotion(&self, square: &Square) -> bool {
         match self.side_to_move {
             Color::White => square.get_rank() == Rank::Eighth,
