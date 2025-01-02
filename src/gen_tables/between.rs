@@ -1,9 +1,12 @@
 use std::fs::File;
 use std::io::Write;
 
-use crate::{bitboard::{BitBoard, EMPTY}, square::SQUARES};
+use crate::{
+    bitboard::{BitBoard, EMPTY},
+    square::SQUARES,
+};
 
-use super::helpers::{diagonal, orthagonal, between};
+use super::helpers::{between, diagonal, orthagonal};
 
 static mut BETWEEN: [[BitBoard; 64]; 64] = [[EMPTY; 64]; 64];
 
@@ -15,9 +18,13 @@ pub fn generate_between() {
                     .iter()
                     .filter(|test| {
                         if diagonal(*src, *dest) && src != dest {
-                            diagonal(*src, **test) && diagonal(*dest, **test) && between(*src, *dest, **test)
+                            diagonal(*src, **test)
+                                && diagonal(*dest, **test)
+                                && between(*src, *dest, **test)
                         } else if orthagonal(*src, *dest) && src != dest {
-                            orthagonal(*src, **test) && orthagonal(*dest, **test) && between(*src, *dest, **test)
+                            orthagonal(*src, **test)
+                                && orthagonal(*dest, **test)
+                                && between(*src, *dest, **test)
                         } else {
                             false
                         }

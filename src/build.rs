@@ -7,6 +7,7 @@ mod color;
 mod error;
 mod file;
 mod gen_tables;
+mod piece;
 mod rank;
 mod square;
 
@@ -34,4 +35,6 @@ fn main() {
     write_rook_moves(&mut file);
 
     write_king_moves(&mut file);
+
+    write_zobrist(&mut file);
 }

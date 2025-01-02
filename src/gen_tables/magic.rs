@@ -12,7 +12,7 @@ use crate::{
 };
 
 #[allow(dead_code)]
-enum Piece {
+enum MagicPiece {
     Bishop,
     Rook,
 }
@@ -83,10 +83,11 @@ fn flatten_data(data: ([Magic; 64], [Vec<BitBoard>; 64])) -> ([Magic; 64], Vec<B
     (updated_magic, flattened_moves)
 }
 
-fn find_magic(piece: Piece, square: Square) -> Result<(Magic, Vec<BitBoard>), &'static str> {
+#[rustfmt::skip]
+fn find_magic(piece: MagicPiece, square: Square) -> Result<(Magic, Vec<BitBoard>), &'static str> {
     let mask = match piece {
-        Piece::Bishop => generate_bishop_moves(square, BitBoard(0)) & BitBoard(0x007e7e7e7e7e7e00),
-        Piece::Rook => generate_rook_mask(square),
+        MagicPiece::Bishop => generate_bishop_moves(square, BitBoard(0)) & BitBoard(0x007e7e7e7e7e7e00),
+        MagicPiece::Rook => generate_rook_mask(square),
     };
 
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
@@ -109,14 +110,14 @@ fn find_magic(piece: Piece, square: Square) -> Result<(Magic, Vec<BitBoard>), &'
     Err("Failed to find magic!")
 }
 
-fn try_make_table(piece: &Piece, square: Square, magic: Magic) -> Result<Vec<BitBoard>, &str> {
+fn try_make_table(piece: &MagicPiece, square: Square, magic: Magic) -> Result<Vec<BitBoard>, &str> {
     let mut table: Vec<BitBoard> =
         vec![BitBoard::default(); 1 << magic.mask.0.count_ones() as usize];
 
     for blockers in subsets(magic.mask) {
         let moves = match piece {
-            Piece::Bishop => generate_bishop_moves(square, blockers),
-            Piece::Rook => generate_rook_moves(square, blockers),
+            MagicPiece::Bishop => generate_bishop_moves(square, blockers),
+            MagicPiece::Rook => generate_rook_moves(square, blockers),
         };
         let table_entry = &mut table[magic_index(magic, blockers)];
 
@@ -146,7 +147,7 @@ fn generate_bishop_magics_and_moves() -> ([Magic; 64], Vec<BitBoard>) {
     let mut moves = [const { Vec::new() }; 64];
 
     for square in SQUARES {
-        let magic_moves = find_magic(Piece::Bishop, square).unwrap();
+        let magic_moves = find_magic(MagicPiece::Bishop, square).unwrap();
         magics[square.to_index()] = magic_moves.0;
         moves[square.to_index()] = magic_moves.1;
     }
@@ -193,7 +194,7 @@ fn generate_rook_moves_and_magics() -> ([Magic; 64], Vec<BitBoard>) {
     let mut moves = [const { Vec::new() }; 64];
 
     for square in SQUARES {
-        let magic_moves = find_magic(Piece::Rook, square).unwrap();
+        let magic_moves = find_magic(MagicPiece::Rook, square).unwrap();
         magics[square.to_index()] = magic_moves.0;
         moves[square.to_index()] = magic_moves.1;
     }

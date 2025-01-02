@@ -18,6 +18,10 @@ impl CastlingRights {
         CastlingRights(0b0000)
     }
 
+    pub fn to_index(self) -> usize {
+        self.0 as usize
+    }
+
     pub fn from_fen(fen: &str) -> Self {
         let mut castling_rights = CastlingRights::new();
 
@@ -35,6 +39,12 @@ impl CastlingRights {
         }
 
         castling_rights
+    }
+
+    pub fn color(&self, color: Color) -> CastlingRights {
+        const MASK: u8 = 0b0011;
+
+        CastlingRights(self.0 & (MASK << (color as u8 * CastlingRights::OFFSET)))
     }
 
     pub fn square_to_castle_rights(color: &Color, square: Square) -> CastlingRights {

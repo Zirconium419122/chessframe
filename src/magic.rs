@@ -1,4 +1,7 @@
-use crate::{bitboard::BitBoard, color::Color, file::File, rank::Rank, square::Square};
+use crate::{
+    bitboard::BitBoard, castling_rights::CastlingRights, color::Color, file::File, piece::Piece,
+    rank::Rank, square::Square,
+};
 
 include!("tables.rs");
 
@@ -86,10 +89,55 @@ pub fn get_rank(rank: Rank) -> BitBoard {
 
 #[inline]
 pub fn get_between(start: Square, end: Square) -> BitBoard {
-    unsafe { *BETWEEN.get_unchecked(start.to_index()).get_unchecked(end.to_index()) }
+    unsafe {
+        *BETWEEN
+            .get_unchecked(start.to_index())
+            .get_unchecked(end.to_index())
+    }
 }
 
 #[inline]
 pub fn get_tangent(start: Square, end: Square) -> BitBoard {
-    unsafe { *TANGENT.get_unchecked(start.to_index()).get_unchecked(end.to_index()) }
+    unsafe {
+        *TANGENT
+            .get_unchecked(start.to_index())
+            .get_unchecked(end.to_index())
+    }
+}
+
+pub struct Zobrist;
+
+impl Zobrist {
+    #[inline]
+    pub fn get_side_to_move() -> u64 {
+        ZOBRIST_SIDE_TO_MOVE
+    }
+
+    #[inline]
+    pub fn get_piece(piece: Piece, square: Square, color: Color) -> u64 {
+        unsafe {
+            *ZOBRIST_PIECES
+                .get_unchecked(color.to_index())
+                .get_unchecked(piece.to_index())
+                .get_unchecked(square.to_index())
+        }
+    }
+
+    #[inline]
+    pub fn get_castle(castling_rights: CastlingRights, color: Color) -> u64 {
+        unsafe {
+            *ZOBRIST_CASTLE
+                .get_unchecked(color.to_index())
+                .get_unchecked(castling_rights.color(color).to_index())
+        }
+    }
+
+    #[inline]
+    pub fn get_en_passant(file: File, color: Color) -> u64 {
+        unsafe {
+            *ZOBRIST_ENPASSANT
+                .get_unchecked(color.to_index())
+                .get_unchecked(file.to_index())
+        }
+    }
 }

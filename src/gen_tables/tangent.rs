@@ -1,7 +1,10 @@
 use std::fs::File;
 use std::io::Write;
 
-use crate::{bitboard::{BitBoard, EMPTY}, square::SQUARES};
+use crate::{
+    bitboard::{BitBoard, EMPTY},
+    square::SQUARES,
+};
 
 use super::helpers::{diagonal, orthagonal};
 

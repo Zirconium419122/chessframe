@@ -1,5 +1,10 @@
 use chess_frame::{
-    bitboard::{BitBoard, EMPTY}, board::*, chess_move::ChessMove, color::Color, piece::Piece, square::Square,
+    bitboard::{BitBoard, EMPTY},
+    board::*,
+    chess_move::ChessMove,
+    color::Color,
+    piece::Piece,
+    square::Square,
 };
 
 #[test]
@@ -201,9 +206,27 @@ fn test_pinned_bitboard() {
 
     assert_eq!(board.pinned, EMPTY);
 
-    board.make_move(&ChessMove::new(Square::B1, Square::C3)).unwrap();
+    board
+        .make_move(&ChessMove::new(Square::B1, Square::C3))
+        .unwrap();
 
     assert_eq!(board.pinned, BitBoard(0x40000));
+}
+
+#[test]
+fn test_hash() {
+    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    let mut board = Board::from_fen(fen);
+
+    assert_eq!(board.hash, 0x89fb87680071bbf1);
+    assert_eq!(board.get_hash(), 0x50fe28372fb16079);
+
+    board
+        .make_move(&ChessMove::new(Square::E2, Square::E4))
+        .unwrap();
+
+    assert_eq!(board.hash, 0x78a96839bd08e4c4);
+    assert_eq!(board.get_hash(), 0x24e422090249293);
 }
 
 #[test]
