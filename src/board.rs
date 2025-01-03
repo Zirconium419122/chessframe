@@ -443,7 +443,8 @@ impl Board {
         if let Some(captured) = self.get_piece(to) {
             self.xor(to_bitboard, captured, !self.side_to_move);
         }
-        self.xor(move_bitboard, piece, self.side_to_move);
+        self.xor(from_bitboard, piece, self.side_to_move);
+        self.xor(to_bitboard, piece, self.side_to_move);
 
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
             &!self.side_to_move,
@@ -515,7 +516,8 @@ impl Board {
                 *CASTLE_ROOK_END.get_unchecked(index)
             });
 
-            self.xor(start ^ end, Piece::Rook, self.side_to_move);
+            self.xor(start, Piece::Rook, self.side_to_move);
+            self.xor(end, Piece::Rook, self.side_to_move);
         }
 
         let attackers = (get_bishop_moves(king_square, EMPTY) & (self.pieces_color(Piece::Bishop, self.side_to_move) | self.pieces_color(Piece::Queen, self.side_to_move)))
