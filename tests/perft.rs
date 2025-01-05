@@ -10,10 +10,6 @@ impl Perft {
     }
 
     fn perft(&mut self, board: &Board, depth: usize, divide: bool) -> usize {
-        if depth == 0 {
-            return 1;
-        }
-    
         if let Some((perft_result, transposition_depth)) = self.0.get(&board.get_hash()) {
             if *transposition_depth == depth {
                 return *perft_result;
@@ -24,7 +20,11 @@ impl Perft {
     
         for mv in board.generate_moves_vec() {
             if let Ok(ref board) = board.make_move_new(&mv) {
-                let perft_results = self.perft(board, depth - 1, false);
+                let perft_results = if depth == 1 {
+                    1
+                } else {
+                    self.perft(board, depth - 1, false)
+                };
                 count += perft_results;
     
                 if divide {
