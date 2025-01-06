@@ -1,8 +1,7 @@
 use std::io;
 
 use chess_frame::{
-    board::Board,
-    uci::{Uci, UciCommand},
+    bitboard::EMPTY, board::Board, uci::{Uci, UciCommand}
 };
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 
@@ -108,7 +107,7 @@ impl Uci for RandomMoveMaker {
                     if let Some(ref mut board) = self.board {
                         let mut moves = Vec::new();
 
-                        for mv in board.generate_moves_vec() {
+                        for mv in board.generate_moves_vec(!EMPTY) {
                             if let Ok(_) = board.make_move_new(&mv) {
                                 moves.push(mv);
                             }

@@ -1,4 +1,4 @@
-use chess_frame::board::Board;
+use chess_frame::{bitboard::EMPTY, board::Board};
 
 struct Perft(std::collections::HashMap<u64, (usize, usize)>);
 
@@ -18,7 +18,7 @@ impl Perft {
     
         let mut count = 0;
     
-        for mv in board.generate_moves_vec() {
+        for mv in board.generate_moves_vec(!EMPTY) {
             if let Ok(ref board) = board.make_move_new(&mv) {
                 let perft_results = if depth == 1 {
                     1

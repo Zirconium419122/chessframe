@@ -591,7 +591,7 @@ impl Board {
 
     /// Generate a vector of psudo-legal `ChessMoves`'s.
     #[rustfmt::skip]
-    pub fn generate_moves_vec(&self) -> Vec<ChessMove> {
+    pub fn generate_moves_vec(&self, mask: BitBoard) -> Vec<ChessMove> {
         let mut moves: Vec<ChessMove> = Vec::with_capacity(218);
 
         let allied_pieces = self.occupancy(self.side_to_move);
@@ -614,7 +614,7 @@ impl Board {
                         Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
                         Piece::King => get_king_moves(src) | if self.check < 1 { self.generate_castling_moves() } else { EMPTY },
                         _ => unreachable!(),
-                    } & !allied_pieces;
+                    } & !allied_pieces & mask;
 
                     generated_moves
                         .into_iter()
@@ -635,7 +635,7 @@ impl Board {
                     } else {
                         EMPTY
                     }
-                } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy);
+                } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy) & mask;
 
                 pawn_moves.into_iter().for_each(|dest| {
                     if self.is_promotion(&dest) {
@@ -650,10 +650,12 @@ impl Board {
             }
 
             if let Some(en_passant) = self.en_passant_square {
-                for src in get_pawn_attacks(en_passant, !self.side_to_move)
-                    & self.pieces_color(Piece::Pawn, self.side_to_move)
-                {
-                    moves.push(ChessMove::new(src, en_passant));
+                if mask & BitBoard::from_square(en_passant) != EMPTY {
+                    for src in get_pawn_attacks(en_passant, !self.side_to_move)
+                        & self.pieces_color(Piece::Pawn, self.side_to_move)
+                    {
+                        moves.push(ChessMove::new(src, en_passant));
+                    }
                 }
             }
         } else {
@@ -661,7 +663,7 @@ impl Board {
                 .pieces_color(Piece::King, self.side_to_move)
                 .into_iter()
             {
-                let generated_moves = get_king_moves(src) & !allied_pieces;
+                let generated_moves = get_king_moves(src) & !allied_pieces & mask;
 
                 generated_moves
                     .into_iter()

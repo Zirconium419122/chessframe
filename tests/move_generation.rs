@@ -1,11 +1,11 @@
-use chess_frame::{bitboard::BitBoard, board::*};
+use chess_frame::{bitboard::{BitBoard, EMPTY}, board::*};
 
 #[test]
 fn test_generate_moves_vec() {
     let fen = "8/p7/1k2Pp2/1P3P2/1K6/8/8/8 w - - 0 1";
     let board = Board::from_fen(fen);
 
-    let moves = board.generate_moves_vec();
+    let moves = board.generate_moves_vec(!EMPTY);
     assert_eq!(moves.len(), 8)
 }
 
