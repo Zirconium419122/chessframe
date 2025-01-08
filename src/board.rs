@@ -69,14 +69,14 @@ impl Board {
 
         for color in COLORS {
             let king_square = board.pieces_color(Piece::King, color).to_square();
-            let attackers = (get_bishop_moves(king_square, EMPTY) & (board.pieces_color(Piece::Bishop, !color) | board.pieces_color(Piece::Queen, !color)))
-                | (get_rook_moves(king_square, EMPTY) & (board.pieces_color(Piece::Rook, !color) | board.pieces_color(Piece::Queen, !color)));
+            let attackers = board.occupancy(board.side_to_move) & ((get_bishop_moves(king_square, EMPTY) & (board.pieces(Piece::Bishop) | board.pieces(Piece::Queen)))
+                | (get_rook_moves(king_square, EMPTY) & (board.pieces(Piece::Rook) | board.pieces(Piece::Queen))));
 
             for square in attackers {
                 let between = get_between(square, king_square) & board.combined();
                 if between.count_ones() == 1 {
-                    board.pinned ^= between & board.occupancy(color);
-                } else if between.count_ones() == 0 {
+                    board.pinned ^= between & board.occupancy(!board.side_to_move);
+                } else if between == EMPTY {
                     board.check += 1;
                 }
             }
@@ -520,13 +520,13 @@ impl Board {
             self.xor(end, Piece::Rook, self.side_to_move);
         }
 
-        let attackers = (get_bishop_moves(king_square, EMPTY) & (self.pieces_color(Piece::Bishop, self.side_to_move) | self.pieces_color(Piece::Queen, self.side_to_move)))
-            | (get_rook_moves(king_square, EMPTY) & (self.pieces_color(Piece::Rook, self.side_to_move) | self.pieces_color(Piece::Queen, self.side_to_move)));
+        let attackers = self.occupancy(self.side_to_move) & ((get_bishop_moves(king_square, EMPTY) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
+            | (get_rook_moves(king_square, EMPTY) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
 
         for square in attackers {
             let between = get_between(square, king_square) & self.combined();
             if between.count_ones() == 1 {
-                self.pinned ^= between & self.occupancy(self.side_to_move);
+                self.pinned ^= between & self.occupancy(!self.side_to_move);
             } else if between == EMPTY {
                 self.check += 1;
             }

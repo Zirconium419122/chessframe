@@ -209,6 +209,10 @@ fn test_pinned_bitboard() {
     board
         .make_move(&ChessMove::new(Square::B1, Square::C3))
         .unwrap();
+    
+    board
+        .make_move(&ChessMove::new(Square::E8, Square::G8))
+        .unwrap();
 
     assert_eq!(board.pinned, BitBoard(0x40000));
 }
