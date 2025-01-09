@@ -1,15 +1,17 @@
 use std::io;
 
 use chess_frame::{
-    bitboard::EMPTY, board::Board, uci::{Uci, UciCommand}
+    bitboard::EMPTY, board::Board, color::Color, piece::PIECES, uci::{Uci, UciCommand}
 };
 
-struct CaptureMaker {
+const PIECE_VALUES: [isize; 6] = [100, 300, 325, 500, 900, 0];
+
+struct SimpleMoveMaker {
     board: Option<Board>,
     quitting: bool,
 }
 
-impl CaptureMaker {
+impl SimpleMoveMaker {
     pub fn new() -> Self {
         Self {
             board: None,
@@ -26,9 +28,40 @@ impl CaptureMaker {
             }
         }
     }
+
+    fn search(board: &Board, depth: usize) -> isize {
+        if depth == 0 {
+            return Self::evaluate(board);
+        }
+
+        let mut max = isize::MIN;
+
+        for mv in board.generate_moves_vec(!EMPTY) {
+            if let Ok(board) = board.make_move_new(&mv) {
+                let score = -Self::search(&board, depth - 1);
+
+                if score > max {
+                    max = score;
+                }
+            }
+        }
+
+        max
+    }
+
+    fn evaluate(board: &Board) -> isize {
+        let mut score = 0;
+
+        for piece in PIECES.iter() {
+            score += board.pieces_color(*piece, Color::White).count_ones() as isize * PIECE_VALUES[piece.to_index()];
+            score -= board.pieces_color(*piece, Color::Black).count_ones() as isize * PIECE_VALUES[piece.to_index()];
+        }
+
+        score
+    }
 }
 
-impl Uci for CaptureMaker {
+impl Uci for SimpleMoveMaker {
     fn send_command(&mut self, command: UciCommand) {
         match command {
             UciCommand::Id { name, author } => {
@@ -67,7 +100,7 @@ impl Uci for CaptureMaker {
             match command {
                 UciCommand::Uci => {
                     self.send_command(UciCommand::Id {
-                        name: "Capture Maker".to_string(),
+                        name: "Simple Move Maker".to_string(),
                         author: "Zirconium419122".to_string(),
                     });
                     self.send_command(UciCommand::UciOk);
@@ -102,30 +135,27 @@ impl Uci for CaptureMaker {
                 }
                 UciCommand::Go { .. } => {
                     if let Some(ref board) = self.board {
-                        let mut moves = Vec::new();
+                        let mut max = isize::MIN;
+                        let mut best_move = None;
 
-                        for mv in board.generate_moves_vec(board.occupancy(!board.side_to_move)) {
-                            if let Ok(_) = board.make_move_new(&mv) {
-                                moves.push(mv);
-                            }
-                        }
+                        for mv in board.generate_moves_vec(!EMPTY) {
+                            if let Ok(board) = board.make_move_new(&mv) {
+                                let score = Self::search(&board, 4);
 
-                        if moves.is_empty() {
-                            for mv in board.generate_moves_vec(!EMPTY) {
-                                if let Ok(_) = board.make_move_new(&mv) {
-                                    moves.push(mv);
+                                if score > max {
+                                    max = score;
+                                    best_move = Some(mv);
                                 }
                             }
                         }
 
-                        dbg!(&moves);
-                        let mv = moves[0].clone();
-
-                        self.send_command(UciCommand::Info(format!("pv {}", mv)));
-                        self.send_command(UciCommand::BestMove {
-                            best_move: mv.to_string(),
-                            ponder: None,
-                        });
+                        if let Some(best_move) = best_move {
+                            self.send_command(UciCommand::Info(format!("pv {}", best_move)));
+                            self.send_command(UciCommand::BestMove {
+                                best_move: best_move.to_string(),
+                                ponder: None,
+                            });
+                        }
                     }
                 }
                 UciCommand::Stop => {}
@@ -137,6 +167,6 @@ impl Uci for CaptureMaker {
 }
 
 fn main() {
-    let mut engine = CaptureMaker::new();
+    let mut engine = SimpleMoveMaker::new();
     engine.run();
 }
