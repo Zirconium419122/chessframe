@@ -29,7 +29,7 @@ impl SimpleMoveMaker {
         }
     }
 
-    fn search(board: &Board, depth: usize) -> isize {
+    fn search(board: &Board, alpha: &mut isize, beta: isize, depth: usize) -> isize {
         if depth == 0 {
             return Self::evaluate(board);
         }
@@ -38,10 +38,16 @@ impl SimpleMoveMaker {
 
         for mv in board.generate_moves_vec(!EMPTY) {
             if let Ok(board) = board.make_move_new(&mv) {
-                let score = -Self::search(&board, depth - 1);
+                let score = -Self::search(&board, &mut -beta, -*alpha, depth - 1);
 
                 if score > max {
                     max = score;
+                    if score > *alpha {
+                        *alpha = score;
+                    }
+                }
+                if score >= beta {
+                    return max;
                 }
             }
         }
@@ -135,21 +141,21 @@ impl Uci for SimpleMoveMaker {
                 }
                 UciCommand::Go { .. } => {
                     if let Some(ref board) = self.board {
-                        let mut max = isize::MIN;
-                        let mut best_move = None;
+                        let mut moves = Vec::new();
 
                         for mv in board.generate_moves_vec(!EMPTY) {
                             if let Ok(board) = board.make_move_new(&mv) {
-                                let score = Self::search(&board, 4);
+                                #[allow(const_item_mutation)]
+                                let score = -Self::search(&board, &mut isize::MIN, isize::MAX, 5);
 
-                                if score > max {
-                                    max = score;
-                                    best_move = Some(mv);
-                                }
+                                moves.push((score, mv));
                             }
                         }
 
-                        if let Some(best_move) = best_move {
+
+                        if !moves.is_empty() {
+                            let best_move = moves.iter().max_by_key(|(score, _)| *score).unwrap().1;
+    
                             self.send_command(UciCommand::Info(format!("pv {}", best_move)));
                             self.send_command(UciCommand::BestMove {
                                 best_move: best_move.to_string(),

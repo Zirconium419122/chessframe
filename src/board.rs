@@ -63,19 +63,19 @@ impl Board {
 
         board.combined = board.occupancy(Color::White) | board.occupancy(Color::Black);
 
-        let knights = get_knight_moves(board.pieces_color(Piece::King, board.side_to_move).to_square())
-            & board.pieces_color(Piece::Knight, !board.side_to_move);
+        let knights = get_knight_moves(board.pieces_color(Piece::King, !board.side_to_move).to_square())
+            & board.pieces_color(Piece::Knight, board.side_to_move);
         board.check = (knights.count_ones() > 0) as u8;
 
         for color in COLORS {
-            let king_square = board.pieces_color(Piece::King, color).to_square();
-            let attackers = board.occupancy(board.side_to_move) & ((get_bishop_moves(king_square, EMPTY) & (board.pieces(Piece::Bishop) | board.pieces(Piece::Queen)))
+            let king_square = board.pieces_color(Piece::King, !color).to_square();
+            let attackers = board.occupancy(color) & ((get_bishop_moves(king_square, EMPTY) & (board.pieces(Piece::Bishop) | board.pieces(Piece::Queen)))
                 | (get_rook_moves(king_square, EMPTY) & (board.pieces(Piece::Rook) | board.pieces(Piece::Queen))));
 
             for square in attackers {
                 let between = get_between(square, king_square) & board.combined();
                 if between.count_ones() == 1 {
-                    board.pinned ^= between & board.occupancy(!board.side_to_move);
+                    board.pinned ^= between & board.occupancy(!color);
                 } else if between == EMPTY {
                     board.check += 1;
                 }
