@@ -1,4 +1,7 @@
-use chess_frame::{bitboard::{BitBoard, EMPTY}, board::*};
+use chess_frame::{
+    bitboard::{BitBoard, EMPTY},
+    board::*,
+};
 
 #[test]
 fn test_generate_moves_vec() {

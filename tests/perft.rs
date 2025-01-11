@@ -15,9 +15,9 @@ impl Perft {
                 return *perft_result;
             }
         }
-    
+
         let mut count = 0;
-    
+
         for mv in board.generate_moves_vec(!EMPTY) {
             if let Ok(ref board) = board.make_move_new(&mv) {
                 let perft_results = if depth == 1 {
@@ -26,15 +26,15 @@ impl Perft {
                     self.perft(board, depth - 1, false)
                 };
                 count += perft_results;
-    
+
                 if divide {
                     println!("{}: {}", mv, perft_results);
                 }
             }
         }
-    
+
         self.0.insert(board.get_hash(), (count, depth));
-    
+
         count
     }
 }

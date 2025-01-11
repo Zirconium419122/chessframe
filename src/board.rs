@@ -154,7 +154,7 @@ impl Board {
                     .unwrap_unchecked() as u8)
                     .unchecked_sub(1)
             };
-            let square = Square::new(rank << 3 + file);
+            let square = Square::new(rank << (3 + file));
 
             self.set_en_passant(square);
         }
@@ -224,6 +224,7 @@ impl Board {
         unsafe { self.pieces.get_unchecked_mut(piece.to_index()) }
     }
 
+    /// Get the zobrist hash of the board.
     #[inline]
     pub fn get_hash(&self) -> u64 {
         self.hash
@@ -239,6 +240,12 @@ impl Board {
             } else {
                 0
             }
+    }
+
+    /// Are we in check?
+    #[inline]
+    pub fn in_check(&self) -> bool {
+        self.check > 0
     }
 
     /// Get the en passant square, if there is one.

@@ -1,7 +1,11 @@
 use std::io;
 
 use chess_frame::{
-    bitboard::EMPTY, board::Board, color::Color, piece::PIECES, uci::{Uci, UciCommand}
+    bitboard::EMPTY,
+    board::Board,
+    color::Color,
+    piece::PIECES,
+    uci::{Uci, UciCommand},
 };
 
 const PIECE_VALUES: [isize; 6] = [100, 300, 325, 500, 900, 0];
@@ -34,10 +38,12 @@ impl SimpleMoveMaker {
             return Self::evaluate(board);
         }
 
+        let mut legal_moves = false;
         let mut max = isize::MIN;
 
         for mv in board.generate_moves_vec(!EMPTY) {
             if let Ok(board) = board.make_move_new(&mv) {
+                legal_moves = true;
                 let score = -Self::search(&board, &mut -beta, -*alpha, depth - 1);
 
                 if score > max {
@@ -52,6 +58,14 @@ impl SimpleMoveMaker {
             }
         }
 
+        if !legal_moves {
+            if board.in_check() {
+                return isize::MIN + depth as isize;
+            } else {
+                return 0;
+            }
+        }
+
         max
     }
 
@@ -59,8 +73,14 @@ impl SimpleMoveMaker {
         let mut score = 0;
 
         for piece in PIECES.iter() {
-            score += board.pieces_color(*piece, Color::White).count_ones() as isize * PIECE_VALUES[piece.to_index()];
-            score -= board.pieces_color(*piece, Color::Black).count_ones() as isize * PIECE_VALUES[piece.to_index()];
+            score += board.pieces_color(*piece, Color::White).count_ones() as isize
+                * PIECE_VALUES[piece.to_index()];
+            score -= board.pieces_color(*piece, Color::Black).count_ones() as isize
+                * PIECE_VALUES[piece.to_index()];
+        }
+
+        if board.in_check() {
+            score -= 100;
         }
 
         score
@@ -141,22 +161,23 @@ impl Uci for SimpleMoveMaker {
                 }
                 UciCommand::Go { .. } => {
                     if let Some(ref board) = self.board {
-                        let mut moves = Vec::new();
+                        let mut max = isize::MIN;
+                        let mut best_move = None;
 
                         for mv in board.generate_moves_vec(!EMPTY) {
                             if let Ok(board) = board.make_move_new(&mv) {
                                 #[allow(const_item_mutation)]
                                 let score = -Self::search(&board, &mut isize::MIN, isize::MAX, 5);
 
-                                moves.push((score, mv));
+                                if score > max {
+                                    max = score;
+                                    best_move = Some(mv);
+                                }
                             }
                         }
 
-
-                        if !moves.is_empty() {
-                            let best_move = moves.iter().max_by_key(|(score, _)| *score).unwrap().1;
-    
-                            self.send_command(UciCommand::Info(format!("pv {}", best_move)));
+                        if let Some(best_move) = best_move {
+                            self.send_command(UciCommand::Info(format!("pv {} score cp {}", best_move, max)));
                             self.send_command(UciCommand::BestMove {
                                 best_move: best_move.to_string(),
                                 ponder: None,

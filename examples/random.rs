@@ -1,7 +1,9 @@
 use std::io;
 
 use chess_frame::{
-    bitboard::EMPTY, board::Board, uci::{Uci, UciCommand}
+    bitboard::EMPTY,
+    board::Board,
+    uci::{Uci, UciCommand},
 };
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 
