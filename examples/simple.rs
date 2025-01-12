@@ -1,14 +1,24 @@
 use std::io;
 
 use chess_frame::{
-    bitboard::EMPTY,
-    board::Board,
-    color::Color,
-    piece::PIECES,
-    uci::{Uci, UciCommand},
+    bitboard::EMPTY, board::Board, chess_move::ChessMove, color::Color, piece::{Piece, PIECES}, uci::{Uci, UciCommand}
 };
 
 const PIECE_VALUES: [isize; 6] = [100, 300, 325, 500, 900, 0];
+
+/// MVV_LVA[victim][attacker]
+const MVV_LVA: [[i8; 6]; 6] = [
+    [15, 14, 13, 12, 11, 10], // victim Pawn, attacker P, N, B, R, Q, K
+    [25, 24, 23, 22, 21, 20], // victim Knight, attacker P, N, B, R, Q, K
+    [35, 34, 33, 32, 31, 30], // victim Bishop, attacker P, N, B, R, Q, K
+    [45, 44, 43, 42, 41, 40], // victim Rook, attacker P, N, B, R, Q, K
+    [55, 54, 53, 52, 51, 50], // victim Queen, attacker P, N, B, R, Q, K
+    [0, 0, 0, 0, 0, 0],       // victim King, attacker P, N, B, R, Q, K
+];
+
+fn get_mvv_lva(victim: Piece, attacker: Piece) -> i8 {
+    unsafe { *MVV_LVA.get_unchecked(victim.to_index()).get_unchecked(attacker.to_index()) }
+}
 
 struct SimpleMoveMaker {
     board: Option<Board>,
@@ -41,7 +51,9 @@ impl SimpleMoveMaker {
         let mut legal_moves = false;
         let mut max = isize::MIN;
 
-        for mv in board.generate_moves_vec(!EMPTY) {
+        let mut moves = board.generate_moves_vec(!EMPTY);
+        Self::sort_moves(board, &mut moves);
+        for mv in moves {
             if let Ok(board) = board.make_move_new(&mv) {
                 legal_moves = true;
                 let score = -Self::search(&board, &mut -beta, -*alpha, depth - 1);
@@ -79,11 +91,22 @@ impl SimpleMoveMaker {
                 * PIECE_VALUES[piece.to_index()];
         }
 
-        if board.in_check() {
-            score -= 100;
+        let perspective = if board.side_to_move == Color::White { 1 } else { -1 };
+        score * perspective
+    }
+
+    fn sort_moves(board: &Board, moves: &mut Vec<ChessMove>) {
+        moves.sort_by_key(|mv| -Self::score_move(board, *mv));
+    }
+
+    fn score_move(board: &Board, mv: ChessMove) -> isize {
+        let moved = unsafe { board.get_piece(mv.from).unwrap_unchecked() };
+
+        if let Some(capture) = board.get_piece(mv.to) {
+            return get_mvv_lva(capture, moved) as isize;
         }
 
-        score
+        0
     }
 }
 
@@ -164,10 +187,12 @@ impl Uci for SimpleMoveMaker {
                         let mut max = isize::MIN;
                         let mut best_move = None;
 
-                        for mv in board.generate_moves_vec(!EMPTY) {
+                        let mut moves = board.generate_moves_vec(!EMPTY);
+                        Self::sort_moves(board, &mut moves);
+                        for mv in moves {
                             if let Ok(board) = board.make_move_new(&mv) {
                                 #[allow(const_item_mutation)]
-                                let score = -Self::search(&board, &mut isize::MIN, isize::MAX, 5);
+                                let score = -Self::search(&board, &mut isize::MIN, isize::MAX, 6);
 
                                 if score > max {
                                     max = score;
