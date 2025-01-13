@@ -1,74 +1,3 @@
-pub enum UciCommand {
-    // Basic commands from GUI to Engine
-    Uci,
-    Debug(bool),
-    IsReady,
-
-    SetOption {
-        name: String,
-        value: String,
-    },
-
-    Register {
-        name: Option<String>,
-        code: Option<String>,
-        later: bool,
-    },
-
-    UciNewGame,
-
-    Position {
-        fen: String,
-        moves: Option<Vec<String>>,
-    },
-
-    Go {
-        wtime: Option<usize>,       // White's time left in ms
-        btime: Option<usize>,       // Black's time left in ms
-        winc: Option<usize>,        // White's increment in ms
-        binc: Option<usize>,        // Black's increment in ms
-        moves_to_go: Option<usize>, // Moves to next to next time control
-        depth: Option<usize>,       // Limit search depth
-        nodes: Option<usize>,       // Limit search nodes
-        mate: Option<usize>,        // Search for mate in n moves
-        move_time: Option<usize>,   // Time per move in ms
-        infinite: bool,             // Infinite time control
-        ponder: bool,               // Engine should ponder
-    },
-
-    PonderHit,
-
-    Stop,
-    Quit,
-
-    // Responses from Engine to GUI
-    Id {
-        name: String,
-        author: String,
-    },
-    UciOk,
-    ReadyOk,
-
-    BestMove {
-        best_move: String,
-        ponder: Option<String>,
-    },
-
-    CopyProtection {
-        ok: bool,
-        checking: bool,
-        error: bool,
-    },
-    Registration {
-        ok: bool,
-        checking: bool,
-        error: bool,
-    },
-
-    Info(String),
-    Option(String),
-}
-
 impl From<String> for UciCommand {
     fn from(value: String) -> Self {
         let tokens: Vec<&str> = value.split_whitespace().collect();
@@ -131,17 +60,30 @@ impl From<String> for UciCommand {
                 if tokens.get(1) == Some(&"fen") {
                     let mut fen = tokens[2..].join(" ");
                     let mut moves = Vec::new();
-
+                    
                     if let Some(moves_start) = tokens.iter().position(|&x| x == "moves") {
                         fen = fen.split("moves").collect::<Vec<&str>>()[0].to_string();
+                        
+                        for mv in &tokens[moves_start + 1..] {
+                            moves.push(mv.to_string());
+                        }
+                    }
+                    
+                    UciCommand::Position {
+                        fen,
+                        moves: Some(moves),
+                    }
+                } else if tokens.get(1) == Some(&"startpos") {
+                    let mut moves = Vec::new();
 
+                    if let Some(moves_start) = tokens.iter().position(|&x| x == "moves") {
                         for mv in &tokens[moves_start + 1..] {
                             moves.push(mv.to_string());
                         }
                     }
 
                     UciCommand::Position {
-                        fen,
+                        fen: "startpos".to_string(),
                         moves: Some(moves),
                     }
                 } else {
@@ -329,6 +271,79 @@ impl From<String> for UciCommand {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum UciCommand {
+    // Basic commands from GUI to Engine
+    Uci,
+    Debug(bool),
+    IsReady,
+
+    SetOption {
+        name: String,
+        value: String,
+    },
+
+    Register {
+        name: Option<String>,
+        code: Option<String>,
+        later: bool,
+    },
+
+    UciNewGame,
+
+    Position {
+        fen: String,
+        moves: Option<Vec<String>>,
+    },
+
+    Go {
+        wtime: Option<usize>,       // White's time left in ms
+        btime: Option<usize>,       // Black's time left in ms
+        winc: Option<usize>,        // White's increment in ms
+        binc: Option<usize>,        // Black's increment in ms
+        moves_to_go: Option<usize>, // Moves to next to next time control
+        depth: Option<usize>,       // Limit search depth
+        nodes: Option<usize>,       // Limit search nodes
+        mate: Option<usize>,        // Search for mate in n moves
+        move_time: Option<usize>,   // Time per move in ms
+        infinite: bool,             // Infinite time control
+        ponder: bool,               // Engine should ponder
+    },
+
+    PonderHit,
+
+    Stop,
+    Quit,
+
+    // Responses from Engine to GUI
+    Id {
+        name: String,
+        author: String,
+    },
+    UciOk,
+    ReadyOk,
+
+    BestMove {
+        best_move: String,
+        ponder: Option<String>,
+    },
+
+    CopyProtection {
+        ok: bool,
+        checking: bool,
+        error: bool,
+    },
+    Registration {
+        ok: bool,
+        checking: bool,
+        error: bool,
+    },
+
+    Info(String),
+    Option(String),
+}
+
 pub trait Uci {
     fn send_command(&mut self, command: UciCommand);
     fn read_command(&mut self) -> Option<UciCommand>;

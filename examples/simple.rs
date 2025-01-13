@@ -17,7 +17,11 @@ const MVV_LVA: [[i8; 6]; 6] = [
 ];
 
 fn get_mvv_lva(victim: Piece, attacker: Piece) -> i8 {
-    unsafe { *MVV_LVA.get_unchecked(victim.to_index()).get_unchecked(attacker.to_index()) }
+    unsafe {
+        *MVV_LVA
+            .get_unchecked(victim.to_index())
+            .get_unchecked(attacker.to_index())
+    }
 }
 
 struct SimpleMoveMaker {
@@ -43,9 +47,9 @@ impl SimpleMoveMaker {
         }
     }
 
-    fn search(board: &Board, alpha: &mut isize, beta: isize, depth: usize) -> isize {
+    fn search(board: &Board, mut alpha: isize, beta: isize, depth: usize) -> isize {
         if depth == 0 {
-            return Self::evaluate(board);
+            return Self::quiescence_search(board, alpha, beta);
         }
 
         let mut legal_moves = false;
@@ -56,12 +60,12 @@ impl SimpleMoveMaker {
         for mv in moves {
             if let Ok(board) = board.make_move_new(&mv) {
                 legal_moves = true;
-                let score = -Self::search(&board, &mut -beta, -*alpha, depth - 1);
+                let score = -Self::search(&board, -beta, -alpha, depth - 1);
 
                 if score > max {
                     max = score;
-                    if score > *alpha {
-                        *alpha = score;
+                    if score > alpha {
+                        alpha = score;
                     }
                 }
                 if score >= beta {
@@ -81,6 +85,34 @@ impl SimpleMoveMaker {
         max
     }
 
+    fn quiescence_search(board: &Board, mut alpha: isize, beta: isize) -> isize {
+        let evaluation = Self::evaluate(board);
+        if evaluation >= beta {
+            return beta;
+        }
+        if evaluation > alpha {
+            alpha = evaluation;
+        }
+
+        let mut moves = board.generate_moves_vec(board.occupancy(!board.side_to_move));
+        Self::sort_moves(board, &mut moves);
+
+        for mv in moves {
+            if let Ok(board) = board.make_move_new(&mv) {
+                let score = -Self::quiescence_search(&board, -beta, -alpha);
+
+                if score >= beta {
+                    return beta;
+                }
+                if score > alpha {
+                    alpha = score;
+                }
+            }
+        }
+
+        alpha
+    }
+
     fn evaluate(board: &Board) -> isize {
         let mut score = 0;
 
@@ -91,7 +123,15 @@ impl SimpleMoveMaker {
                 * PIECE_VALUES[piece.to_index()];
         }
 
-        let perspective = if board.side_to_move == Color::White { 1 } else { -1 };
+        if board.in_check() {
+            score -= 50;
+        }
+
+        let perspective = if board.side_to_move == Color::White {
+            1
+        } else {
+            -1
+        };
         score * perspective
     }
 
@@ -192,7 +232,7 @@ impl Uci for SimpleMoveMaker {
                         for mv in moves {
                             if let Ok(board) = board.make_move_new(&mv) {
                                 #[allow(const_item_mutation)]
-                                let score = -Self::search(&board, &mut isize::MIN, isize::MAX, 6);
+                                let score = -Self::search(&board, isize::MIN, isize::MAX, 6);
 
                                 if score > max {
                                     max = score;
@@ -202,7 +242,10 @@ impl Uci for SimpleMoveMaker {
                         }
 
                         if let Some(best_move) = best_move {
-                            self.send_command(UciCommand::Info(format!("pv {} score cp {}", best_move, max)));
+                            self.send_command(UciCommand::Info(format!(
+                                "pv {} score cp {}",
+                                best_move, max
+                            )));
                             self.send_command(UciCommand::BestMove {
                                 best_move: best_move.to_string(),
                                 ponder: None,
