@@ -1,7 +1,12 @@
 use std::io;
 
 use chess_frame::{
-    bitboard::EMPTY, board::Board, chess_move::ChessMove, color::Color, piece::{Piece, PIECES}, uci::{Uci, UciCommand}
+    bitboard::EMPTY,
+    board::Board,
+    chess_move::ChessMove,
+    color::Color,
+    piece::{Piece, PIECES},
+    uci::{Uci, UciCommand},
 };
 
 const PIECE_VALUES: [isize; 6] = [100, 300, 325, 500, 900, 0];
@@ -30,6 +35,9 @@ struct SimpleMoveMaker {
 }
 
 impl SimpleMoveMaker {
+    const SEARCH_DEPTH: usize = 7;
+    const MATE_SCORE: isize = 1_000_000_000;
+
     pub fn new() -> Self {
         Self {
             board: None,
@@ -76,7 +84,7 @@ impl SimpleMoveMaker {
 
         if !legal_moves {
             if board.in_check() {
-                return isize::MIN + depth as isize;
+                return -SimpleMoveMaker::MATE_SCORE + SimpleMoveMaker::SEARCH_DEPTH as isize - depth as isize;
             } else {
                 return 0;
             }
@@ -232,7 +240,7 @@ impl Uci for SimpleMoveMaker {
                         for mv in moves {
                             if let Ok(board) = board.make_move_new(&mv) {
                                 #[allow(const_item_mutation)]
-                                let score = -Self::search(&board, isize::MIN, isize::MAX, 6);
+                                let score = -Self::search(&board, isize::MIN, isize::MAX, SimpleMoveMaker::SEARCH_DEPTH - 1);
 
                                 if score > max {
                                     max = score;
