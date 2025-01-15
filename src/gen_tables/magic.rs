@@ -93,7 +93,7 @@ fn find_magic(piece: MagicPiece, square: Square) -> Result<(Magic, Vec<BitBoard>
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
 
     // Try magic numbers until we find one that works
-    for _ in 0..1000000 {
+    for _ in 0..1_000_000 {
         let magic_number = generate_magic_candidate(&mut rng);
         let magic = Magic {
             mask,

@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::{File, OpenOptions}, io::{BufRead, BufReader}};
 
 use crate::gen_tables::*;
 
@@ -30,11 +30,24 @@ fn main() {
 
     write_knight_moves(&mut file);
 
-    write_bishop_moves(&mut file);
-
-    write_rook_moves(&mut file);
-
     write_king_moves(&mut file);
 
     write_zobrist(&mut file);
+
+    if let Err(_) = OpenOptions::new().write(true).open("src/magic_tables.rs") {
+        let mut file = File::create("src/magic_tables.rs").unwrap();
+
+        write_bishop_moves(&mut file);
+
+        write_rook_moves(&mut file);
+    } else if let Ok(mut file) = OpenOptions::new().write(true).open("src/magic_tables.rs") {
+        if file.metadata().expect("file metadata not found").len() == 0 {
+            let reader = BufReader::new(OpenOptions::new().read(true).open("src/magic_tables.rs").unwrap());
+            if reader.lines().count() != 4 {
+                write_bishop_moves(&mut file);
+    
+                write_rook_moves(&mut file);
+            }
+        }
+    }
 }

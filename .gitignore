@@ -20,3 +20,4 @@ Cargo.lock
 # Ignore tables.rs as this is a generated file
 
 src/tables.rs
+src/magic_tables.rs

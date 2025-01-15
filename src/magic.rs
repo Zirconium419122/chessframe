@@ -4,6 +4,7 @@ use crate::{
 };
 
 include!("tables.rs");
+include!("magic_tables.rs");
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Magic {
