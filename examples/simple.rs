@@ -38,8 +38,8 @@ impl SimpleMoveMaker {
     const SEARCH_DEPTH: usize = 7;
     const MATE_SCORE: isize = 1_000_000_000;
 
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> SimpleMoveMaker {
+        SimpleMoveMaker {
             board: None,
             quitting: false,
         }
@@ -53,6 +53,26 @@ impl SimpleMoveMaker {
                 break;
             }
         }
+    }
+
+    pub fn search_base(board: &Board, depth: usize) -> (isize, Option<ChessMove>) {
+        let mut max = isize::MIN;
+        let mut best_move = None;
+
+        let mut moves = board.generate_moves_vec(!EMPTY);
+        Self::sort_moves(board, &mut moves);
+        for mv in moves {
+            if let Ok(board) = board.make_move_new(&mv) {
+                let score = -Self::search(&board, isize::MIN, isize::MAX, depth - 1);
+
+                if score > max {
+                    max = score;
+                    best_move = Some(mv);
+                }
+            }
+        }
+
+        (max, best_move)
     }
 
     fn search(board: &Board, mut alpha: isize, beta: isize, depth: usize) -> isize {
@@ -232,27 +252,12 @@ impl Uci for SimpleMoveMaker {
                 }
                 UciCommand::Go { .. } => {
                     if let Some(ref board) = self.board {
-                        let mut max = isize::MIN;
-                        let mut best_move = None;
-
-                        let mut moves = board.generate_moves_vec(!EMPTY);
-                        Self::sort_moves(board, &mut moves);
-                        for mv in moves {
-                            if let Ok(board) = board.make_move_new(&mv) {
-                                #[allow(const_item_mutation)]
-                                let score = -Self::search(&board, isize::MIN, isize::MAX, SimpleMoveMaker::SEARCH_DEPTH - 1);
-
-                                if score > max {
-                                    max = score;
-                                    best_move = Some(mv);
-                                }
-                            }
-                        }
+                        let (score, best_move) = Self::search_base(&board, SimpleMoveMaker::SEARCH_DEPTH);
 
                         if let Some(best_move) = best_move {
                             self.send_command(UciCommand::Info(format!(
                                 "pv {} score cp {}",
-                                best_move, max
+                                best_move, score
                             )));
                             self.send_command(UciCommand::BestMove {
                                 best_move: best_move.to_string(),

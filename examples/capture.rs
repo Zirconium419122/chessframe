@@ -12,8 +12,8 @@ struct CaptureMaker {
 }
 
 impl CaptureMaker {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> CaptureMaker {
+        CaptureMaker {
             board: None,
             quitting: false,
         }
