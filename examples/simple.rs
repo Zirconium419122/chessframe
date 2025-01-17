@@ -255,10 +255,22 @@ impl Uci for SimpleMoveMaker {
                         let (score, best_move) = Self::search_base(&board, SimpleMoveMaker::SEARCH_DEPTH);
 
                         if let Some(best_move) = best_move {
-                            self.send_command(UciCommand::Info(format!(
-                                "pv {} score cp {}",
-                                best_move, score
-                            )));
+                            if score.abs() >= SimpleMoveMaker::MATE_SCORE - 100 {
+                                let correction = if score > 0 { 1 } else { -1 };
+                                let moves_to_mate = SimpleMoveMaker::MATE_SCORE - score.abs();
+                                let mate_in_moves = (moves_to_mate / 2) + 1;
+
+                                self.send_command(UciCommand::Info(format!(
+                                    "pv {} score mate {}",
+                                    best_move,
+                                    correction * mate_in_moves
+                                )));
+                            } else {
+                                self.send_command(UciCommand::Info(format!(
+                                    "pv {} score cp {}",
+                                    best_move, score
+                                )));
+                            }
                             self.send_command(UciCommand::BestMove {
                                 best_move: best_move.to_string(),
                                 ponder: None,
