@@ -1,4 +1,12 @@
-use std::{fs::File, io::{self, Write}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread};
+use std::{
+    fs::File,
+    io::{self, Write},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread,
+};
 
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
@@ -6,10 +14,12 @@ use rand_chacha::{
 };
 
 use chess_frame::{
-    bitboard::{BitBoard, EMPTY}, square::{Square, SQUARES}
+    bitboard::{BitBoard, EMPTY},
+    square::{Square, SQUARES},
 };
 
 #[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
 enum MagicPiece {
     Bishop,
     Rook,
@@ -81,39 +91,17 @@ fn flatten_data(data: ([Magic; 64], [Vec<BitBoard>; 64])) -> ([Magic; 64], Vec<B
     (updated_magic, flattened_moves)
 }
 
-fn generate_bishop_magics_and_moves(rng: &mut ChaCha8Rng) -> Result<([Magic; 64], Vec<BitBoard>), &'static str> {
+fn generate_magics_and_moves(rng: &mut ChaCha8Rng, piece: MagicPiece) -> Result<([Magic; 64], Vec<BitBoard>), &'static str> {
     let mut magics = [Magic::default(); 64];
     let mut moves = [const { Vec::new() }; 64];
 
     for square in SQUARES {
-        if let Ok(magic_moves) = find_magic(rng, MagicPiece::Bishop, square) {
+        if let Ok(magic_moves) = find_magic(rng, piece, square) {
             magics[square.to_index()] = magic_moves.0;
             moves[square.to_index()] = magic_moves.1;
         } else {
             loop {
-                if let Ok(magic_moves) = find_magic(rng, MagicPiece::Bishop, square) {
-                    magics[square.to_index()] = magic_moves.0;
-                    moves[square.to_index()] = magic_moves.1;
-                    break;
-                }
-            }
-        }
-    }
-
-    Ok(flatten_data((magics, moves)))
-}
-
-fn generate_rook_magics_and_moves(rng: &mut ChaCha8Rng) -> Result<([Magic; 64], Vec<BitBoard>), &'static str> {
-    let mut magics = [Magic::default(); 64];
-    let mut moves = [const { Vec::new() }; 64];
-
-    for square in SQUARES {
-        if let Ok(magic_moves) = find_magic(rng, MagicPiece::Rook, square) {
-            magics[square.to_index()] = magic_moves.0;
-            moves[square.to_index()] = magic_moves.1;
-        } else {
-            loop {
-                if let Ok(magic_moves) = find_magic(rng, MagicPiece::Rook, square) {
+                if let Ok(magic_moves) = find_magic(rng, piece, square) {
                     magics[square.to_index()] = magic_moves.0;
                     moves[square.to_index()] = magic_moves.1;
                     break;
@@ -307,7 +295,7 @@ fn main() {
     loop {
         iterations += 1;
 
-        if let Ok((latest_bishop_magics, latest_bishop_moves)) = generate_bishop_magics_and_moves(&mut rng) {
+        if let Ok((latest_bishop_magics, latest_bishop_moves)) = generate_magics_and_moves(&mut rng, MagicPiece::Bishop) {
             if let Some((_, ref bishop_moves)) = bishop_moves_and_magics {
                 if latest_bishop_moves.len() < bishop_moves.len() {
                     bishop_moves_and_magics = Some((latest_bishop_magics, latest_bishop_moves));
@@ -318,7 +306,7 @@ fn main() {
             }
         }
 
-        if let Ok((latest_rook_magics, latest_rook_moves)) = generate_rook_magics_and_moves(&mut rng) {
+        if let Ok((latest_rook_magics, latest_rook_moves)) = generate_magics_and_moves(&mut rng, MagicPiece::Rook) {
             if let Some((_, ref rook_moves)) = rook_moves_and_magics {
                 if latest_rook_moves.len() < rook_moves.len() {
                     rook_moves_and_magics = Some((latest_rook_magics, latest_rook_moves));

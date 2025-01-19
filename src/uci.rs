@@ -60,15 +60,15 @@ impl From<String> for UciCommand {
                 if tokens.get(1) == Some(&"fen") {
                     let mut fen = tokens[2..].join(" ");
                     let mut moves = Vec::new();
-                    
+
                     if let Some(moves_start) = tokens.iter().position(|&x| x == "moves") {
                         fen = fen.split("moves").collect::<Vec<&str>>()[0].to_string();
-                        
+
                         for mv in &tokens[moves_start + 1..] {
                             moves.push(mv.to_string());
                         }
                     }
-                    
+
                     UciCommand::Position {
                         fen,
                         moves: Some(moves),

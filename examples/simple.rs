@@ -59,11 +59,14 @@ impl SimpleMoveMaker {
         let mut max = isize::MIN;
         let mut best_move = None;
 
+        let alpha = isize::MIN;
+        let beta = isize::MAX;
+
         let mut moves = board.generate_moves_vec(!EMPTY);
         Self::sort_moves(board, &mut moves);
         for mv in moves {
             if let Ok(board) = board.make_move_new(&mv) {
-                let score = -Self::search(&board, isize::MIN, isize::MAX, depth - 1);
+                let score = -Self::search(&board, alpha, beta, depth - 1);
 
                 if score > max {
                     max = score;
