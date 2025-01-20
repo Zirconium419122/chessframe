@@ -91,26 +91,22 @@ fn flatten_data(data: ([Magic; 64], [Vec<BitBoard>; 64])) -> ([Magic; 64], Vec<B
     (updated_magic, flattened_moves)
 }
 
-fn generate_magics_and_moves(rng: &mut ChaCha8Rng, piece: MagicPiece) -> Result<([Magic; 64], Vec<BitBoard>), &'static str> {
-    let mut magics = [Magic::default(); 64];
-    let mut moves = [const { Vec::new() }; 64];
+fn generate_magics_and_moves(
+    rng: &mut ChaCha8Rng,
+    piece: MagicPiece,
+) -> Result<[Option<(Magic, Vec<BitBoard>)>; 64], &'static str> {
+    let mut magics_and_moves = [const { None }; 64];
 
     for square in SQUARES {
-        if let Ok(magic_moves) = find_magic(rng, piece, square) {
-            magics[square.to_index()] = magic_moves.0;
-            moves[square.to_index()] = magic_moves.1;
-        } else {
-            loop {
-                if let Ok(magic_moves) = find_magic(rng, piece, square) {
-                    magics[square.to_index()] = magic_moves.0;
-                    moves[square.to_index()] = magic_moves.1;
-                    break;
-                }
+        magics_and_moves[square.to_index()] =
+            if let Ok(magic_moves) = find_magic(rng, piece, square) {
+                Some((magic_moves.0, magic_moves.1))
+            } else {
+                None
             }
-        }
     }
 
-    Ok(flatten_data((magics, moves)))
+    Ok(magics_and_moves)
 }
 
 #[rustfmt::skip]
@@ -238,6 +234,24 @@ fn subsets(mask: BitBoard) -> Vec<BitBoard> {
     subsets
 }
 
+fn extract_moves_and_magics(
+    moves_and_magics: &[Option<(Magic, Vec<BitBoard>)>; 64],
+) -> ([Magic; 64], [Vec<BitBoard>; 64]) {
+    let magics = moves_and_magics
+        .iter()
+        .map(|x| x.as_ref().unwrap().0)
+        .collect::<Vec<Magic>>()
+        .try_into()
+        .unwrap();
+    let moves = moves_and_magics
+        .iter()
+        .map(|x| x.as_ref().unwrap().1.clone())
+        .collect::<Vec<Vec<BitBoard>>>()
+        .try_into()
+        .unwrap();
+    (magics, moves)
+}
+
 fn write_bishop_moves(f: &mut File, bishop_magics_and_moves: ([Magic; 64], Vec<BitBoard>)) {
     writeln!(
         f,
@@ -273,8 +287,8 @@ fn write_rook_moves(f: &mut File, rook_magics_and_moves: ([Magic; 64], Vec<BitBo
 fn main() {
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
 
-    let mut bishop_moves_and_magics: Option<([Magic; 64], Vec<BitBoard>)> = None;
-    let mut rook_moves_and_magics: Option<([Magic; 64], Vec<BitBoard>)> = None;
+    let mut bishop_moves_and_magics: [Option<(Magic, Vec<BitBoard>)>; 64] = [const { None }; 64];
+    let mut rook_moves_and_magics: [Option<(Magic, Vec<BitBoard>)>; 64] = [const { None }; 64];
 
     let stop_flag = Arc::new(AtomicBool::new(false));
     let stop_flag_clone = stop_flag.clone();
@@ -295,51 +309,85 @@ fn main() {
     loop {
         iterations += 1;
 
-        if let Ok((latest_bishop_magics, latest_bishop_moves)) = generate_magics_and_moves(&mut rng, MagicPiece::Bishop) {
-            if let Some((_, ref bishop_moves)) = bishop_moves_and_magics {
-                if latest_bishop_moves.len() < bishop_moves.len() {
-                    bishop_moves_and_magics = Some((latest_bishop_magics, latest_bishop_moves));
+        if let Ok(latest_bishop_magics_and_moves) =
+            generate_magics_and_moves(&mut rng, MagicPiece::Bishop)
+        {
+            for (i, latest_bishop_magics_and_moves) in latest_bishop_magics_and_moves
+                .iter()
+                .enumerate()
+                .filter(|(_, x)| x.is_some())
+            {
+                let latest_bishop_magics_and_moves =
+                    latest_bishop_magics_and_moves.as_ref().unwrap();
+                if let Some(bishop_moves_and_magics) = &mut bishop_moves_and_magics[i] {
+                    if latest_bishop_magics_and_moves.1.len() < bishop_moves_and_magics.1.len() {
+                        *bishop_moves_and_magics = latest_bishop_magics_and_moves.clone();
+                    }
+                } else {
+                    bishop_moves_and_magics[i] = Some(latest_bishop_magics_and_moves.clone());
+                    // println!("Found bishop moves and magics for square {}!", i);
                 }
-            } else {
-                bishop_moves_and_magics = Some((latest_bishop_magics, latest_bishop_moves));
-                println!("Found bishop moves and magics!");
             }
         }
 
-        if let Ok((latest_rook_magics, latest_rook_moves)) = generate_magics_and_moves(&mut rng, MagicPiece::Rook) {
-            if let Some((_, ref rook_moves)) = rook_moves_and_magics {
-                if latest_rook_moves.len() < rook_moves.len() {
-                    rook_moves_and_magics = Some((latest_rook_magics, latest_rook_moves));
+        if let Ok(latest_rook_magics_and_moves) =
+            generate_magics_and_moves(&mut rng, MagicPiece::Rook)
+        {
+            for (i, latest_rook_magics_and_moves) in latest_rook_magics_and_moves
+                .iter()
+                .enumerate()
+                .filter(|(_, x)| x.is_some())
+            {
+                let latest_rook_magics_and_moves = latest_rook_magics_and_moves.as_ref().unwrap();
+                if let Some(rook_moves_and_magics) = &mut rook_moves_and_magics[i] {
+                    if latest_rook_magics_and_moves.1.len() < rook_moves_and_magics.1.len() {
+                        *rook_moves_and_magics = latest_rook_magics_and_moves.clone();
+                    }
+                } else {
+                    rook_moves_and_magics[i] = Some(latest_rook_magics_and_moves.clone());
+                    // println!("Found rook moves and magics for square {}!", i);
                 }
-            } else {
-                rook_moves_and_magics = Some((latest_rook_magics, latest_rook_moves));
-                println!("Found rook moves and magics!");
             }
         }
 
         let bishop_moves_kb = bishop_moves_and_magics
-            .as_ref()
-            .map_or(0, |(_, bishop_moves)| (bishop_moves.len() * 8) / 1024);
+            .iter()
+            .filter_map(|x| x.as_ref())
+            .fold(0, |acc, (_, moves)| acc + moves.len() * 8 / 1024);
         let rook_moves_kb = rook_moves_and_magics
-            .as_ref()
-            .map_or(0, |(_, rook_moves)| (rook_moves.len() * 8) / 1024);
+            .iter()
+            .filter_map(|x| x.as_ref())
+            .fold(0, |acc, (_, moves)| acc + moves.len() * 8 / 1024);
+        let found_bishop_squares = bishop_moves_and_magics
+            .iter()
+            .filter(|x| x.is_some())
+            .count();
+        let found_rook_squares = rook_moves_and_magics
+            .iter()
+            .filter(|x| x.is_some())
+            .count();
 
         print!(
-            "\rIteration: {}, Bishop moves size: {} KB, Rook moves size: {} KB",
-            iterations, bishop_moves_kb, rook_moves_kb
+            "\rIteration: {}, Bishop moves size: {} KB, Rook moves size: {} KB | Progress: Bishops {}/64, Rooks {}/64",
+            iterations, bishop_moves_kb, rook_moves_kb, found_bishop_squares, found_rook_squares
         );
-        io::stdout().flush().unwrap(); 
+        io::stdout().flush().unwrap();
 
         if stop_flag.load(Ordering::Relaxed) {
             break;
         }
     }
 
-    if bishop_moves_and_magics.is_none() {
-        eprintln!("Failed to generate bishop moves and magics!");
+    if bishop_moves_and_magics
+        .iter()
+        .filter(|x| x.is_none())
+        .count()
+        > 0
+    {
+        eprintln!("\nFailed to generate bishop moves and magics!");
         return;
-    } else if rook_moves_and_magics.is_none() {
-        eprintln!("Failed to generate rook moves and magics!");
+    } else if rook_moves_and_magics.iter().filter(|x| x.is_none()).count() > 0 {
+        eprintln!("\nFailed to generate rook moves and magics!");
         return;
     }
 
@@ -347,8 +395,14 @@ fn main() {
 
     println!("\nWriting magic tables to src/magic_tables.rs...");
 
-    write_bishop_moves(&mut file, bishop_moves_and_magics.unwrap());
-    write_rook_moves(&mut file, rook_moves_and_magics.unwrap());
+    write_bishop_moves(
+        &mut file,
+        flatten_data(extract_moves_and_magics(&bishop_moves_and_magics)),
+    );
+    write_rook_moves(
+        &mut file,
+        flatten_data(extract_moves_and_magics(&rook_moves_and_magics)),
+    );
 
     println!("Done!");
 }
