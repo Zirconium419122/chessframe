@@ -94,16 +94,28 @@ fn flatten_data(data: ([Magic; 64], [Vec<BitBoard>; 64])) -> ([Magic; 64], Vec<B
 fn generate_magics_and_moves(
     rng: &mut ChaCha8Rng,
     piece: MagicPiece,
+    search_squares: &Option<Vec<Square>>,
 ) -> Result<[Option<(Magic, Vec<BitBoard>)>; 64], &'static str> {
     let mut magics_and_moves = [const { None }; 64];
 
-    for square in SQUARES {
-        magics_and_moves[square.to_index()] =
-            if let Ok(magic_moves) = find_magic(rng, piece, square) {
-                Some((magic_moves.0, magic_moves.1))
-            } else {
-                None
-            }
+    if let Some(search_squares) = search_squares {
+        for square in search_squares {
+            magics_and_moves[square.to_index()] =
+                if let Ok(magic_moves) = find_magic(rng, piece, *square) {
+                    Some((magic_moves.0, magic_moves.1))
+                } else {
+                    None
+                }
+        }
+    } else {
+        for square in SQUARES {
+            magics_and_moves[square.to_index()] =
+                if let Ok(magic_moves) = find_magic(rng, piece, square) {
+                    Some((magic_moves.0, magic_moves.1))
+                } else {
+                    None
+                }
+        }
     }
 
     Ok(magics_and_moves)
@@ -287,7 +299,10 @@ fn write_rook_moves(f: &mut File, rook_magics_and_moves: ([Magic; 64], Vec<BitBo
 fn main() {
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
 
+    let mut missing_bishop_squares = Some(Vec::from(SQUARES));
     let mut bishop_moves_and_magics: [Option<(Magic, Vec<BitBoard>)>; 64] = [const { None }; 64];
+
+    let mut missing_rook_squares = Some(Vec::from(SQUARES));
     let mut rook_moves_and_magics: [Option<(Magic, Vec<BitBoard>)>; 64] = [const { None }; 64];
 
     let stop_flag = Arc::new(AtomicBool::new(false));
@@ -309,8 +324,14 @@ fn main() {
     loop {
         iterations += 1;
 
+        if let Some(missing_squares) = &missing_bishop_squares {
+            if missing_squares.is_empty() {
+                missing_bishop_squares = None;
+            }
+        }
+
         if let Ok(latest_bishop_magics_and_moves) =
-            generate_magics_and_moves(&mut rng, MagicPiece::Bishop)
+            generate_magics_and_moves(&mut rng, MagicPiece::Bishop, &missing_bishop_squares)
         {
             for (i, latest_bishop_magics_and_moves) in latest_bishop_magics_and_moves
                 .iter()
@@ -330,8 +351,14 @@ fn main() {
             }
         }
 
+        if let Some(missing_squares) = &missing_rook_squares {
+            if missing_squares.is_empty() {
+                missing_rook_squares = None;
+            }
+        }
+
         if let Ok(latest_rook_magics_and_moves) =
-            generate_magics_and_moves(&mut rng, MagicPiece::Rook)
+            generate_magics_and_moves(&mut rng, MagicPiece::Rook, &missing_rook_squares)
         {
             for (i, latest_rook_magics_and_moves) in latest_rook_magics_and_moves
                 .iter()
