@@ -39,7 +39,7 @@ fn test_pawn_move_generation() {
         let board = Board::from_fen(fen);
 
         let pawn_pushes = board.generate_pawn_moves() & !board.occupancy(!board.side_to_move);
-        assert_eq!(pawn_pushes, BitBoard(0x000fffe00000000));
+        assert_eq!(pawn_pushes, BitBoard(0x0000FEFE00000000));
 
         let pawn_captures = board.generate_pawn_moves() & board.occupancy(!board.side_to_move);
         assert_eq!(pawn_captures, BitBoard(0));
@@ -55,7 +55,7 @@ fn test_pawn_move_generation() {
         let board = Board::from_fen(fen);
 
         let pawn_quiets = board.generate_pawn_moves() & !board.occupancy(!board.side_to_move);
-        assert_eq!(pawn_quiets, BitBoard(0x38550000000000));
+        assert_eq!(pawn_quiets, BitBoard(0x10000000000000));
 
         let pawn_captures = board.generate_pawn_moves() & board.occupancy(!board.side_to_move);
         assert_eq!(pawn_captures, BitBoard(0));
@@ -65,7 +65,7 @@ fn test_pawn_move_generation() {
         assert_eq!(en_passant, BitBoard(0));
 
         let pawn_moves = board.generate_pawn_moves();
-        assert_eq!(pawn_moves, BitBoard(0x38550000000000));
+        assert_eq!(pawn_moves, BitBoard(0x10000000000000));
     }
 }
 

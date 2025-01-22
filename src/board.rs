@@ -827,12 +827,14 @@ impl Board {
 
         const WHITE_KING_SIDE: BitBoard = BitBoard(0x60);
         const WHITE_QUEEN_SIDE: BitBoard = BitBoard(0x0E);
+        const WHITE_QUEEN_SIDE_ATTACKS: BitBoard = BitBoard(0x0C);
         const BLACK_KING_SIDE: BitBoard = BitBoard(0x6000000000000000);
         const BLACK_QUEEN_SIDE: BitBoard = BitBoard(0x0E00000000000000);
+        const BLACK_QUEEN_SIDE_ATTACKS: BitBoard = BitBoard(0x0C00000000000000);
 
-        let (king_side, queen_side) = match self.side_to_move {
-            Color::White => (WHITE_KING_SIDE, WHITE_QUEEN_SIDE),
-            Color::Black => (BLACK_KING_SIDE, BLACK_QUEEN_SIDE),
+        let (king_side, queen_side, queen_side_attacks) = match self.side_to_move {
+            Color::White => (WHITE_KING_SIDE, WHITE_QUEEN_SIDE, WHITE_QUEEN_SIDE_ATTACKS),
+            Color::Black => (BLACK_KING_SIDE, BLACK_QUEEN_SIDE, BLACK_QUEEN_SIDE_ATTACKS),
         };
 
         let combined = self.combined();
@@ -852,7 +854,7 @@ impl Board {
             .into_iter()
             .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
             == EMPTY;
-        let no_attackers_queenside = queen_side
+        let no_attackers_queenside = queen_side_attacks
             .into_iter()
             .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
             == EMPTY;

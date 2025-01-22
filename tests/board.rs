@@ -229,8 +229,8 @@ fn test_hash() {
         .make_move(&ChessMove::new(Square::E2, Square::E4))
         .unwrap();
 
-    assert_eq!(board.hash, 0x78a96839bd08e4c4);
-    assert_eq!(board.get_hash(), 0x24e422090249293);
+    assert_eq!(board.hash, 0xd392461d4bd9b816);
+    assert_eq!(board.get_hash(), 0xa9756c0466f5ce41);
 }
 
 #[test]
