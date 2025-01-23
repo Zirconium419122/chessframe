@@ -306,33 +306,19 @@ impl Board {
             _ => return Err(Error::InvalidMove),
         };
 
-        if let Some(piece) = self.get_piece(from) {
-            let mut mv: Option<ChessMove> = None;
-
+        if self.get_piece(from).is_some() {
             if let Some(promotion) = promotion {
-                mv = Some(ChessMove::new_promotion(from, to, promotion));
-            }
+                let mv = ChessMove::new_promotion(from, to, promotion);
 
-            if let Piece::King = piece {
-                let move_bitboard = BitBoard::from_square(from) ^ BitBoard::from_square(to);
-
-                if (move_bitboard & get_castle_moves()) == move_bitboard {
-                    mv = Some(ChessMove::new(from, to));
-                }
-            }
-
-            if let Some(mv) = mv {
                 if self.validate_move(&mv).is_ok() {
                     return Ok(mv);
                 }
             }
 
-            mv = Some(ChessMove::new(from, to));
+            let mv = ChessMove::new(from, to);
 
-            if let Some(mv) = mv {
-                if self.validate_move(&mv).is_ok() {
-                    return Ok(mv);
-                }
+            if self.validate_move(&mv).is_ok() {
+                return Ok(mv);
             }
         }
 
@@ -823,8 +809,6 @@ impl Board {
 
     /// Generate all castling moves.
     pub fn generate_castling_moves(&self) -> BitBoard {
-        let king = self.pieces_color(Piece::King, self.side_to_move);
-
         const WHITE_KING_SIDE: BitBoard = BitBoard(0x60);
         const WHITE_QUEEN_SIDE: BitBoard = BitBoard(0x0E);
         const WHITE_QUEEN_SIDE_ATTACKS: BitBoard = BitBoard(0x0C);
@@ -846,7 +830,7 @@ impl Board {
             return EMPTY;
         }
 
-        if self.get_attackers(king.to_square()) != EMPTY {
+        if self.check != 0 {
             return EMPTY;
         }
 
