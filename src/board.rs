@@ -834,20 +834,18 @@ impl Board {
             return EMPTY;
         }
 
-        let no_attackers_kingside = king_side
+        let attackers_kingside = king_side
             .into_iter()
-            .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
-            == EMPTY;
-        let no_attackers_queenside = queen_side_attacks
+            .any(|square| self.get_attackers(square) != EMPTY);
+        let attackers_queenside = queen_side_attacks
             .into_iter()
-            .fold(EMPTY, |acc, square| acc | self.get_attackers(square))
-            == EMPTY;
+            .any(|square| self.get_attackers(square) != EMPTY);
 
         let can_castle_kingside = empty_kingside
-            && no_attackers_kingside
+            && !attackers_kingside
             && self.castling_rights.can_castle(&self.side_to_move, true);
         let can_castle_queenside = empty_queenside
-            && no_attackers_queenside
+            && !attackers_queenside
             && self.castling_rights.can_castle(&self.side_to_move, false);
 
         let mut moves = BitBoard::default();
