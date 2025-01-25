@@ -10,7 +10,7 @@ impl Perft {
     }
 
     fn perft(&mut self, board: &Board, depth: usize, divide: bool) -> usize {
-        if let Some((perft_result, transposition_depth)) = self.0.get(&board.get_hash()) {
+        if let Some((perft_result, transposition_depth)) = self.0.get(&board.hash()) {
             if *transposition_depth == depth {
                 return *perft_result;
             }
@@ -33,7 +33,7 @@ impl Perft {
             }
         }
 
-        self.0.insert(board.get_hash(), (count, depth));
+        self.0.insert(board.hash(), (count, depth));
 
         count
     }

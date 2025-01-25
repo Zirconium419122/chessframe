@@ -15,7 +15,7 @@ pub fn generate_pawn_moves() {
     for color in COLORS.iter() {
         for src in SQUARES.iter() {
             unsafe {
-                if src.get_rank() == color.to_second_rank() {
+                if src.rank() == color.to_second_rank() {
                     PAWN_MOVES[color.to_index()][src.to_index()] =
                         BitBoard::from_square(src.wrapping_forward(*color))
                             | BitBoard::from_square(

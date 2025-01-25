@@ -14,7 +14,7 @@ pub fn generate_files() {
         unsafe {
             FILES[i] = SQUARES
                 .iter()
-                .filter(|x| x.get_file().to_index() == i)
+                .filter(|x| x.file().to_index() == i)
                 .fold(EMPTY, |acc, square| acc | BitBoard::from_square(*square))
         }
     }
@@ -26,8 +26,8 @@ pub fn generate_adjacent_files() {
             ADJACENT_FILES[i] = SQUARES
                 .iter()
                 .filter(|x| {
-                    x.get_file().to_index() == i.wrapping_add(1)
-                        || x.get_file().to_index() == i.wrapping_sub(1)
+                    x.file().to_index() == i.wrapping_add(1)
+                        || x.file().to_index() == i.wrapping_sub(1)
                 })
                 .fold(EMPTY, |acc, square| acc | BitBoard::from_square(*square))
         }

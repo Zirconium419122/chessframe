@@ -13,7 +13,7 @@ pub fn generate_ranks() {
         unsafe {
             RANKS[i] = SQUARES
                 .iter()
-                .filter(|x| x.get_rank().to_index() == i)
+                .filter(|x| x.rank().to_index() == i)
                 .fold(EMPTY, |acc, square| acc | BitBoard::from_square(*square))
         }
     }

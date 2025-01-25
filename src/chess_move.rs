@@ -12,12 +12,12 @@ pub struct ChessMove {
 impl fmt::Display for ChessMove {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let (rank_from, file_from) = (
-            unsafe { self.from.get_rank().to_index().unchecked_add(1) },
-            self.from.get_file().to_index(),
+            unsafe { self.from.rank().to_index().unchecked_add(1) },
+            self.from.file().to_index(),
         );
         let (rank_to, file_to) = (
-            unsafe { self.to.get_rank().to_index().unchecked_add(1) },
-            self.to.get_file().to_index(),
+            unsafe { self.to.rank().to_index().unchecked_add(1) },
+            self.to.file().to_index(),
         );
 
         let file_from_char = (file_from as u8 + b'a') as char;
@@ -56,7 +56,7 @@ impl ChessMove {
         (self.from, self.to)
     }
 
-    pub fn get_promotion(&self) -> Option<Piece> {
+    pub fn promotion(&self) -> Option<Piece> {
         self.promotion
     }
 

@@ -1,19 +1,19 @@
 use crate::square::Square;
 
 pub fn diagonal(start: Square, end: Square) -> bool {
-    let start_rank = start.get_rank().to_index() as i8;
-    let start_file = start.get_file().to_index() as i8;
-    let end_rank = end.get_rank().to_index() as i8;
-    let end_file = end.get_file().to_index() as i8;
+    let start_rank = start.rank().to_index() as i8;
+    let start_file = start.file().to_index() as i8;
+    let end_rank = end.rank().to_index() as i8;
+    let end_file = end.file().to_index() as i8;
 
     (start_rank - end_rank).abs() == (start_file - end_file).abs()
 }
 
 pub fn orthagonal(start: Square, end: Square) -> bool {
-    let start_rank = start.get_rank().to_index() as i8;
-    let start_file = start.get_file().to_index() as i8;
-    let end_rank = end.get_rank().to_index() as i8;
-    let end_file = end.get_file().to_index() as i8;
+    let start_rank = start.rank().to_index() as i8;
+    let start_file = start.file().to_index() as i8;
+    let end_rank = end.rank().to_index() as i8;
+    let end_file = end.file().to_index() as i8;
 
     start_rank == end_rank || start_file == end_file
 }

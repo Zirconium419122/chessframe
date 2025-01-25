@@ -226,10 +226,10 @@ impl Board {
 
     /// Get the zobrist hash of the board.
     #[inline]
-    pub fn get_hash(&self) -> u64 {
+    pub fn hash(&self) -> u64 {
         self.hash
             ^ if let Some(en_passant_square) = self.en_passant_square {
-                Zobrist::get_en_passant(en_passant_square.get_file(), !self.side_to_move)
+                Zobrist::get_en_passant(en_passant_square.file(), !self.side_to_move)
             } else {
                 0
             }
@@ -259,8 +259,8 @@ impl Board {
     }
 
     fn set_en_passant(&mut self, square: Square) {
-        if get_adjacent_files(square.get_file())
-            & get_rank(square.wrapping_backward(!self.side_to_move).get_rank())
+        if get_adjacent_files(square.file())
+            & get_rank(square.wrapping_backward(!self.side_to_move).rank())
             & self.pieces_color(Piece::Pawn, !self.side_to_move)
             != EMPTY
         {
@@ -477,15 +477,15 @@ impl Board {
         if let Piece::Knight = piece {
             self.check = (get_knight_moves(king_square) & to_bitboard != EMPTY) as u8;
         } else if let Piece::Pawn = piece {
-            if let Some(Piece::Knight) = mv.get_promotion() {
+            if let Some(Piece::Knight) = mv.promotion() {
                 self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
                 self.xor(BitBoard::from_square(to), Piece::Knight, self.side_to_move);
                 self.check = (get_knight_moves(king_square) & to_bitboard != EMPTY) as u8;
-            } else if let Some(promotion) = mv.get_promotion() {
+            } else if let Some(promotion) = mv.promotion() {
                 self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
                 self.xor(BitBoard::from_square(to), promotion, self.side_to_move);
-            } else if from.get_rank() == self.side_to_move.to_second_rank()
-                && to.get_rank() == self.side_to_move.to_fourth_rank()
+            } else if from.rank() == self.side_to_move.to_second_rank()
+                && to.rank() == self.side_to_move.to_fourth_rank()
             {
                 self.set_en_passant(to.wrapping_backward(self.side_to_move));
                 self.check = (get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY) as u8;
@@ -501,7 +501,7 @@ impl Board {
                 self.check = (get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY) as u8;
             }
         } else if castle {
-            let index = to.get_file().to_index();
+            let index = to.file().to_index();
             let start = BitBoard::set(self.side_to_move.to_backrank(), unsafe {
                 *CASTLE_ROOK_START.get_unchecked(index)
             });
@@ -731,8 +731,8 @@ impl Board {
     #[inline]
     pub fn is_promotion(&self, square: &Square) -> bool {
         match self.side_to_move {
-            Color::White => square.get_rank() == Rank::Eighth,
-            Color::Black => square.get_rank() == Rank::First,
+            Color::White => square.rank() == Rank::Eighth,
+            Color::Black => square.rank() == Rank::First,
         }
     }
 

@@ -50,55 +50,55 @@ impl Square {
 
     /// Return the `Rank` given this `Square`.
     #[inline]
-    pub fn get_rank(&self) -> Rank {
+    pub fn rank(&self) -> Rank {
         Rank::from_index((self.0 >> 3) as usize)
     }
 
     /// Return the `File` given this `Square`.
     #[inline]
-    pub fn get_file(&self) -> File {
+    pub fn file(&self) -> File {
         File::from_index((self.0 % 8) as usize)
     }
 
     /// If there is a square above this one, return it. Otherwise, return `None`.
     #[inline]
     pub fn up(&self) -> Option<Square> {
-        if self.get_rank() == Rank::Eighth {
+        if self.rank() == Rank::Eighth {
             None
         } else {
-            Some(Square::make_square(self.get_rank().up(), self.get_file()))
+            Some(Square::make_square(self.rank().up(), self.file()))
         }
     }
 
     /// If there is a square below this one, return it. Otherwise, return `None`.
     #[inline]
     pub fn down(&self) -> Option<Square> {
-        if self.get_rank() == Rank::First {
+        if self.rank() == Rank::First {
             None
         } else {
-            Some(Square::make_square(self.get_rank().down(), self.get_file()))
+            Some(Square::make_square(self.rank().down(), self.file()))
         }
     }
 
     /// If there is a square to the left of this one, return it. Otherwise, return `None`.
     #[inline]
     pub fn left(&self) -> Option<Square> {
-        if self.get_file() == File::A {
+        if self.file() == File::A {
             None
         } else {
-            Some(Square::make_square(self.get_rank(), self.get_file().left()))
+            Some(Square::make_square(self.rank(), self.file().left()))
         }
     }
 
     /// If there is a square to the right of this one, return it. Otherwise, return `None`.
     #[inline]
     pub fn right(&self) -> Option<Square> {
-        if self.get_file() == File::H {
+        if self.file() == File::H {
             None
         } else {
             Some(Square::make_square(
-                self.get_rank(),
-                self.get_file().right(),
+                self.rank(),
+                self.file().right(),
             ))
         }
     }
@@ -124,25 +124,25 @@ impl Square {
     /// If there is a square above this one, return it. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_up(&self) -> Square {
-        Square::make_square(self.get_rank().up(), self.get_file())
+        Square::make_square(self.rank().up(), self.file())
     }
 
     /// If there is a square below this one, return it. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_down(&self) -> Square {
-        Square::make_square(self.get_rank().down(), self.get_file())
+        Square::make_square(self.rank().down(), self.file())
     }
 
     /// If there is a square to the left of this one, return it. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_left(&self) -> Square {
-        Square::make_square(self.get_rank(), self.get_file().left())
+        Square::make_square(self.rank(), self.file().left())
     }
 
     /// If there is a square to the right of this one, return it. Otherwise, wrap around.
     #[inline]
     pub fn wrapping_right(&self) -> Square {
-        Square::make_square(self.get_rank(), self.get_file().right())
+        Square::make_square(self.rank(), self.file().right())
     }
 
     /// If there is a square forwards, given a `Color`, go in that direction. Otherwise, wrap around.
