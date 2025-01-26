@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
 pub enum Error {
     #[error("The string specified does not contain a valid square")]
     InvalidSquare,

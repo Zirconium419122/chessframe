@@ -1,6 +1,6 @@
 use crate::{color::Color, file::File, square::Square};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
 pub struct CastlingRights(u8);
 
 impl Default for CastlingRights {

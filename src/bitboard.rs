@@ -3,7 +3,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 
 use crate::{file::File, rank::Rank, square::Square};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
 pub struct BitBoard(pub u64);
 
 pub const EMPTY: BitBoard = BitBoard(0);

@@ -1,7 +1,7 @@
 use crate::color::Color;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
 pub enum Piece {
     Pawn,
     Knight,

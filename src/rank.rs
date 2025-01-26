@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::error::Error;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
 pub enum Rank {
     First = 0,
     Second = 1,

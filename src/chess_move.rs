@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::{piece::Piece, square::Square};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
 pub struct ChessMove {
     pub from: Square,
     pub to: Square,

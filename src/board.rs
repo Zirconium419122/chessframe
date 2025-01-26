@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{hash::{Hash, Hasher}, str::FromStr};
 
 use crate::{
     bitboard::{BitBoard, EMPTY},
@@ -13,7 +13,7 @@ use crate::{
     square::Square,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Board {
     pub pieces: [BitBoard; 6],    // 6 for white, 6 for black
     pub occupancy: [BitBoard; 2], // white, black occupancy
@@ -29,6 +29,12 @@ pub struct Board {
 impl Default for Board {
     fn default() -> Self {
         Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+    }
+}
+
+impl Hash for Board {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.hash().hash(state);
     }
 }
 
