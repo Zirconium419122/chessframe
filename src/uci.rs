@@ -1,17 +1,21 @@
-impl From<String> for UciCommand {
-    fn from(value: String) -> Self {
+use std::str::FromStr;
+
+impl FromStr for UciCommand {
+    type Err = &'static str;
+    
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let tokens: Vec<&str> = value.split_whitespace().collect();
 
         match tokens.first() {
-            Some(&"uci") => UciCommand::Uci,
+            Some(&"uci") => Ok(UciCommand::Uci),
             Some(&"debug") => {
                 if tokens.get(1) == Some(&"on") {
-                    UciCommand::Debug(true)
+                    Ok(UciCommand::Debug(true))
                 } else {
-                    UciCommand::Debug(false)
+                    Ok(UciCommand::Debug(false))
                 }
             }
-            Some(&"isready") => UciCommand::IsReady,
+            Some(&"isready") => Ok(UciCommand::IsReady),
             Some(&"setoption") => {
                 let name_index = tokens.iter().position(|&x| x == "name").unwrap_or(1) + 1;
                 let value_index = tokens
@@ -23,7 +27,7 @@ impl From<String> for UciCommand {
                 let name = tokens.get(name_index).unwrap_or(&"").to_string();
                 let value = tokens.get(value_index).unwrap_or(&"").to_string();
 
-                UciCommand::SetOption { name, value }
+                Ok(UciCommand::SetOption { name, value })
             }
             Some(&"register") => {
                 let mut name = None;
@@ -53,9 +57,9 @@ impl From<String> for UciCommand {
                     }
                 }
 
-                UciCommand::Register { name, code, later }
+                Ok(UciCommand::Register { name, code, later })
             }
-            Some(&"ucinewgame") => UciCommand::UciNewGame,
+            Some(&"ucinewgame") => Ok(UciCommand::UciNewGame),
             Some(&"position") => {
                 if tokens.get(1) == Some(&"fen") {
                     let mut fen = tokens[2..].join(" ");
@@ -69,10 +73,10 @@ impl From<String> for UciCommand {
                         }
                     }
 
-                    UciCommand::Position {
+                    Ok(UciCommand::Position {
                         fen,
                         moves: Some(moves),
-                    }
+                    })
                 } else if tokens.get(1) == Some(&"startpos") {
                     let mut moves = Vec::new();
 
@@ -82,12 +86,12 @@ impl From<String> for UciCommand {
                         }
                     }
 
-                    UciCommand::Position {
+                    Ok(UciCommand::Position {
                         fen: "startpos".to_string(),
                         moves: Some(moves),
-                    }
+                    })
                 } else {
-                    UciCommand::Info("string Please input a valid command".into())
+                    Err("Please input a valid position command")
                 }
             }
             Some(&"go") => {
@@ -172,7 +176,7 @@ impl From<String> for UciCommand {
                     }
                 }
 
-                UciCommand::Go {
+                Ok(UciCommand::Go {
                     wtime,
                     btime,
                     winc,
@@ -184,29 +188,29 @@ impl From<String> for UciCommand {
                     move_time,
                     infinite,
                     ponder,
-                }
+                })
             }
-            Some(&"stop") => UciCommand::Stop,
-            Some(&"ponderhit") => UciCommand::PonderHit,
-            Some(&"quit") => UciCommand::Quit,
+            Some(&"stop") => Ok(UciCommand::Stop),
+            Some(&"ponderhit") => Ok(UciCommand::PonderHit),
+            Some(&"quit") => Ok(UciCommand::Quit),
             Some(&"id") => {
                 let id_type = tokens.get(1).unwrap_or(&"");
                 let id_value = tokens[2..].join(" ");
 
                 match *id_type {
-                    "name" => UciCommand::Id {
+                    "name" => Ok(UciCommand::Id {
                         name: id_value,
                         author: String::new(),
-                    },
-                    "author" => UciCommand::Id {
+                    }),
+                    "author" => Ok(UciCommand::Id {
                         name: String::new(),
                         author: id_value,
-                    },
-                    _ => UciCommand::Info("Invalid id command".to_string()),
+                    }),
+                    _ => Err("Invalid id command"),
                 }
             }
-            Some(&"uciok") => UciCommand::UciOk,
-            Some(&"readyok") => UciCommand::ReadyOk,
+            Some(&"uciok") => Ok(UciCommand::UciOk),
+            Some(&"readyok") => Ok(UciCommand::ReadyOk),
             Some(&"bestmove") => {
                 let best_move = tokens.get(1).unwrap_or(&"").to_string();
                 let ponder = if tokens.get(2) == Some(&"ponder") {
@@ -215,64 +219,64 @@ impl From<String> for UciCommand {
                     None
                 };
 
-                UciCommand::BestMove { best_move, ponder }
+                Ok(UciCommand::BestMove { best_move, ponder })
             }
             Some(&"copyprotection") => {
                 if let Some(val) = tokens.get(1) {
                     return match *val {
-                        "ok" => UciCommand::CopyProtection {
+                        "ok" => Ok(UciCommand::CopyProtection {
                             ok: true,
                             checking: false,
                             error: false,
-                        },
-                        "checking" => UciCommand::CopyProtection {
+                        }),
+                        "checking" => Ok(UciCommand::CopyProtection {
                             ok: false,
                             checking: true,
                             error: false,
-                        },
-                        "error" => UciCommand::CopyProtection {
+                        }),
+                        "error" => Ok(UciCommand::CopyProtection {
                             ok: false,
                             checking: false,
                             error: true,
-                        },
-                        _ => UciCommand::Info("Invalid option".to_string()),
+                        }),
+                        _ => Err("Invalid option"),
                     };
                 }
 
-                UciCommand::Info("Invalid copyprotection command".to_string())
+                Err("Invalid copyprotection command")
             }
             Some(&"registration") => {
                 if let Some(val) = tokens.get(1) {
                     return match *val {
-                        "ok" => UciCommand::Registration {
+                        "ok" => Ok(UciCommand::Registration {
                             ok: true,
                             checking: false,
                             error: false,
-                        },
-                        "checking" => UciCommand::Registration {
+                        }),
+                        "checking" => Ok(UciCommand::Registration {
                             ok: false,
                             checking: true,
                             error: false,
-                        },
-                        "error" => UciCommand::Registration {
+                        }),
+                        "error" => Ok(UciCommand::Registration {
                             ok: false,
                             checking: false,
                             error: true,
-                        },
-                        _ => UciCommand::Info("Invalid option".to_string()),
+                        }),
+                        _ => Err("Invalid option"),
                     };
                 }
 
-                UciCommand::Info("Invalid registration command".to_string())
+                Err("Invalid registration command")
             }
-            Some(&"info") => UciCommand::Info(tokens[1..].join(" ")),
-            Some(&"option") => UciCommand::Option(tokens[1..].join(" ")),
-            _ => UciCommand::Info("Unknown command!".to_string()),
+            Some(&"info") => Ok(UciCommand::Info(tokens[1..].join(" "))),
+            Some(&"option") => Ok(UciCommand::Option(tokens[1..].join(" "))),
+            _ => Err("Not a command"),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Hash)]
 pub enum UciCommand {
     // Basic commands from GUI to Engine
     Uci,

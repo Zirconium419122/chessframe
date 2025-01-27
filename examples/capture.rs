@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, str::FromStr};
 
 use chess_frame::{
     bitboard::EMPTY,
@@ -61,7 +61,7 @@ impl Uci for CaptureMaker {
         let mut line = String::new();
         io::stdin().read_line(&mut line).unwrap();
 
-        Some(UciCommand::from(line.trim().to_string()))
+        UciCommand::from_str(line.trim()).ok()
     }
 
     fn handle_command(&mut self) {
