@@ -39,6 +39,28 @@ impl Hash for Board {
 }
 
 impl Board {
+    /// Create a empty `Board` which has no pieces in it.
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// 
+    /// let board = Board::new();
+    /// 
+    /// assert_eq!(board.combined(), EMPTY);
+    /// ```
+    pub fn new() -> Board {
+        Board {
+            pieces: [EMPTY; 6],
+            occupancy: [EMPTY; 2],
+            combined: EMPTY,
+            pinned: EMPTY,
+            check: 0,
+            hash: 0,
+            side_to_move: Color::White,
+            castling_rights: CastlingRights::default(),
+            en_passant_square: None,
+        }
+    }
+
     /// Create a board from a FEN in the form of a `&str`.
     /// ```
     /// use chess_frame::board::Board;
@@ -50,17 +72,7 @@ impl Board {
     /// ```
     #[rustfmt::skip]
     pub fn from_fen(fen: &str) -> Board {
-        let mut board = Board {
-            pieces: [BitBoard::default(); 6],
-            occupancy: [BitBoard::default(); 2],
-            combined: BitBoard::default(),
-            pinned: BitBoard::default(),
-            check: 0,
-            hash: 0,
-            side_to_move: Color::White,
-            castling_rights: CastlingRights::default(),
-            en_passant_square: None,
-        };
+        let mut board = Board::new();
 
         let parts: Vec<&str> = fen.split_whitespace().collect();
         assert_eq!(parts.len(), 6);
@@ -230,7 +242,16 @@ impl Board {
         unsafe { self.pieces.get_unchecked_mut(piece.to_index()) }
     }
 
-    /// Get the zobrist hash of the board.
+    /// Get the zobrist hash of the board. This is different from the hash field in [`Board`] as it only contains the hash for the pieces.
+    /// # Example
+    /// ```
+    /// use chess_frame::board::Board;
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.hash(), 0x50FE28372FB16071);
+    /// ```
     #[inline]
     pub fn hash(&self) -> u64 {
         self.hash
@@ -248,13 +269,33 @@ impl Board {
             }
     }
 
-    /// Are we in check?
+    /// Looks up the check field in the [`Board`] and checks if it's above `0`.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::board::Board;
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert!(!board.in_check());
+    /// ```
     #[inline]
     pub fn in_check(&self) -> bool {
         self.check > 0
     }
 
-    /// Get the en passant square, if there is one.
+    /// Get the en passant square, returns [`Option<Square>`].
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, square::Square};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.en_passant_square(), None);
+    /// ```
     #[inline]
     pub fn en_passant_square(&self) -> Option<Square> {
         self.en_passant_square
@@ -274,6 +315,19 @@ impl Board {
         }
     }
 
+    /// Remove the castling rights provided in the castling_rights parameter.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, castling_rights::CastlingRights};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let mut board = Board::from_fen(fen);
+    /// 
+    /// board.remove_castling_rights(CastlingRights::from_fen("KQ"));
+    /// 
+    /// assert_eq!(board.castling_rights, CastlingRights::from_fen("kq"));
+    /// ```
     pub fn remove_castling_rights(&mut self, castling_rights: CastlingRights) {
         self.castling_rights = self.castling_rights.remove(castling_rights);
     }
@@ -286,7 +340,31 @@ impl Board {
     }
 
     /// Check if one can castle to the given side.
-    pub fn can_castle(&mut self, kingside: bool) -> Result<(), &str> {
+    /// 
+    /// # Examples
+    /// 
+    /// Starting position:
+    /// ```
+    /// use chess_frame::board::Board;
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.can_castle(true), Err("Cannot castle kingside"));
+    /// assert_eq!(board.can_castle(false), Err("Cannot castle queenside"));
+    /// ```
+    /// 
+    /// Opening position:
+    /// ```
+    /// use chess_frame::board::Board;
+    /// 
+    /// let fen = "r1bqk2r/ppppbppp/2n2n2/4p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R w KQkq - 1 5";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.can_castle(true), Ok(()));
+    /// assert_eq!(board.can_castle(false), Err("Cannot castle queenside"));
+    /// ```
+    pub fn can_castle(&self, kingside: bool) -> Result<(), &str> {
         let castling_moves = self.generate_castling_moves();
 
         if kingside
@@ -302,7 +380,17 @@ impl Board {
         Ok(())
     }
 
-    /// Infer a `ChessMove` from a string based on the current `Board`.
+    /// Infer a [`ChessMove`] from a string based on the current [`Board`].
+    /// 
+    /// # Example:
+    /// ```
+    /// use chess_frame::{board::Board, chess_move::ChessMove, square::Square};
+    /// 
+    /// let mut board = Board::default();
+    /// let mv = board.infer_move("e2e4");
+    /// 
+    /// assert_eq!(mv, Ok(ChessMove::new(Square::E2, Square::E4)));
+    /// ```
     pub fn infer_move(&mut self, mv: &str) -> Result<ChessMove, Error> {
         let from = Square::from_str(&mv[0..2])?;
         let to = Square::from_str(&mv[2..4])?;
@@ -331,7 +419,7 @@ impl Board {
         Err(Error::NoPieceOnSquare)
     }
 
-    /// Checks that a `ChessMove` is a valid move for the current board state. Does not check if the move leaves the king in check.
+    /// Checks that a [`ChessMove`] is a valid move for the current board state. Does not check if the move leaves the king in check.
     pub fn validate_move(&mut self, mv: &ChessMove) -> Result<Piece, &str> {
         let (from, to) = mv.get_move();
         let piece = self.get_piece(from).ok_or("No piece found on square!")?;
@@ -358,10 +446,10 @@ impl Board {
         Ok(piece)
     }
 
-    /// Make a `ChessMove` on a copy of the current `Board`.
+    /// Make a [`ChessMove`] on a copy of the current [`Board`].
     ///
     /// # Parameters
-    /// - `mv`: A reference to a `ChessMove` representing the move to make.
+    /// - `mv`: A reference to a [`ChessMove`] representing the move to make.
     ///   The move must be either pseudo-legal or fully legal; invalid or unchecked moves
     ///   will result in undefined behavior.
     ///
@@ -384,9 +472,11 @@ impl Board {
     /// ```
     ///
     /// # Notes
-    /// This method assumes all moves are pre-validated (pseudo-legal or legal) or generated by `generate_moves_vec`.
+    /// This method assumes all moves are pre-validated (pseudo-legal or legal) or generated by [`generate_moves_vec`].
     /// It does not perform a legality check before execution but will enforce
     /// certain rules (e.g., pinned pieces cannot move) during processing.
+    /// 
+    /// [`generate_moves_vec`]: #method.generate_moves_vec
     pub fn make_move_new(&self, mv: &ChessMove) -> Result<Board, Error> {
         let mut board = *self;
 
@@ -395,10 +485,10 @@ impl Board {
         Ok(board)
     }
 
-    /// Make a `ChessMove` on the current `Board`.
+    /// Make a [`ChessMove`] on the current [`Board`].
     ///
     /// # Parameters
-    /// - `mv`: A reference to a `ChessMove` representing the move to make.
+    /// - `mv`: A reference to a [`ChessMove`] representing the move to make.
     ///   The move must be either pseudo-legal or fully legal; invalid or unchecked moves
     ///   will result in undefined behavior.
     ///
@@ -421,9 +511,11 @@ impl Board {
     /// ```
     ///
     /// # Notes
-    /// This method assumes all moves are pre-validated (pseudo-legal or legal) or generated by `generate_moves_vec`.
+    /// This method assumes all moves are pre-validated (pseudo-legal or legal) or generated by [`generate_moves_vec`].
     /// It does not perform a legality check before execution but will enforce
     /// certain rules (e.g., pinned pieces cannot move) during processing.
+    /// 
+    /// [`generate_moves_vec`]: #method.generate_moves_vec
     #[rustfmt::skip]
     pub fn make_move(&mut self, mv: &ChessMove) -> Result<(), Error> {
         let (from, to) = mv.get_move();
@@ -588,7 +680,7 @@ impl Board {
             | self.generate_king_moves()
     }
 
-    /// Generate a vector of psudo-legal `ChessMoves`'s.
+    /// Generate a vector of psudo-legal [`ChessMove`]'s.
     #[rustfmt::skip]
     pub fn generate_moves_vec(&self, mask: BitBoard) -> Vec<ChessMove> {
         let mut moves: Vec<ChessMove> = Vec::with_capacity(218);

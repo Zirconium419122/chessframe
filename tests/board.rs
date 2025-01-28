@@ -222,15 +222,15 @@ fn test_hash() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);
 
-    assert_eq!(board.hash, 0x89fb87680071bbf1);
-    assert_eq!(board.hash(), 0x50fe28372fb16079);
+    assert_eq!(board.hash, 0x89FB87680071BBF1);
+    assert_eq!(board.hash(), 0x50FE28372FB16079);
 
     board
         .make_move(&ChessMove::new(Square::E2, Square::E4))
         .unwrap();
 
-    assert_eq!(board.hash, 0xd392461d4bd9b816);
-    assert_eq!(board.hash(), 0xa9756c0466f5ce41);
+    assert_eq!(board.hash, 0xD392461D4BD9B816);
+    assert_eq!(board.hash(), 0xA9756C0466F5CE41);
 }
 
 #[test]
@@ -239,7 +239,7 @@ fn test_can_castle() {
     let mut board = Board::from_fen(fen);
 
     {
-        let mut board = board.clone();
+        let board = board.clone();
 
         assert_eq!(board.side_to_move, Color::White);
         assert_eq!(
