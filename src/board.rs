@@ -639,6 +639,18 @@ impl Board {
     }
 
     /// Get the piece at a given square.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, piece::Piece, square::Square};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.get_piece(Square::E1), Some(Piece::King));
+    /// assert_eq!(board.get_piece(Square::E2), Some(Piece::Pawn));
+    /// assert_eq!(board.get_piece(Square::E3), None);
+    /// ```
     pub fn get_piece(&self, square: Square) -> Option<Piece> {
         let bitboard = BitBoard::from_square(square);
         if self.combined() & bitboard == EMPTY {
@@ -666,11 +678,21 @@ impl Board {
     }
 
     /// Set the piece at a given square (used during board construction).
-    pub fn set_piece(&mut self, piece: Piece, color: Color, square: Square) {
+    fn set_piece(&mut self, piece: Piece, color: Color, square: Square) {
         self.xor(BitBoard::from_square(square), piece, color);
     }
 
     /// Generate all psuedo-legal moves.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::BitBoard};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_moves(), BitBoard(0xFFFF0000))
+    /// ```
     pub fn generate_moves(&self) -> BitBoard {
         self.generate_pawn_moves()
             | self.generate_knight_moves()
@@ -681,6 +703,16 @@ impl Board {
     }
 
     /// Generate a vector of psudo-legal [`ChessMove`]'s.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_moves_vec(!EMPTY).len(), 20);
+    /// ```
     #[rustfmt::skip]
     pub fn generate_moves_vec(&self, mask: BitBoard) -> Vec<ChessMove> {
         let mut moves: Vec<ChessMove> = Vec::with_capacity(218);
@@ -766,11 +798,35 @@ impl Board {
     }
 
     /// Generate all moves for ray pieces.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_ray_moves(), EMPTY);
+    /// ```
     pub fn generate_ray_moves(&self) -> BitBoard {
         self.generate_bishop_moves() | self.generate_rook_moves() | self.generate_queen_moves()
     }
 
     /// Get attackers for a given square.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::{BitBoard, EMPTY}, chess_move::ChessMove, square::Square};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.get_attackers(Square::E4), EMPTY);
+    /// #
+    /// # // let _ = board.make_move_new(&ChessMove::new(Square::E2, Square::E4));
+    /// #
+    /// # // assert_eq!(board.get_attackers(Square::D5), BitBoard::from_square(Square::E4));
+    /// ```
     #[rustfmt::skip]
     #[inline]
     pub fn get_attackers(&self, square: Square) -> BitBoard {
@@ -792,6 +848,16 @@ impl Board {
     }
 
     /// Generate all pawn moves.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::BitBoard};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_pawn_moves(), BitBoard(0xFFFF0000))
+    /// ```
     pub fn generate_pawn_moves(&self) -> BitBoard {
         let mut moves = BitBoard::default();
 
@@ -811,6 +877,16 @@ impl Board {
     }
 
     /// Generate all en passants.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_en_passant(), EMPTY);
+    /// ```
     #[inline]
     pub fn generate_en_passant(&self) -> BitBoard {
         if let Some(en_passant) = self.en_passant_square {
@@ -835,6 +911,16 @@ impl Board {
     }
 
     /// Generate all knight moves.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::BitBoard};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_knight_moves(), BitBoard(0x00A50000))
+    /// ```
     pub fn generate_knight_moves(&self) -> BitBoard {
         let mut moves = BitBoard::default();
 
@@ -846,6 +932,16 @@ impl Board {
     }
 
     /// Generate all bishop moves.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_bishop_moves(), EMPTY)
+    /// ```
     pub fn generate_bishop_moves(&self) -> BitBoard {
         let occupancy = self.combined();
 
@@ -862,6 +958,16 @@ impl Board {
     }
 
     /// Generate all rook moves.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_rook_moves(), EMPTY)
+    /// ```
     pub fn generate_rook_moves(&self) -> BitBoard {
         let occupancy = self.combined();
 
@@ -878,6 +984,16 @@ impl Board {
     }
 
     /// Generate all queen moves.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_queen_moves(), EMPTY)
+    /// ```
     pub fn generate_queen_moves(&self) -> BitBoard {
         let occupancy = self.combined();
 
@@ -895,6 +1011,16 @@ impl Board {
     }
 
     /// Generate all king moves except castling moves.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_king_moves(), EMPTY)
+    /// ```
     pub fn generate_king_moves(&self) -> BitBoard {
         let mut moves = BitBoard::default();
 
@@ -906,6 +1032,16 @@ impl Board {
     }
 
     /// Generate all castling moves.
+    /// 
+    /// # Example
+    /// ```
+    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// 
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    /// 
+    /// assert_eq!(board.generate_castling_moves(), EMPTY)
+    /// ```
     pub fn generate_castling_moves(&self) -> BitBoard {
         const WHITE_KING_SIDE: BitBoard = BitBoard(0x60);
         const WHITE_QUEEN_SIDE: BitBoard = BitBoard(0x0E);
