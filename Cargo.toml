@@ -3,6 +3,7 @@ name = "chess-frame"
 version = "0.0.0"
 edition = "2021"
 build = "src/build.rs"
+readme = "README.md"
 
 [dependencies]
 thiserror = "2.0.2"
