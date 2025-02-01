@@ -45,11 +45,11 @@ impl fmt::Display for ChessMove {
 
 impl ChessMove {
     /// Create a new `ChessMove` given a `from` and `to` square.
-    /// 
+    ///
     /// # Parameters
     /// - `from` a [`Square`] representing the starting square of the move.
     /// - `to` a [`Square`] representing the ending square of the move.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use chess_frame::{board::Board, chess_move::ChessMove, square::Square};
@@ -68,12 +68,12 @@ impl ChessMove {
     }
 
     /// Create a new `ChessMove` given a `from` and `to` square and a `promotion` piece.
-    /// 
+    ///
     /// # Parameters
     /// - `from` a [`Square`] representing the starting square of the move.
     /// - `to` a [`Square`] representing the ending square of the move.
     /// - `promotion` a [`Piece`] representing the piece to promote to.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use chess_frame::{board::Board, chess_move::ChessMove, piece::Piece, square::Square};
@@ -93,10 +93,10 @@ impl ChessMove {
     }
 
     /// Get the `from` and `to` squares of the move.
-    /// 
+    ///
     /// # Returns
     /// - `(Square, Square)` a tuple containing the `from` and `to` squares of the move.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use chess_frame::{chess_move::ChessMove, square::Square};
@@ -110,10 +110,10 @@ impl ChessMove {
     }
 
     /// Get the promotion piece of the move.
-    /// 
+    ///
     /// # Returns
     /// - [`Option<Piece>`] an optional [`Piece`] representing the promotion piece of the move.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use chess_frame::{chess_move::ChessMove, piece::Piece, square::Square};

@@ -96,10 +96,7 @@ impl Square {
         if self.file() == File::H {
             None
         } else {
-            Some(Square::make_square(
-                self.rank(),
-                self.file().right(),
-            ))
+            Some(Square::make_square(self.rank(), self.file().right()))
         }
     }
 

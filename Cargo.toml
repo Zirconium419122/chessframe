@@ -2,8 +2,10 @@
 name = "chess-frame"
 version = "0.0.0"
 edition = "2021"
-build = "src/build.rs"
 readme = "README.md"
+repository = "https://github.com/Zirconium419122/chess-frame"
+license = "Apache-2.0"
+build = "src/build.rs"
 
 [dependencies]
 thiserror = "2.0.2"

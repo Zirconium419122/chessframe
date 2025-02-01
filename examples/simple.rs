@@ -78,6 +78,7 @@ impl SimpleMoveMaker {
         (max, best_move)
     }
 
+    #[rustfmt::skip]
     fn search(board: &Board, mut alpha: isize, beta: isize, depth: usize) -> isize {
         if depth == 0 {
             return Self::quiescence_search(board, alpha, beta);
@@ -215,6 +216,7 @@ impl Uci for SimpleMoveMaker {
         UciCommand::from_str(line.trim()).ok()
     }
 
+    #[rustfmt::skip]
     fn handle_command(&mut self) {
         if let Some(command) = self.read_command() {
             match command {

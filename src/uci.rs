@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 impl FromStr for UciCommand {
     type Err = &'static str;
-    
+
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let tokens: Vec<&str> = value.split_whitespace().collect();
 
