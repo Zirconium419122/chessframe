@@ -52,7 +52,7 @@ impl ChessMove {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, chess_move::ChessMove, square::Square};
+    /// use chessframe::{board::Board, chess_move::ChessMove, square::Square};
     ///
     /// let board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
@@ -76,7 +76,7 @@ impl ChessMove {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, chess_move::ChessMove, piece::Piece, square::Square};
+    /// use chessframe::{board::Board, chess_move::ChessMove, piece::Piece, square::Square};
     ///
     /// let fen = "7r/1Pk5/8/K7/8/8/8/1R6 w - - 0 1";
     /// let board = Board::from_fen(fen);
@@ -99,7 +99,7 @@ impl ChessMove {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{chess_move::ChessMove, square::Square};
+    /// use chessframe::{chess_move::ChessMove, square::Square};
     ///
     /// let mv = ChessMove::new(Square::E2, Square::E4);
     ///
@@ -116,7 +116,7 @@ impl ChessMove {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{chess_move::ChessMove, piece::Piece, square::Square};
+    /// use chessframe::{chess_move::ChessMove, piece::Piece, square::Square};
     ///
     /// let mv = ChessMove::new_promotion(Square::B7, Square::B8, Piece::Queen);
     ///

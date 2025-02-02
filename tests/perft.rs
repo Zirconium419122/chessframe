@@ -1,4 +1,4 @@
-use chess_frame::{bitboard::EMPTY, board::Board};
+use chessframe::{bitboard::EMPTY, board::Board};
 
 struct Perft(std::collections::HashMap<u64, (usize, usize)>);
 

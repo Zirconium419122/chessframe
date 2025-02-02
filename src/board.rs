@@ -44,7 +44,7 @@ impl Hash for Board {
 impl Board {
     /// Create a empty `Board` which has no pieces in it.
     /// ```
-    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// use chessframe::{board::Board, bitboard::EMPTY};
     ///
     /// let board = Board::new();
     ///
@@ -66,7 +66,7 @@ impl Board {
 
     /// Create a board from a FEN in the form of a `&str`.
     /// ```
-    /// use chess_frame::board::Board;
+    /// use chessframe::board::Board;
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -183,7 +183,7 @@ impl Board {
 
     /// Get the combined bitboard of all pieces on the board.
     /// ```
-    /// use chess_frame::{bitboard::BitBoard, board::Board};
+    /// use chessframe::{bitboard::BitBoard, board::Board};
     ///
     /// let board = Board::default();
     ///
@@ -202,7 +202,7 @@ impl Board {
 
     /// Get the occupancy bitboard for a particular color.
     /// ```
-    /// use chess_frame::{bitboard::BitBoard, board::Board, color::Color};
+    /// use chessframe::{bitboard::BitBoard, board::Board, color::Color};
     ///
     /// let board = Board::default();
     ///
@@ -222,7 +222,7 @@ impl Board {
 
     /// Get the bitboard of a particular piece type.
     /// ```
-    /// use chess_frame::{bitboard::BitBoard, board::Board, piece::Piece};
+    /// use chessframe::{bitboard::BitBoard, board::Board, piece::Piece};
     ///
     /// let board = Board::default();
     ///
@@ -248,7 +248,7 @@ impl Board {
     /// Get the zobrist hash of the board. This is different from the hash field in [`Board`] as it only contains the hash for the pieces.
     /// # Example
     /// ```
-    /// use chess_frame::board::Board;
+    /// use chessframe::board::Board;
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -276,7 +276,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::board::Board;
+    /// use chessframe::board::Board;
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -292,7 +292,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, square::Square};
+    /// use chessframe::{board::Board, square::Square};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -322,7 +322,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, castling_rights::CastlingRights};
+    /// use chessframe::{board::Board, castling_rights::CastlingRights};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let mut board = Board::from_fen(fen);
@@ -348,7 +348,7 @@ impl Board {
     ///
     /// Starting position:
     /// ```
-    /// use chess_frame::board::Board;
+    /// use chessframe::board::Board;
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -359,7 +359,7 @@ impl Board {
     ///
     /// Opening position:
     /// ```
-    /// use chess_frame::board::Board;
+    /// use chessframe::board::Board;
     ///
     /// let fen = "r1bqk2r/ppppbppp/2n2n2/4p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R w KQkq - 1 5";
     /// let board = Board::from_fen(fen);
@@ -387,7 +387,7 @@ impl Board {
     ///
     /// # Example:
     /// ```
-    /// use chess_frame::{board::Board, chess_move::ChessMove, square::Square};
+    /// use chessframe::{board::Board, chess_move::ChessMove, square::Square};
     ///
     /// let mut board = Board::default();
     /// let mv = board.infer_move("e2e4");
@@ -466,7 +466,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, chess_move::ChessMove, square::Square};
+    /// use chessframe::{board::Board, chess_move::ChessMove, square::Square};
     ///
     /// let board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
@@ -505,7 +505,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, chess_move::ChessMove, square::Square};
+    /// use chessframe::{board::Board, chess_move::ChessMove, square::Square};
     ///
     /// let mut board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
@@ -645,7 +645,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, piece::Piece, square::Square};
+    /// use chessframe::{board::Board, piece::Piece, square::Square};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -689,7 +689,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::BitBoard};
+    /// use chessframe::{board::Board, bitboard::BitBoard};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -709,7 +709,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// use chessframe::{board::Board, bitboard::EMPTY};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -804,7 +804,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// use chessframe::{board::Board, bitboard::EMPTY};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -819,7 +819,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::{BitBoard, EMPTY}, chess_move::ChessMove, square::Square};
+    /// use chessframe::{board::Board, bitboard::{BitBoard, EMPTY}, chess_move::ChessMove, square::Square};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -854,7 +854,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::BitBoard};
+    /// use chessframe::{board::Board, bitboard::BitBoard};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -883,7 +883,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// use chessframe::{board::Board, bitboard::EMPTY};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -917,7 +917,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::BitBoard};
+    /// use chessframe::{board::Board, bitboard::BitBoard};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -938,7 +938,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// use chessframe::{board::Board, bitboard::EMPTY};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -964,7 +964,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// use chessframe::{board::Board, bitboard::EMPTY};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -990,7 +990,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// use chessframe::{board::Board, bitboard::EMPTY};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -1017,7 +1017,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// use chessframe::{board::Board, bitboard::EMPTY};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
@@ -1038,7 +1038,7 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chess_frame::{board::Board, bitboard::EMPTY};
+    /// use chessframe::{board::Board, bitboard::EMPTY};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);

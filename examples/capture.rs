@@ -1,6 +1,6 @@
 use std::{io, str::FromStr};
 
-use chess_frame::{
+use chessframe::{
     bitboard::EMPTY,
     board::Board,
     uci::{Uci, UciCommand},

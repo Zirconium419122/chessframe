@@ -13,7 +13,7 @@ use rand_chacha::{
     ChaCha8Rng,
 };
 
-use chess_frame::{
+use chessframe::{
     bitboard::{BitBoard, EMPTY},
     square::{Square, SQUARES},
 };
@@ -418,7 +418,8 @@ fn main() {
         return;
     }
 
-    let mut file = File::create("src/magic_tables.rs").unwrap();
+    let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR should be set");
+    let mut file = File::create(format!("{}/magic_tables.rs", out_dir)).unwrap();
 
     println!("\nWriting magic tables to src/magic_tables.rs...");
 

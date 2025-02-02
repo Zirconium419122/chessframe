@@ -1,4 +1,4 @@
-use chess_frame::{
+use chessframe::{
     bitboard::{BitBoard, EMPTY},
     board::*,
 };
