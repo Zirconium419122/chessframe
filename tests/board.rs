@@ -69,10 +69,10 @@ fn test_from_fen_starting_position() {
     assert_eq!(board.side_to_move, Color::White);
 
     // Test castling rights
-    assert!(board.castling_rights.can_castle(&Color::White, true)); // White kingside
-    assert!(board.castling_rights.can_castle(&Color::White, false)); // White queenside
-    assert!(board.castling_rights.can_castle(&Color::Black, true)); // Black kingside
-    assert!(board.castling_rights.can_castle(&Color::Black, false)); // Black queenside
+    assert!(board.castling_rights.can_castle(Color::White, true)); // White kingside
+    assert!(board.castling_rights.can_castle(Color::White, false)); // White queenside
+    assert!(board.castling_rights.can_castle(Color::Black, true)); // Black kingside
+    assert!(board.castling_rights.can_castle(Color::Black, false)); // Black queenside
 
     // Test en passant square
     // Since en passant target square is "-", it should be none or unset

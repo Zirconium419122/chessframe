@@ -26,16 +26,16 @@ impl CastlingRights {
         let mut castling_rights = CastlingRights::new();
 
         if fen.contains('K') {
-            castling_rights = castling_rights.add(&Color::White, true);
+            castling_rights = castling_rights.add(Color::White, true);
         }
         if fen.contains('Q') {
-            castling_rights = castling_rights.add(&Color::White, false);
+            castling_rights = castling_rights.add(Color::White, false);
         }
         if fen.contains('k') {
-            castling_rights = castling_rights.add(&Color::Black, true);
+            castling_rights = castling_rights.add(Color::Black, true);
         }
         if fen.contains('q') {
-            castling_rights = castling_rights.add(&Color::Black, false);
+            castling_rights = castling_rights.add(Color::Black, false);
         }
 
         castling_rights
@@ -47,7 +47,7 @@ impl CastlingRights {
         CastlingRights(self.0 & (MASK << (color as u8 * CastlingRights::OFFSET)))
     }
 
-    pub fn square_to_castle_rights(color: &Color, square: Square) -> CastlingRights {
+    pub fn square_to_castle_rights(color: Color, square: Square) -> CastlingRights {
         if square == Square::make_square(color.to_backrank(), File::E) {
             CastlingRights::new().add(color, true).add(color, false)
         } else if square == Square::make_square(color.to_backrank(), File::H) {
@@ -64,18 +64,18 @@ impl CastlingRights {
     }
 
     #[rustfmt::skip]
-    pub fn can_castle(&self, color: &Color, kingside: bool) -> bool {
-        let offset = if color == &Color::Black { CastlingRights::OFFSET } else { 0 };
+    pub fn can_castle(&self, color: Color, kingside: bool) -> bool {
+        let offset = if color == Color::Black { CastlingRights::OFFSET } else { 0 };
         let castle_right = if kingside { CastlingRights::KINGSIDE } else { CastlingRights::QUEENSIDE };
 
         (self.0 & (castle_right << offset)) != 0
     }
 
     #[rustfmt::skip]
-    pub fn add(&mut self, color: &Color, kingside: bool) -> CastlingRights {
+    pub fn add(&mut self, color: Color, kingside: bool) -> CastlingRights {
         let mut castling_rights = *self;
 
-        let offset = if color == &Color::Black { CastlingRights::OFFSET } else { 0 };
+        let offset = if color == Color::Black { CastlingRights::OFFSET } else { 0 };
         let castle_right = if kingside { CastlingRights::KINGSIDE } else { CastlingRights::QUEENSIDE };
 
         castling_rights.0 |= castle_right << offset;
@@ -84,16 +84,16 @@ impl CastlingRights {
     }
 
     #[rustfmt::skip]
-    pub fn revoke(&mut self, color: &Color, kingside: bool) {
+    pub fn revoke(&mut self, color: Color, kingside: bool) {
         let mut castling_rights = *self;
 
-        let offset = if color == &Color::Black { CastlingRights::OFFSET } else { 0 };
+        let offset = if color == Color::Black { CastlingRights::OFFSET } else { 0 };
         let castle_right = if kingside { CastlingRights::KINGSIDE } else { CastlingRights::QUEENSIDE };
 
         castling_rights.0 &= !(castle_right << offset);
     }
 
-    pub fn revoke_all(&mut self, color: &Color) {
+    pub fn revoke_all(&mut self, color: Color) {
         self.revoke(color, true);
         self.revoke(color, false);
     }

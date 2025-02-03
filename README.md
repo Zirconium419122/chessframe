@@ -5,7 +5,7 @@ chessframe is a Rust library for working with chess positions, generating psudo-
 ## Features
 
 - Load positions from FEN strings.
-- Generate legal moves efficiently.
+- Generate psudo-legal moves efficiently.
 
 ## Examples
 

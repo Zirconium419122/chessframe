@@ -541,12 +541,12 @@ impl Board {
         self.xor(to_bitboard, piece, self.side_to_move);
 
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
-            &!self.side_to_move,
+            !self.side_to_move,
             to,
         ));
 
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
-            &self.side_to_move,
+            self.side_to_move,
             from,
         ));
 
@@ -1080,10 +1080,10 @@ impl Board {
 
         let can_castle_kingside = empty_kingside
             && !attackers_kingside
-            && self.castling_rights.can_castle(&self.side_to_move, true);
+            && self.castling_rights.can_castle(self.side_to_move, true);
         let can_castle_queenside = empty_queenside
             && !attackers_queenside
-            && self.castling_rights.can_castle(&self.side_to_move, false);
+            && self.castling_rights.can_castle(self.side_to_move, false);
 
         let mut moves = BitBoard::default();
 

@@ -421,7 +421,7 @@ fn main() {
     let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR should be set");
     let mut file = File::create(format!("{}/magic_tables.rs", out_dir)).unwrap();
 
-    println!("\nWriting magic tables to src/magic_tables.rs...");
+    println!("\nWriting magic tables to {}/magic_tables.rs...", out_dir);
 
     write_bishop_moves(
         &mut file,
