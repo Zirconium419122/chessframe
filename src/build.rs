@@ -16,7 +16,7 @@ mod square;
 
 fn main() {
     println!("cargo::rerun-if-changed=src/build.rs");
-    
+
     let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR should be set");
     let mut file = File::create(format!("{}/tables.rs", out_dir)).unwrap();
 
@@ -48,7 +48,10 @@ fn main() {
         write_bishop_moves(&mut file);
 
         write_rook_moves(&mut file);
-    } else if let Ok(mut file) = OpenOptions::new().write(true).open(format!("{}/magic_tables.rs", out_dir)) {
+    } else if let Ok(mut file) = OpenOptions::new()
+        .write(true)
+        .open(format!("{}/magic_tables.rs", out_dir))
+    {
         if file.metadata().expect("file metadata not found").len() == 0 {
             let reader = BufReader::new(
                 OpenOptions::new()

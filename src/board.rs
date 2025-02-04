@@ -111,7 +111,11 @@ impl Board {
 
         board.castling_rights = CastlingRights::from_fen(parts[2]);
 
+        board.side_to_move = !board.side_to_move;
+
         board.parse_en_passant(parts[3]);
+
+        board.side_to_move = !board.side_to_move;
 
         board
     }
@@ -175,8 +179,10 @@ impl Board {
                     .unwrap_unchecked() as u8)
                     .unchecked_sub(1)
             };
-            let square = Square::new(rank << (3 + file));
-
+            let square = Square::make_square(
+                Rank::from_index(rank as usize),
+                File::from_index(file as usize),
+            );
             self.set_en_passant(square);
         }
     }
@@ -335,7 +341,7 @@ impl Board {
         self.castling_rights = self.castling_rights.remove(castling_rights);
     }
 
-    fn xor(&mut self, bitboard: BitBoard, piece: Piece, color: Color) {
+    pub(crate) fn xor(&mut self, bitboard: BitBoard, piece: Piece, color: Color) {
         *self.pieces_mut(piece) ^= bitboard;
         *self.occupancy_mut(color) ^= bitboard;
         *self.combined_mut() ^= bitboard;

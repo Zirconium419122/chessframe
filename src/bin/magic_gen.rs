@@ -389,10 +389,7 @@ fn main() {
             .iter()
             .filter(|x| x.is_some())
             .count();
-        let found_rook_squares = rook_moves_and_magics
-            .iter()
-            .filter(|x| x.is_some())
-            .count();
+        let found_rook_squares = rook_moves_and_magics.iter().filter(|x| x.is_some()).count();
 
         print!(
             "\rIteration: {}, Bishop moves size: {} KB, Rook moves size: {} KB | Progress: Bishops {}/64, Rooks {}/64",
