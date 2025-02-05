@@ -34,6 +34,28 @@ let mv = ChessMove::new(Square::E2, Square::E4);
 assert_eq!(board.make_move(&mv), Ok(()));
 ```
 
+### Making and undoing a Move using `Game`
+
+This example demonstrates how to make and undo a move using the `Game` struct.
+
+```rust
+use chessframe::{chess_move::ChessMove, game::Game, piece::Piece, square::Square};
+
+let mut game = Game::new();
+
+let mv = ChessMove::new(Square::E2, Square::E4);
+assert_eq!(game.board.get_piece(Square::E2), Some(Piece::Pawn));
+assert_eq!(game.board.get_piece(Square::E4), None);
+
+game.make_move(mv);
+assert_eq!(game.board.get_piece(Square::E2), None);
+assert_eq!(game.board.get_piece(Square::E4), Some(Piece::Pawn));
+
+game.undo_move();
+assert_eq!(game.board.get_piece(Square::E2), Some(Piece::Pawn));
+assert_eq!(game.board.get_piece(Square::E4), None);
+```
+
 ### Using `make_move_new` for Perft Tests
 
 The following example implements a Perft test, which counts all possible positions after a given number of moves.
@@ -49,7 +71,7 @@ fn perft(board: &Board, depth: usize) -> usize {
             let perft_results = if depth == 1 {
                 1
             } else {
-                self.perft(board, depth - 1)
+                perft(board, depth - 1)
             };
             count += perft_results;
         }

@@ -3,7 +3,7 @@ use crate::{
     square::Square,
 };
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
 pub struct Game {
     pub board: Board,
     pub history: Vec<(ChessMove, Option<(Piece, Square)>)>,
@@ -59,7 +59,9 @@ impl Game {
 
     /// Undo the last move made on the [`Board`].
     ///
-    /// # Example
+    /// # Examples
+    ///
+    /// Undo a en passant move:
     /// ```
     /// use chessframe::{chess_move::ChessMove, game::Game, piece::Piece, square::Square};
     ///
@@ -75,13 +77,41 @@ impl Game {
     /// game.undo_move();
     /// assert_eq!(game.board.get_piece(Square::H5), Some(Piece::Pawn));
     /// ```
+    ///
+    /// Undo a promotion move:
+    /// ```
+    /// use chessframe::{chess_move::ChessMove, game::Game, piece::Piece, square::Square};
+    ///
+    /// let fen = "8/1PK5/7b/6k1/8/8/8/8 w - - 0 1";
+    /// let mut game = Game::from_fen(fen);
+    ///
+    /// let mv = ChessMove::new_promotion(Square::B7, Square::B8, Piece::Queen);
+    /// assert_eq!(game.board.get_piece(Square::B8), None);
+    ///
+    /// game.make_move(mv);
+    ///
+    /// assert_eq!(game.board.get_piece(Square::B8), Some(Piece::Queen));
+    ///
+    /// game.undo_move();
+    /// assert_eq!(game.board.get_piece(Square::B8), None);
+    /// assert_eq!(game.board.get_piece(Square::B7), Some(Piece::Pawn));
+    /// ```
     pub fn undo_move(&mut self) {
-        let (from, to) = self.history[self.ply - 1].0.get_move();
+        let mv = self.history[self.ply - 1].0;
+        let (from, to) = mv.get_move();
+
         if let Some(piece) = self.board.get_piece(to) {
             self.board
                 .xor(BitBoard::from_square(to), piece, !self.board.side_to_move);
-            self.board
-                .xor(BitBoard::from_square(from), piece, !self.board.side_to_move);
+            self.board.xor(
+                BitBoard::from_square(from),
+                if mv.promotion().is_some() {
+                    Piece::Pawn
+                } else {
+                    piece
+                },
+                !self.board.side_to_move,
+            );
 
             if let Some((captured, square)) = self.history[self.ply - 1].1 {
                 self.board.xor(
@@ -93,6 +123,7 @@ impl Game {
 
             self.board.side_to_move = !self.board.side_to_move;
             self.ply -= 1;
+            self.history.pop();
         }
     }
 }
