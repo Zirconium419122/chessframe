@@ -1,12 +1,12 @@
 use crate::{
-    bitboard::BitBoard, board::Board, chess_move::ChessMove, error::Error, piece::Piece,
-    square::Square,
+    bitboard::BitBoard, board::Board, chess_move::ChessMove, error::Error, file::File,
+    magic::get_castle_moves, piece::Piece, square::Square,
 };
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
 pub struct Game {
     pub board: Board,
-    pub history: Vec<(ChessMove, Option<(Piece, Square)>)>,
+    pub history: Vec<(ChessMove, Option<(Piece, Square)>, bool)>,
     pub ply: usize,
 }
 
@@ -44,13 +44,17 @@ impl Game {
     /// assert_eq!(game.board.en_passant_square, Some(Square::H6));
     /// ```
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
-        let to = mv.get_move().1;
+        let (from, to) = mv.get_move();
+        let move_bitboard = BitBoard::from_square(from) | BitBoard::from_square(to);
+        let castle = self.board.get_piece(from).ok_or(Error::NoPieceOnSquare)? == Piece::King
+            && ((move_bitboard) & get_castle_moves()) == move_bitboard;
         self.history.push((
             mv,
             self.board.en_passant_square()
                 .filter(|&en_passant_square| to == en_passant_square)
                 .map(|_| (Piece::Pawn, to.wrapping_backward(self.board.side_to_move)))
                 .or_else(|| self.board.get_piece(to).map(|captured| (captured, to))),
+            castle,
         ));
         self.board.make_move(&mv)?;
         self.ply += 1;
@@ -76,6 +80,26 @@ impl Game {
     ///
     /// game.undo_move();
     /// assert_eq!(game.board.get_piece(Square::H5), Some(Piece::Pawn));
+    /// ```
+    ///
+    /// Undo a castling move:
+    /// ```
+    /// use chessframe::{chess_move::ChessMove, game::Game, piece::Piece, square::Square};
+    ///
+    /// let fen = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 1 5";
+    /// let mut game = Game::from_fen(fen);
+    ///
+    /// let mv = ChessMove::new(Square::E1, Square::G1);
+    /// assert_eq!(game.board.get_piece(Square::F1), None);
+    /// assert_eq!(game.board.get_piece(Square::G1), None);
+    ///
+    /// game.make_move(mv);
+    /// assert_eq!(game.board.get_piece(Square::F1), Some(Piece::Rook));
+    /// assert_eq!(game.board.get_piece(Square::G1), Some(Piece::King));
+    ///
+    /// game.undo_move();
+    /// assert_eq!(game.board.get_piece(Square::F1), None);
+    /// assert_eq!(game.board.get_piece(Square::G1), None);
     /// ```
     ///
     /// Undo a promotion move:
@@ -118,6 +142,32 @@ impl Game {
                     BitBoard::from_square(square),
                     captured,
                     self.board.side_to_move,
+                );
+            }
+
+            if self.history[self.ply - 1].2 {
+                let backrank = (!self.board.side_to_move).to_backrank();
+                let (rook_start, rook_end) = match to.file() {
+                    File::G => (
+                        Square::make_square(backrank, File::F),
+                        Square::make_square(backrank, File::H),
+                    ),
+                    File::C => (
+                        Square::make_square(backrank, File::D),
+                        Square::make_square(backrank, File::A),
+                    ),
+                    _ => unreachable!(),
+                };
+
+                self.board.xor(
+                    BitBoard::from_square(rook_start),
+                    Piece::Rook,
+                    !self.board.side_to_move,
+                );
+                self.board.xor(
+                    BitBoard::from_square(rook_end),
+                    Piece::Rook,
+                    !self.board.side_to_move,
                 );
             }
 
