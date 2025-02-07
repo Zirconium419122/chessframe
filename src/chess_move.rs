@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::{piece::Piece, square::Square};
+use crate::{color::Color, piece::Piece, square::Square};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
 pub struct ChessMove {
@@ -124,6 +124,46 @@ impl ChessMove {
     /// ```
     pub fn promotion(&self) -> Option<Piece> {
         self.promotion
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
+pub enum MoveMetaData {
+    #[default]
+    None,
+    Capture(Piece, Square),
+    EnPassant(Square),
+    Castle,
+}
+
+impl MoveMetaData {
+    pub fn new(captured: Option<Piece>, square: Square, en_passant: bool, castle: bool, color: Color) -> MoveMetaData {
+        match (captured, en_passant, castle) {
+            (Some(captured), _, _) => MoveMetaData::Capture(captured, square),
+            (_, true, _) => MoveMetaData::EnPassant(square.wrapping_backward(color)),
+            (_, _, true) => MoveMetaData::Castle,
+            _ => MoveMetaData::None,
+        }
+    }
+
+    pub fn capture(&self) -> Option<(Piece, Square)> {
+        if let MoveMetaData::Capture(captured, square) = *self {
+            Some((captured, square))
+        } else {
+            None
+        }
+    }
+
+    pub fn en_passant(&self) -> Option<Square> {
+        if let MoveMetaData::EnPassant(square) = *self {
+            Some(square)
+        } else {
+            None
+        }
+    }
+
+    pub fn castle(&self) -> bool {
+        self == &MoveMetaData::Castle
     }
 }
 

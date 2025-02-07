@@ -1,12 +1,12 @@
 use crate::{
-    bitboard::BitBoard, board::Board, chess_move::ChessMove, error::Error, file::File,
-    magic::get_castle_moves, piece::Piece, square::Square,
+    bitboard::BitBoard, board::Board, chess_move::{ChessMove, MoveMetaData}, error::Error, file::File,
+    piece::Piece, square::Square,
 };
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
 pub struct Game {
     pub board: Board,
-    pub history: Vec<(ChessMove, Option<(Piece, Square)>, bool)>,
+    pub history: Vec<(ChessMove, MoveMetaData)>,
     pub ply: usize,
 }
 
@@ -44,19 +44,11 @@ impl Game {
     /// assert_eq!(game.board.en_passant_square, Some(Square::H6));
     /// ```
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
-        let (from, to) = mv.get_move();
-        let move_bitboard = BitBoard::from_square(from) | BitBoard::from_square(to);
-        let castle = self.board.get_piece(from).ok_or(Error::NoPieceOnSquare)? == Piece::King
-            && ((move_bitboard) & get_castle_moves()) == move_bitboard;
+        let metadata = self.board.make_move_metadata(&mv)?;
         self.history.push((
             mv,
-            self.board.en_passant_square()
-                .filter(|&en_passant_square| to == en_passant_square)
-                .map(|_| (Piece::Pawn, to.wrapping_backward(self.board.side_to_move)))
-                .or_else(|| self.board.get_piece(to).map(|captured| (captured, to))),
-            castle,
+            metadata,
         ));
-        self.board.make_move(&mv)?;
         self.ply += 1;
         Ok(())
     }
@@ -137,38 +129,39 @@ impl Game {
                 !self.board.side_to_move,
             );
 
-            if let Some((captured, square)) = self.history[self.ply - 1].1 {
-                self.board.xor(
-                    BitBoard::from_square(square),
-                    captured,
-                    self.board.side_to_move,
-                );
-            }
+            match self.history[self.ply - 1].1 {
+                MoveMetaData::Capture(captured, square) => {
+                    self.board.xor(BitBoard::from_square(square), captured, self.board.side_to_move);
+                },
+                MoveMetaData::EnPassant(square) => {
+                    self.board.xor(BitBoard::from_square(square), Piece::Pawn, self.board.side_to_move);
+                },
+                MoveMetaData::Castle => {
+                    let backrank = (!self.board.side_to_move).to_backrank();
+                    let (rook_start, rook_end) = match to.file() {
+                        File::G => (
+                            Square::make_square(backrank, File::F),
+                            Square::make_square(backrank, File::H),
+                        ),
+                        File::C => (
+                            Square::make_square(backrank, File::D),
+                            Square::make_square(backrank, File::A),
+                        ),
+                        _ => unreachable!(),
+                    };
 
-            if self.history[self.ply - 1].2 {
-                let backrank = (!self.board.side_to_move).to_backrank();
-                let (rook_start, rook_end) = match to.file() {
-                    File::G => (
-                        Square::make_square(backrank, File::F),
-                        Square::make_square(backrank, File::H),
-                    ),
-                    File::C => (
-                        Square::make_square(backrank, File::D),
-                        Square::make_square(backrank, File::A),
-                    ),
-                    _ => unreachable!(),
-                };
-
-                self.board.xor(
-                    BitBoard::from_square(rook_start),
-                    Piece::Rook,
-                    !self.board.side_to_move,
-                );
-                self.board.xor(
-                    BitBoard::from_square(rook_end),
-                    Piece::Rook,
-                    !self.board.side_to_move,
-                );
+                    self.board.xor(
+                        BitBoard::from_square(rook_start),
+                        Piece::Rook,
+                        !self.board.side_to_move,
+                    );
+                    self.board.xor(
+                        BitBoard::from_square(rook_end),
+                        Piece::Rook,
+                        !self.board.side_to_move,
+                    );
+                },
+                _ => {},
             }
 
             self.board.side_to_move = !self.board.side_to_move;
