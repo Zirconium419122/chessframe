@@ -12,6 +12,14 @@ pub struct Game {
 
 impl Game {
     /// Create a new [`Game`] with the initial starting position.
+    /// 
+    /// # Example
+    /// ```
+    /// use chessframe::{board::Board, game::Game};
+    ///
+    /// let game = Game::new();
+    ///
+    /// assert_eq!(game.board, Board::default());
     pub fn new() -> Game {
         Game {
             board: Board::default(),
@@ -21,6 +29,19 @@ impl Game {
     }
 
     /// Create a new [`Game`] from a FEN string.
+    /// 
+    /// # Parameters
+    /// - `fen` a string slice representing the FEN string.	
+    /// 
+    /// # Example
+    /// ```
+    /// use chessframe::game::Game;
+    ///
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let game = Game::from_fen(fen);
+    ///
+    /// assert_eq!(game, Game::new());
+    /// ```
     pub fn from_fen(fen: &str) -> Game {
         Game {
             board: Board::from_fen(fen),

@@ -137,6 +137,39 @@ pub enum MoveMetaData {
 }
 
 impl MoveMetaData {
+    /// Creates a new `MoveMetaData` instance based on the move's properties.
+    ///
+    /// # Parameters
+    /// - `captured`: An optional [`Piece`] that was captured during the move.
+    /// - `square`: The [`Square`] where the move took place.
+    /// - `en_passant`: A [`bool`] indicating whether the move was an en passant capture.
+    /// - `castle`: A [`bool`] indicating whether the move was a castling move.
+    /// - `color`: The [`Color`] of the side that made the move.
+    ///
+    /// # Returns
+    /// A [`MoveMetaData`] variant corresponding to the move type:
+    /// - [`MoveMetaData::Capture`] if a piece was captured.
+    /// - [`MoveMetaData::EnPassant`] if an en passant capture occurred.
+    /// - [`MoveMetaData::Castle`] if the move was a castling move.
+    /// - [`MoveMetaData::None`] if the move had no special properties.
+    /// 
+    /// # Example
+    /// ```
+    /// use chessframe::{chess_move::MoveMetaData, color::Color, piece::Piece, square::Square};
+    /// 
+    /// let captured = Some(Piece::Pawn);
+    /// let square = Square::D5;
+    /// let en_passant = false;
+    /// let castle = false;
+    /// let color = Color::White;
+    /// 
+    /// let move_metadata = MoveMetaData::new(captured, square, en_passant, castle, color);
+    /// 
+    /// assert_eq!(
+    ///     move_metadata,
+    ///     MoveMetaData::Capture(Piece::Pawn, Square::D5),
+    /// );
+    /// ```
     pub fn new(captured: Option<Piece>, square: Square, en_passant: bool, castle: bool, color: Color) -> MoveMetaData {
         match (captured, en_passant, castle) {
             (Some(captured), _, _) => MoveMetaData::Capture(captured, square),
@@ -146,6 +179,11 @@ impl MoveMetaData {
         }
     }
 
+    /// Returns the captured piece and its position, if the move was a capture.
+    ///
+    /// # Returns
+    /// - `Some((Piece, Square))` if the move captured a piece.
+    /// - `None` if no piece was captured.
     pub fn capture(&self) -> Option<(Piece, Square)> {
         if let MoveMetaData::Capture(captured, square) = *self {
             Some((captured, square))
@@ -154,6 +192,11 @@ impl MoveMetaData {
         }
     }
 
+    /// Returns the en passant target square if the move was an en passant.
+    ///
+    /// # Returns
+    /// - `Some(Square)` if the move was an en passant.
+    /// - `None` otherwise.
     pub fn en_passant(&self) -> Option<Square> {
         if let MoveMetaData::EnPassant(square) = *self {
             Some(square)
@@ -162,6 +205,11 @@ impl MoveMetaData {
         }
     }
 
+    /// Checks if the move was a castling move.
+    ///
+    /// # Returns
+    /// - `true` if the move was castling.
+    /// - `false` otherwise.
     pub fn castle(&self) -> bool {
         self == &MoveMetaData::Castle
     }
