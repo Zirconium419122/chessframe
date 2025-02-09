@@ -14,14 +14,17 @@ impl CastlingRights {
     const QUEENSIDE: u8 = 0b0010;
     const OFFSET: u8 = 2;
 
+    /// Create a new [`CastlingRights`] struct with no castling rights.
     pub fn new() -> CastlingRights {
         CastlingRights(0b0000)
     }
 
+    /// Convert the [`CastlingRights`] struct to a usize.
     pub fn to_index(self) -> usize {
         self.0 as usize
     }
 
+    /// Create a new [`CastlingRights`] struct from a part of a FEN string.
     pub fn from_fen(fen: &str) -> Self {
         let mut castling_rights = CastlingRights::new();
 
@@ -41,12 +44,14 @@ impl CastlingRights {
         castling_rights
     }
 
+    /// Get the castling rights for a specific color.
     pub fn color(&self, color: Color) -> CastlingRights {
         const MASK: u8 = 0b0011;
 
         CastlingRights(self.0 & (MASK << (color as u8 * CastlingRights::OFFSET)))
     }
 
+    /// Convert a square to the castling rights it represents.
     pub fn square_to_castle_rights(color: Color, square: Square) -> CastlingRights {
         if square == Square::make_square(color.to_backrank(), File::E) {
             CastlingRights::new().add(color, true).add(color, false)
@@ -59,10 +64,12 @@ impl CastlingRights {
         }
     }
 
+    /// Remove castling rights provided by the `remove` argument.
     pub fn remove(&self, remove: CastlingRights) -> CastlingRights {
         CastlingRights(self.0 & !remove.0)
     }
 
+    /// Check if a specific color can castle on a specific side.
     #[rustfmt::skip]
     pub fn can_castle(&self, color: Color, kingside: bool) -> bool {
         let offset = if color == Color::Black { CastlingRights::OFFSET } else { 0 };
@@ -71,6 +78,7 @@ impl CastlingRights {
         (self.0 & (castle_right << offset)) != 0
     }
 
+    /// Add castling rights for a specific color and side.
     #[rustfmt::skip]
     pub fn add(&mut self, color: Color, kingside: bool) -> CastlingRights {
         let mut castling_rights = *self;
@@ -83,6 +91,7 @@ impl CastlingRights {
         castling_rights
     }
 
+    /// Revoke castling rights for a specific color and side.
     #[rustfmt::skip]
     pub fn revoke(&mut self, color: Color, kingside: bool) {
         let mut castling_rights = *self;
@@ -93,6 +102,7 @@ impl CastlingRights {
         castling_rights.0 &= !(castle_right << offset);
     }
 
+    /// Revoke all castling rights for a specific color.
     pub fn revoke_all(&mut self, color: Color) {
         self.revoke(color, true);
         self.revoke(color, false);
