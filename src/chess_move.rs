@@ -152,25 +152,31 @@ impl MoveMetaData {
     /// - [`MoveMetaData::EnPassant`] if an en passant capture occurred.
     /// - [`MoveMetaData::Castle`] if the move was a castling move.
     /// - [`MoveMetaData::None`] if the move had no special properties.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use chessframe::{chess_move::MoveMetaData, color::Color, piece::Piece, square::Square};
-    /// 
+    ///
     /// let captured = Some(Piece::Pawn);
     /// let square = Square::D5;
     /// let en_passant = false;
     /// let castle = false;
     /// let color = Color::White;
-    /// 
+    ///
     /// let move_metadata = MoveMetaData::new(captured, square, en_passant, castle, color);
-    /// 
+    ///
     /// assert_eq!(
     ///     move_metadata,
     ///     MoveMetaData::Capture(Piece::Pawn, Square::D5),
     /// );
     /// ```
-    pub fn new(captured: Option<Piece>, square: Square, en_passant: bool, castle: bool, color: Color) -> MoveMetaData {
+    pub fn new(
+        captured: Option<Piece>,
+        square: Square,
+        en_passant: bool,
+        castle: bool,
+        color: Color,
+    ) -> MoveMetaData {
         match (captured, en_passant, castle) {
             (Some(captured), _, _) => MoveMetaData::Capture(captured, square),
             (_, true, _) => MoveMetaData::EnPassant(square.wrapping_backward(color)),

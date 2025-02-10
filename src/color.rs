@@ -33,6 +33,14 @@ impl Color {
     }
 
     /// Get the back [`Rank`] for the current [`Color`].
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{color::Color, rank::Rank};
+    ///
+    /// assert_eq!(Color::White.to_backrank(), Rank::First);
+    /// assert_eq!(Color::Black.to_backrank(), Rank::Eighth);
+    /// ```
     #[inline]
     pub fn to_backrank(self) -> Rank {
         match self {
@@ -42,6 +50,14 @@ impl Color {
     }
 
     /// Get the second [`Rank`] for the current [`Color`].
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{color::Color, rank::Rank};
+    ///
+    /// assert_eq!(Color::White.to_second_rank(), Rank::Second);
+    /// assert_eq!(Color::Black.to_second_rank(), Rank::Seventh);
+    /// ```
     #[inline]
     pub fn to_second_rank(self) -> Rank {
         match self {
@@ -51,6 +67,14 @@ impl Color {
     }
 
     /// Get the fourth [`Rank`] for the current [`Color`].
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{color::Color, rank::Rank};
+    ///
+    /// assert_eq!(Color::White.to_fourth_rank(), Rank::Fourth);
+    /// assert_eq!(Color::Black.to_fourth_rank(), Rank::Fifth);
+    /// ```
     #[inline]
     pub fn to_fourth_rank(self) -> Rank {
         match self {

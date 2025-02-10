@@ -1,6 +1,11 @@
 use crate::{
-    bitboard::BitBoard, board::Board, chess_move::{ChessMove, MoveMetaData}, error::Error, file::File,
-    piece::Piece, square::Square,
+    bitboard::BitBoard,
+    board::Board,
+    chess_move::{ChessMove, MoveMetaData},
+    error::Error,
+    file::File,
+    piece::Piece,
+    square::Square,
 };
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
@@ -12,7 +17,7 @@ pub struct Game {
 
 impl Game {
     /// Create a new [`Game`] with the initial starting position.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use chessframe::{board::Board, game::Game};
@@ -29,10 +34,10 @@ impl Game {
     }
 
     /// Create a new [`Game`] from a FEN string.
-    /// 
+    ///
     /// # Parameters
-    /// - `fen` a string slice representing the FEN string.	
-    /// 
+    /// - `fen` a string slice representing the FEN string.
+    ///
     /// # Example
     /// ```
     /// use chessframe::game::Game;
@@ -66,10 +71,7 @@ impl Game {
     /// ```
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
         let metadata = self.board.make_move_metadata(&mv)?;
-        self.history.push((
-            mv,
-            metadata,
-        ));
+        self.history.push((mv, metadata));
         self.ply += 1;
         Ok(())
     }
@@ -152,11 +154,19 @@ impl Game {
 
             match self.history[self.ply - 1].1 {
                 MoveMetaData::Capture(captured, square) => {
-                    self.board.xor(BitBoard::from_square(square), captured, self.board.side_to_move);
-                },
+                    self.board.xor(
+                        BitBoard::from_square(square),
+                        captured,
+                        self.board.side_to_move,
+                    );
+                }
                 MoveMetaData::EnPassant(square) => {
-                    self.board.xor(BitBoard::from_square(square), Piece::Pawn, self.board.side_to_move);
-                },
+                    self.board.xor(
+                        BitBoard::from_square(square),
+                        Piece::Pawn,
+                        self.board.side_to_move,
+                    );
+                }
                 MoveMetaData::Castle => {
                     let backrank = (!self.board.side_to_move).to_backrank();
                     let (rook_start, rook_end) = match to.file() {
@@ -181,8 +191,8 @@ impl Game {
                         Piece::Rook,
                         !self.board.side_to_move,
                     );
-                },
-                _ => {},
+                }
+                _ => {}
             }
 
             self.board.side_to_move = !self.board.side_to_move;
