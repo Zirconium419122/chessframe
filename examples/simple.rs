@@ -6,7 +6,7 @@ use chessframe::{
     chess_move::ChessMove,
     color::Color,
     piece::{Piece, PIECES},
-    uci::{Uci, UciCommand},
+    uci::*,
 };
 
 const PIECE_VALUES: [isize; 6] = [100, 300, 325, 500, 900, 0];
@@ -203,7 +203,7 @@ impl Uci for SimpleMoveMaker {
                 }
             }
             UciCommand::Info(info) => {
-                println!("info {}", info);
+                println!("{}", info);
             }
             _ => {}
         }
@@ -229,9 +229,10 @@ impl Uci for SimpleMoveMaker {
                 }
                 UciCommand::Debug(debug) => {
                     if debug {
-                        self.send_command(UciCommand::Info(
-                            "string Debug mode not supported!".to_string(),
-                        ));
+                        self.send_command(UciCommand::Info(Info {
+                            string: Some("Debug mode not supported!".to_string()),
+                            ..Default::default()
+                        }));
                     }
                 }
                 UciCommand::IsReady => {
@@ -265,16 +266,25 @@ impl Uci for SimpleMoveMaker {
                                 let moves_to_mate = SimpleMoveMaker::MATE_SCORE - score.abs();
                                 let mate_in_moves = (moves_to_mate / 2) + 1;
 
-                                self.send_command(UciCommand::Info(format!(
-                                    "pv {} score mate {}",
-                                    best_move,
-                                    correction * mate_in_moves
-                                )));
+                                let mut score = Score::default();
+                                score.mate = Some(correction * mate_in_moves);
+
+                                self.send_command(UciCommand::Info(Info {
+                                    pv: Some(best_move.to_string()),
+                                    score: Some(score),
+                                    ..Default::default()
+                                }));
                             } else {
-                                self.send_command(UciCommand::Info(format!(
-                                    "pv {} score cp {}",
-                                    best_move, score
-                                )));
+                                let cp = score;
+
+                                let mut score = Score::default();
+                                score.cp = Some(cp);
+
+                                self.send_command(UciCommand::Info(Info {
+                                    pv: Some(best_move.to_string()),
+                                    score: Some(score),
+                                    ..Default::default()
+                                }));
                             }
                             self.send_command(UciCommand::BestMove {
                                 best_move: best_move.to_string(),

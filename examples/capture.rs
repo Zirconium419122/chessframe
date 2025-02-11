@@ -3,7 +3,7 @@ use std::{io, str::FromStr};
 use chessframe::{
     bitboard::EMPTY,
     board::Board,
-    uci::{Uci, UciCommand},
+    uci::*,
 };
 
 struct CaptureMaker {
@@ -51,7 +51,7 @@ impl Uci for CaptureMaker {
                 }
             }
             UciCommand::Info(info) => {
-                println!("info {}", info);
+                println!("{}", info);
             }
             _ => {}
         }
@@ -76,9 +76,10 @@ impl Uci for CaptureMaker {
                 }
                 UciCommand::Debug(debug) => {
                     if debug {
-                        self.send_command(UciCommand::Info(
-                            "string Debug mode not supported!".to_string(),
-                        ));
+                        self.send_command(UciCommand::Info(Info {
+                            string: Some("Debug mode not supported!".to_string()),
+                            ..Default::default()
+                        }));
                     }
                 }
                 UciCommand::IsReady => {
@@ -123,7 +124,10 @@ impl Uci for CaptureMaker {
                         dbg!(&moves);
                         let mv = moves[0].clone();
 
-                        self.send_command(UciCommand::Info(format!("pv {}", mv)));
+                        self.send_command(UciCommand::Info(Info {
+                            pv: Some(mv.to_string()),
+                            ..Default::default()
+                        }));
                         self.send_command(UciCommand::BestMove {
                             best_move: mv.to_string(),
                             ponder: None,

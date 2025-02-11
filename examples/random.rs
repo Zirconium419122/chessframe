@@ -3,7 +3,7 @@ use std::{io, str::FromStr};
 use chessframe::{
     bitboard::EMPTY,
     board::Board,
-    uci::{Uci, UciCommand},
+    uci::*,
 };
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 
@@ -54,7 +54,7 @@ impl Uci for RandomMoveMaker {
                 }
             }
             UciCommand::Info(info) => {
-                println!("info {}", info);
+                println!("{}", info);
             }
             _ => {}
         }
@@ -79,9 +79,10 @@ impl Uci for RandomMoveMaker {
                 }
                 UciCommand::Debug(debug) => {
                     if debug {
-                        self.send_command(UciCommand::Info(
-                            "string Debug mode not supported!".to_string(),
-                        ));
+                        self.send_command(UciCommand::Info(Info {
+                            string: Some("Debug mode not supported!".to_string()),
+                            ..Default::default()
+                        }));
                     }
                 }
                 UciCommand::IsReady => {
@@ -117,7 +118,12 @@ impl Uci for RandomMoveMaker {
 
                         let best_move = moves[self.rng.next_u32() as usize % moves.len()].clone();
 
-                        self.send_command(UciCommand::Info(format!("pv {}", best_move)));
+                        self.send_command(UciCommand::Info(
+                            Info {
+                                pv: Some(best_move.to_string()),
+                                ..Default::default()
+                            }
+                        ));
                         self.send_command(UciCommand::BestMove {
                             best_move: best_move.to_string(),
                             ponder: None,

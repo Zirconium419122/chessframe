@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 impl FromStr for UciCommand {
     type Err = &'static str;
@@ -269,10 +269,303 @@ impl FromStr for UciCommand {
 
                 Err("Invalid registration command")
             }
-            Some(&"info") => Ok(UciCommand::Info(tokens[1..].join(" "))),
+            Some(&"info") => {
+                let mut depth = None;
+                let mut seldepth = None;
+                let mut time = None;
+                let mut nodes = None;
+                let mut pv = None;
+                let mut multipv = None;
+                let mut score_cp = None;
+                let mut score_mate = None;
+                let mut score_lowerbound = false;
+                let mut score_upperbound = false;
+                let mut currmove = None;
+                let mut currmove_number = None;
+                let mut hashfull = None;
+                let mut nps = None;
+                let mut tbhits = None;
+                let mut sbhits = None;
+                let mut cpuload = None;
+                let mut string = None;
+                let mut refutation = None;
+                let mut currline = None;
+
+                let mut i = 1;
+                while i < tokens.len() {
+                    match tokens[i] {
+                        "depth" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                depth = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "seldepth" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                seldepth = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "time" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                time = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "nodes" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                nodes = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "pv" => {
+                            pv = tokens.get(i + 1).map(|s| s.to_string());
+                            i += 2;
+                        }
+                        "multipv" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                multipv = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "score" => {
+                            if let Some(score_type) = tokens.get(i + 1) {
+                                match *score_type {
+                                    "cp" => {
+                                        if let Some(val) = tokens.get(i + 2) {
+                                            score_cp = val.parse().ok();
+                                        }
+                                        i += 3;
+                                    }
+                                    "mate" => {
+                                        if let Some(val) = tokens.get(i + 2) {
+                                            score_mate = val.parse().ok();
+                                        }
+                                        i += 3;
+                                    }
+                                    "lowerbound" => {
+                                        score_lowerbound = true;
+                                        i += 2;
+                                    }
+                                    "upperbound" => {
+                                        score_upperbound = true;
+                                        i += 2;
+                                    }
+                                    _ => i += 1,
+                                }
+                            } else {
+                                i += 1;
+                            }
+                        }
+                        "currmove" => {
+                            currmove = tokens.get(i + 1).map(|s| s.to_string());
+                            i += 2;
+                        }
+                        "currmovenumber" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                currmove_number = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "hashfull" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                hashfull = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "nps" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                nps = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "tbhits" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                tbhits = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "sbhits" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                sbhits = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "cpuload" => {
+                            if let Some(val) = tokens.get(i + 1) {
+                                cpuload = val.parse().ok();
+                            }
+                            i += 2;
+                        }
+                        "string" => {
+                            string = tokens.get(i + 1).map(|s| s.to_string());
+                            i += 2;
+                        }
+                        "refutation" => {
+                            refutation = tokens.get(i + 1).map(|s| s.to_string());
+                            i += 2;
+                        }
+                        "currline" => {
+                            currline = tokens.get(i + 1).map(|s| s.to_string());
+                            i += 2;
+                        }
+                        _ => i += 1,
+                    }
+                }
+
+                Ok(UciCommand::Info(Info {
+                    depth,
+                    seldepth,
+                    time,
+                    nodes,
+                    pv,
+                    multipv,
+                    score: Some(Score {
+                        cp: score_cp,
+                        mate: score_mate,
+                        lowerbound: score_lowerbound,
+                        upperbound: score_upperbound,
+                    }),
+                    currmove,
+                    currmove_number,
+                    hashfull,
+                    nps,
+                    tbhits,
+                    sbhits,
+                    cpuload,
+                    string,
+                    refutation,
+                    currline,
+                }))
+                // Ok(UciCommand::Info {
+                //     depth,
+                //     seldepth,
+                //     time,
+                //     nodes,
+                //     pv,
+                //     multipv,
+                //     score: Some(Score {
+                //         cp: score_cp,
+                //         mate: score_mate,
+                //         lowerbound: score_lowerbound,
+                //         upperbound: score_upperbound,
+                //     }),
+                //     currmove,
+                //     currmove_number,
+                //     hashfull,
+                //     nps,
+                //     tbhits,
+                //     sbhits,
+                //     cpuload,
+                //     string,
+                //     refutation,
+                //     currline,
+                // })
+            }
             Some(&"option") => Ok(UciCommand::Option(tokens[1..].join(" "))),
             _ => Err("Not a command"),
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
+pub struct Score {
+    pub cp: Option<isize>,
+    pub mate: Option<isize>,
+    pub lowerbound: bool,
+    pub upperbound: bool,
+}
+
+impl fmt::Display for Score {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(cp) = self.cp {
+            write!(f, "score cp {}", cp)?;
+        } else if let Some(mate) = self.mate {
+            write!(f, "score mate {}", mate)?;
+        } else {
+            return Ok(()); // No score info
+        }
+
+        if self.lowerbound {
+            write!(f, " lowerbound")?;
+        }
+        if self.upperbound {
+            write!(f, " upperbound")?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Default)]
+pub struct Info {
+    pub depth: Option<usize>,
+    pub seldepth: Option<usize>,
+    pub time: Option<usize>,
+    pub nodes: Option<usize>,
+    pub pv: Option<String>,
+    pub multipv: Option<usize>,
+    pub score: Option<Score>,
+    pub currmove: Option<String>,
+    pub currmove_number: Option<usize>,
+    pub hashfull: Option<usize>,
+    pub nps: Option<usize>,
+    pub tbhits: Option<usize>,
+    pub sbhits: Option<usize>,
+    pub cpuload: Option<usize>,
+    pub string: Option<String>,
+    pub refutation: Option<String>,
+    pub currline: Option<String>,
+}
+
+impl fmt::Display for Info {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "info")?;
+
+        if let Some(depth) = self.depth {
+            write!(f, " depth {}", depth)?;
+        }
+        if let Some(seldepth) = self.seldepth {
+            write!(f, " seldepth {}", seldepth)?;
+        }
+        if let Some(time) = self.time {
+            write!(f, " time {}", time)?;
+        }
+        if let Some(nodes) = self.nodes {
+            write!(f, " nodes {}", nodes)?;
+        }
+        if let Some(ref pv) = self.pv {
+            write!(f, " pv {}", pv)?;
+        }
+        if let Some(multipv) = self.multipv {
+            write!(f, " multipv {}", multipv)?;
+        }
+        if let Some(ref score) = self.score {
+            write!(f, " {}", score)?;
+        }
+        if let Some(ref currmove) = self.currmove {
+            write!(f, " currmove {}", currmove)?;
+        }
+        if let Some(currmove_number) = self.currmove_number {
+            write!(f, " currmovenumber {}", currmove_number)?;
+        }
+        if let Some(hashfull) = self.hashfull {
+            write!(f, " hashfull {}", hashfull)?;
+        }
+        if let Some(nps) = self.nps {
+            write!(f, " nps {}", nps)?;
+        }
+        if let Some(tbhits) = self.tbhits {
+            write!(f, " tbhits {}", tbhits)?;
+        }
+        if let Some(sbhits) = self.sbhits {
+            write!(f, " sbhits {}", sbhits)?;
+        }
+        if let Some(cpuload) = self.cpuload {
+            write!(f, " cpuload {}", cpuload)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -344,7 +637,7 @@ pub enum UciCommand {
         error: bool,
     },
 
-    Info(String),
+    Info(Info),
     Option(String),
 }
 
