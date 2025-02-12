@@ -1,5 +1,5 @@
-//! # Chessframe
-//! Chessframe is a chess library written in Rust. It provides a simple interface for working with chess positions and generating psudo-legal moves efficiently.
+//! # chessframe
+//! chessframe is a chess library written in Rust. It provides a simple interface for working with chess positions and generating psudo-legal moves efficiently.
 //!
 //! ## Example
 //!
