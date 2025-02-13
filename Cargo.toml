@@ -1,6 +1,6 @@
 [package]
 name = "chessframe"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "A Rust library for working with chess positions, generating psudo-legal moves, and interacting with the UCI protocol."
 readme = "README.md"

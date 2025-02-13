@@ -39,6 +39,14 @@ impl FromStr for Rank {
 
 impl Rank {
     /// Convert a `usize` to a `Rank`. If the index is > 7 wrap around.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::rank::Rank;
+    ///
+    /// assert_eq!(Rank::from_index(0), Rank::First);
+    /// assert_eq!(Rank::from_index(7), Rank::Eighth);
+    /// ```
     #[inline]
     pub fn from_index(index: usize) -> Rank {
         match index % 8 {
@@ -55,18 +63,42 @@ impl Rank {
     }
 
     /// Get the rank below this one. If the rank is `First` wrap around.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::rank::Rank;
+    ///
+    /// assert_eq!(Rank::First, Rank::Second.down());
+    /// assert_eq!(Rank::Eighth, Rank::First.down());
+    /// ```
     #[inline]
     pub fn down(&self) -> Rank {
         Rank::from_index(self.to_index().wrapping_sub(1))
     }
 
     /// Get the rank above this one. If the rank is `Eighth` wrap around.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::rank::Rank;
+    ///
+    /// assert_eq!(Rank::Second, Rank::First.up());
+    /// assert_eq!(Rank::First, Rank::Eighth.up());
+    /// ```
     #[inline]
     pub fn up(&self) -> Rank {
         Rank::from_index(unsafe { self.to_index().unchecked_add(1) })
     }
 
     /// Convert this `Rank` into a `usize` between 0 and 7.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::rank::Rank;
+    ///
+    /// assert_eq!(0, Rank::First.to_index());
+    /// assert_eq!(7, Rank::Eighth.to_index());
+    /// ```
     #[inline]
     pub fn to_index(self) -> usize {
         self as usize

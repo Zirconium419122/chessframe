@@ -43,7 +43,7 @@ impl File {
     /// # Example
     /// ```
     /// use chessframe::file::File;
-    /// 
+    ///
     /// assert_eq!(File::A, File::from_index(0));
     /// assert_eq!(File::H, File::from_index(7));
     /// ```

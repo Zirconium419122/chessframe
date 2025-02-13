@@ -522,47 +522,25 @@ impl fmt::Display for Info {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "info")?;
 
-        if let Some(depth) = self.depth {
-            write!(f, " depth {}", depth)?;
-        }
-        if let Some(seldepth) = self.seldepth {
-            write!(f, " seldepth {}", seldepth)?;
-        }
-        if let Some(time) = self.time {
-            write!(f, " time {}", time)?;
-        }
-        if let Some(nodes) = self.nodes {
-            write!(f, " nodes {}", nodes)?;
-        }
-        if let Some(ref pv) = self.pv {
-            write!(f, " pv {}", pv)?;
-        }
-        if let Some(multipv) = self.multipv {
-            write!(f, " multipv {}", multipv)?;
-        }
-        if let Some(ref score) = self.score {
-            write!(f, " {}", score)?;
-        }
-        if let Some(ref currmove) = self.currmove {
-            write!(f, " currmove {}", currmove)?;
-        }
-        if let Some(currmove_number) = self.currmove_number {
-            write!(f, " currmovenumber {}", currmove_number)?;
-        }
-        if let Some(hashfull) = self.hashfull {
-            write!(f, " hashfull {}", hashfull)?;
-        }
-        if let Some(nps) = self.nps {
-            write!(f, " nps {}", nps)?;
-        }
-        if let Some(tbhits) = self.tbhits {
-            write!(f, " tbhits {}", tbhits)?;
-        }
-        if let Some(sbhits) = self.sbhits {
-            write!(f, " sbhits {}", sbhits)?;
-        }
-        if let Some(cpuload) = self.cpuload {
-            write!(f, " cpuload {}", cpuload)?;
+        let fields = [
+            self.depth.map(|v| format!(" depth {}", v)),
+            self.seldepth.map(|v| format!(" seldepth {}", v)),
+            self.time.map(|v| format!(" time {}", v)),
+            self.nodes.map(|v| format!(" nodes {}", v)),
+            self.pv.as_ref().map(|v| format!(" pv {}", v)),
+            self.multipv.map(|v| format!(" multipv {}", v)),
+            self.score.as_ref().map(|v| format!(" {}", v)),
+            self.currmove.as_ref().map(|v| format!(" currmove {}", v)),
+            self.currmove_number.map(|v| format!(" currmovenumber {}", v)),
+            self.hashfull.map(|v| format!(" hashfull {}", v)),
+            self.nps.map(|v| format!(" nps {}", v)),
+            self.tbhits.map(|v| format!(" tbhits {}", v)),
+            self.sbhits.map(|v| format!(" sbhits {}", v)),
+            self.cpuload.map(|v| format!(" cpuload {}", v)),
+        ];
+
+        for field in fields.iter().flatten() {
+            write!(f, "{}", field)?;
         }
 
         Ok(())
