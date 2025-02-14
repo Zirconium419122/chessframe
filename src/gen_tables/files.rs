@@ -39,7 +39,7 @@ pub fn write_files(f: &mut File) {
     generate_adjacent_files();
 
     unsafe {
-        writeln!(f, "pub const FILES: [BitBoard; 8] = {:?};", FILES,).unwrap();
+        writeln!(f, "pub const FILES: [BitBoard; 8] = {:?};", FILES).unwrap();
 
         writeln!(
             f,

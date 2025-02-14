@@ -89,7 +89,7 @@ pub fn write_zobrist_castle(f: &mut File) {
         writeln!(
             f,
             "pub const ZOBRIST_CASTLE: [[u64; 4]; 2] = {:?};",
-            ZOBRIST_CASTLE
+            ZOBRIST_CASTLE,
         )
         .unwrap();
     }
@@ -102,7 +102,7 @@ pub fn write_zobrist_enpassant(f: &mut File) {
         writeln!(
             f,
             "pub const ZOBRIST_ENPASSANT: [[u64; 8]; 2] = {:?};",
-            ZOBRIST_ENPASSANT
+            ZOBRIST_ENPASSANT,
         )
         .unwrap();
     }

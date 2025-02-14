@@ -19,9 +19,32 @@ impl CastlingRights {
         CastlingRights(0b0000)
     }
 
-    /// Convert the [`CastlingRights`] struct to a usize.
+    /// Convert the [`CastlingRights`] struct to a [`usize`].
     pub fn to_index(self) -> usize {
-        self.0 as usize
+        match self.0 {
+            0b0000 => 0,
+            0b0001 => 1,
+            0b0010 => 2,
+            0b0011 => 3,
+            0b0100 => 4,
+            0b0101 => 5,
+            0b0110 => 6,
+            0b0111 => 7,
+            0b1000 => 8,
+            0b1001 => 9,
+            0b1010 => 10,
+            0b1011 => 11,
+            0b1100 => 12,
+            0b1101 => 13,
+            0b1110 => 14,
+            0b1111 => 15,
+            _ => usize::MAX,
+        }
+    }
+
+    /// Convert the [`CastlingRights`] struct to a [`u8`].
+    pub fn to_int(self) -> u8 {
+        self.0
     }
 
     /// Create a new [`CastlingRights`] struct from a part of a FEN string.

@@ -252,15 +252,30 @@ impl Board {
     }
 
     /// Get the zobrist hash of the board. This is different from the hash field in [`Board`] as it only contains the hash for the pieces.
-    /// # Example
+    /// # Examples
+    ///
+    /// Get the hash for the starting position
     /// ```
     /// use chessframe::board::Board;
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
     ///
-    /// assert_eq!(board.hash(), 0x50FE28372FB16071);
+    /// assert_eq!(board.hash(), 0x1D0D28B8BD0816CA);
     /// ```
+    ///
+    /// Check that two board states otherwise equal does not have the same hash with different castling rights
+    /// ```
+    /// use chessframe::board::Board;
+    ///
+    /// let kingside = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Kk - 0 1";
+    /// let queenside = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Qq - 0 1";
+    ///
+    /// let kingside_board = Board::from_fen(kingside);
+    /// let queenside_board = Board::from_fen(queenside);
+    ///
+    /// assert_ne!(kingside_board.hash(), queenside_board.hash());
+    /// ``````
     #[inline]
     pub fn hash(&self) -> u64 {
         self.hash
