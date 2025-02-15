@@ -129,7 +129,7 @@ impl Zobrist {
         unsafe {
             *ZOBRIST_CASTLE
                 .get_unchecked(color.to_index())
-                .get_unchecked(castling_rights.color(color).to_index() >> 2 * color.to_index())
+                .get_unchecked(castling_rights.color(color).to_index() >> (2 * color.to_index()))
         }
     }
 

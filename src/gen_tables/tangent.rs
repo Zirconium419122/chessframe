@@ -37,7 +37,7 @@ pub fn write_tangent(f: &mut File) {
     unsafe {
         writeln!(
             f,
-            "pub const TANGENT: [[BitBoard; 64]; 64] = {:?};",
+            "pub static TANGENT: [[BitBoard; 64]; 64] = {:?};",
             TANGENT,
         )
         .unwrap();

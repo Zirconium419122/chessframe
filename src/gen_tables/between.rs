@@ -41,7 +41,7 @@ pub fn write_between(f: &mut File) {
     unsafe {
         writeln!(
             f,
-            "pub const BETWEEN: [[BitBoard; 64]; 64] = {:?};",
+            "pub static BETWEEN: [[BitBoard; 64]; 64] = {:?};",
             BETWEEN,
         )
         .unwrap();

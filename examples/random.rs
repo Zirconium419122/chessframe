@@ -1,10 +1,6 @@
 use std::{io, str::FromStr};
 
-use chessframe::{
-    bitboard::EMPTY,
-    board::Board,
-    uci::*,
-};
+use chessframe::{bitboard::EMPTY, board::Board, uci::*};
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 
 struct RandomMoveMaker {
@@ -118,12 +114,10 @@ impl Uci for RandomMoveMaker {
 
                         let best_move = moves[self.rng.next_u32() as usize % moves.len()].clone();
 
-                        self.send_command(UciCommand::Info(
-                            Info {
-                                pv: Some(best_move.to_string()),
-                                ..Default::default()
-                            }
-                        ));
+                        self.send_command(UciCommand::Info(Info {
+                            pv: Some(best_move.to_string()),
+                            ..Default::default()
+                        }));
                         self.send_command(UciCommand::BestMove {
                             best_move: best_move.to_string(),
                             ponder: None,

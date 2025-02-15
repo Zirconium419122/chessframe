@@ -1,10 +1,6 @@
 use std::{io, str::FromStr};
 
-use chessframe::{
-    bitboard::EMPTY,
-    board::Board,
-    uci::*,
-};
+use chessframe::{bitboard::EMPTY, board::Board, uci::*};
 
 struct CaptureMaker {
     board: Option<Board>,

@@ -2,16 +2,27 @@ use crate::{
     bitboard::BitBoard,
     board::Board,
     chess_move::{ChessMove, MoveMetaData},
+    color::Color,
     error::Error,
     file::File,
     piece::Piece,
     square::Square,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
+pub enum Event {
+    Move((ChessMove, MoveMetaData)),
+    Checkmate,
+    Stalemate,
+    DrawByThreefoldRepetition,
+    Resignation(Color),
+    Timeout(Color),
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
 pub struct Game {
     pub board: Board,
-    pub history: Vec<(ChessMove, MoveMetaData)>,
+    pub history: Vec<Event>,
     pub ply: usize,
 }
 
@@ -71,7 +82,7 @@ impl Game {
     /// ```
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
         let metadata = self.board.make_move_metadata(&mv)?;
-        self.history.push((mv, metadata));
+        self.history.push(Event::Move((mv, metadata)));
         self.ply += 1;
         Ok(())
     }
@@ -136,15 +147,30 @@ impl Game {
     /// assert_eq!(game.board.get_piece(Square::B7), Some(Piece::Pawn));
     /// ```
     pub fn undo_move(&mut self) {
-        let mv = self.history[self.ply - 1].0;
-        let (from, to) = mv.get_move();
+        let moves: Vec<(usize, (ChessMove, MoveMetaData))> = self
+            .history
+            .iter()
+            .enumerate()
+            .filter(|x| matches!(x.1, Event::Move(_)))
+            .map(|x| {
+                if let Event::Move(mv) = x.1 {
+                    (x.0, *mv)
+                } else {
+                    unreachable!()
+                }
+            })
+            .collect();
+        let mv_with_index = moves[self.ply - 1];
+
+        let mv = mv_with_index.1;
+        let (from, to) = mv.0.get_move();
 
         if let Some(piece) = self.board.get_piece(to) {
             self.board
                 .xor(BitBoard::from_square(to), piece, !self.board.side_to_move);
             self.board.xor(
                 BitBoard::from_square(from),
-                if mv.promotion().is_some() {
+                if mv.0.promotion().is_some() {
                     Piece::Pawn
                 } else {
                     piece
@@ -152,7 +178,7 @@ impl Game {
                 !self.board.side_to_move,
             );
 
-            match self.history[self.ply - 1].1 {
+            match mv.1 {
                 MoveMetaData::Capture(captured, square) => {
                     self.board.xor(
                         BitBoard::from_square(square),
@@ -197,7 +223,7 @@ impl Game {
 
             self.board.side_to_move = !self.board.side_to_move;
             self.ply -= 1;
-            self.history.pop();
+            self.history.truncate(mv_with_index.0);
         }
     }
 }
