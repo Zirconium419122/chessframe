@@ -479,7 +479,7 @@ impl Board {
     ///
     /// # Returns
     /// - `Ok(Board)` if the move is successfully made.
-    /// - `Err(String)` if the move is invalid, such as attempting to move a pinned piece.
+    /// - `Err(Error)` if the move is invalid, such as attempting to move a pinned piece.
     ///
     /// # Errors
     /// - Returns an error if the resulting board state places or leaves the king in check.
@@ -518,7 +518,7 @@ impl Board {
     ///
     /// # Returns
     /// - `Ok(())` if the move is successfully made.
-    /// - `Err(&str)` if the move is invalid, such as attempting to move a pinned piece.
+    /// - `Err(Error)` if the move is invalid, such as attempting to move a pinned piece.
     ///
     /// # Errors
     /// - Returns an error if the resulting board state places or leaves the king in check.
@@ -671,7 +671,7 @@ impl Board {
     ///
     /// # Returns
     /// - `Ok(MoveMetaData)` if the move is successfully made.
-    /// - `Err(&str)` if the move is invalid, such as attempting to move a pinned piece.
+    /// - `Err(Error)` if the move is invalid, such as attempting to move a pinned piece.
     ///
     /// # Errors
     /// - Returns an error if the resulting board state places or leaves the king in check.

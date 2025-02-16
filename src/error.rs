@@ -17,6 +17,9 @@ pub enum Error {
     #[error("Cannot move pinned piece!")]
     CannotMovePinned,
 
+    #[error("Cannot make move when game has ended!")]
+    GameEnded,
+
     #[error("No piece found on square!")]
     NoPieceOnSquare,
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     bitboard::BitBoard,
     board::Board,
@@ -19,10 +21,17 @@ pub enum Event {
     Timeout(Color),
 }
 
+impl Event {
+    pub fn is_gameending(&self) -> bool {
+        !matches!(self, Event::Move(_))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
 pub struct Game {
     pub board: Board,
     pub history: Vec<Event>,
+    hashes: Vec<u64>,
     pub ply: usize,
 }
 
@@ -37,9 +46,11 @@ impl Game {
     ///
     /// assert_eq!(game.board, Board::default());
     pub fn new() -> Game {
+        let board = Board::default();
         Game {
-            board: Board::default(),
+            board,
             history: vec![],
+            hashes: vec![board.hash()],
             ply: 0,
         }
     }
@@ -59,11 +70,64 @@ impl Game {
     /// assert_eq!(game, Game::new());
     /// ```
     pub fn from_fen(fen: &str) -> Game {
+        let board = Board::from_fen(fen);
         Game {
-            board: Board::from_fen(fen),
+            board,
             history: vec![],
+            hashes: vec![board.hash()],
             ply: 0,
         }
+    }
+
+    /// Play a move on the current [`Board`].
+    ///
+    /// # Parameters
+    /// - `mv`: A [`ChessMove`] representing the move to make.
+    ///   The move must be at least pseudo-legal; invalid or unchecked moves will result in undefined behavior.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the move was successfully played.
+    /// - `Err(Error)` if the move is pseudo-legal but not legal, or if the game has already ended.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{chess_move::ChessMove, game::Game, piece::Piece, square::Square};
+    ///
+    /// let mut game = Game::default();
+    ///
+    /// let mv = ChessMove::new(Square::E2, Square::E4);
+    /// assert_eq!(game.board.get_piece(Square::E2), Some(Piece::Pawn));
+    /// assert_eq!(game.board.get_piece(Square::E4), None);
+    ///
+    /// game.play_move(mv);
+    /// assert_eq!(game.board.get_piece(Square::E2), None);
+    /// assert_eq!(game.board.get_piece(Square::E4), Some(Piece::Pawn));
+    ///
+    /// game.undo_move();
+    /// assert_eq!(game.board.get_piece(Square::E2), Some(Piece::Pawn));
+    /// assert_eq!(game.board.get_piece(Square::E4), None);
+    /// ```
+    pub fn play_move(&mut self, mv: ChessMove) -> Result<(), Error> {
+        if let Some(event) = self.history.last() {
+            if event.is_gameending() {
+                return Err(Error::GameEnded);
+            }
+        }
+
+        self.make_move(mv)?;
+
+        let mut count_map = HashMap::new();
+
+        for hash in &self.hashes {
+            let count = count_map.entry(hash).or_insert(0);
+            *count += 1;
+
+            if *count == 3 {
+                self.history.push(Event::DrawByThreefoldRepetition);
+            }
+        }
+
+        Ok(())
     }
 
     /// Make a move on the [`Board`].
@@ -83,6 +147,7 @@ impl Game {
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
         let metadata = self.board.make_move_metadata(&mv)?;
         self.history.push(Event::Move((mv, metadata)));
+        self.hashes.push(self.board.hash());
         self.ply += 1;
         Ok(())
     }

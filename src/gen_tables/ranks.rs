@@ -23,6 +23,6 @@ pub fn write_ranks(f: &mut File) {
     generate_ranks();
 
     unsafe {
-        writeln!(f, "pub const RANKS: [BitBoard; 8] = {:?};", RANKS,).unwrap();
+        writeln!(f, "pub const RANKS: [BitBoard; 8] = {:?};", RANKS).unwrap();
     }
 }
