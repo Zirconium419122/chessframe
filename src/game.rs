@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    bitboard::BitBoard,
+    bitboard::{BitBoard, EMPTY},
     board::Board,
     chess_move::{ChessMove, MoveMetaData},
     color::Color,
@@ -116,14 +116,27 @@ impl Game {
 
         self.make_move(mv)?;
 
-        let mut count_map = HashMap::new();
+        let legal_moves = self.board.generate_moves_vec(!EMPTY)
+            .into_iter()
+            .filter(|x| self.board.make_move_new(&x).is_ok())
+            .collect::<Vec<ChessMove>>();
 
-        for hash in &self.hashes {
-            let count = count_map.entry(hash).or_insert(0);
-            *count += 1;
+        if legal_moves.is_empty() {
+            if self.board.in_check() {
+                self.history.push(Event::Checkmate);
+            } else {
+                self.history.push(Event::Stalemate);
+            }
+        } else {
+            let mut count_map = HashMap::new();
 
-            if *count == 3 {
-                self.history.push(Event::DrawByThreefoldRepetition);
+            for hash in &self.hashes {
+                let count = count_map.entry(hash).or_insert(0);
+                *count += 1;
+
+                if *count == 3 {
+                    self.history.push(Event::DrawByThreefoldRepetition);
+                }
             }
         }
 
