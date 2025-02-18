@@ -89,23 +89,45 @@ impl Game {
     /// - `Ok(())` if the move was successfully played.
     /// - `Err(Error)` if the move is pseudo-legal but not legal, or if the game has already ended.
     ///
-    /// # Example
+    /// # Examples
+    ///
+    /// Play till threefold repetition:
     /// ```
-    /// use chessframe::{chess_move::ChessMove, game::Game, piece::Piece, square::Square};
+    /// use chessframe::{chess_move::ChessMove, game::{Event, Game}, square::Square};
     ///
-    /// let mut game = Game::default();
+    /// let mut game = Game::from_fen("5q2/5k2/7p/8/8/8/1B4Q1/6K1 w - - 3 3");
     ///
-    /// let mv = ChessMove::new(Square::E2, Square::E4);
-    /// assert_eq!(game.board.get_piece(Square::E2), Some(Piece::Pawn));
-    /// assert_eq!(game.board.get_piece(Square::E4), None);
+    /// let g2_f3 = ChessMove::new(Square::G2, Square::F3);
+    /// let f7_e8 = ChessMove::new(Square::F7, Square::E8);
+    /// let f3_c6 = ChessMove::new(Square::F3, Square::C6);
+    /// let e8_f7 = ChessMove::new(Square::E8, Square::F7);
+    /// let c6_f3 = ChessMove::new(Square::C6, Square::F3);
     ///
-    /// game.play_move(mv);
-    /// assert_eq!(game.board.get_piece(Square::E2), None);
-    /// assert_eq!(game.board.get_piece(Square::E4), Some(Piece::Pawn));
+    /// game.play_move(g2_f3);
+    /// game.play_move(f7_e8);
+    /// game.play_move(f3_c6);
+    /// game.play_move(e8_f7);
+    /// game.play_move(c6_f3);
+    /// game.play_move(f7_e8);
+    /// game.play_move(f3_c6);
+    /// game.play_move(e8_f7);
+    /// game.play_move(c6_f3);
     ///
-    /// game.undo_move();
-    /// assert_eq!(game.board.get_piece(Square::E2), Some(Piece::Pawn));
-    /// assert_eq!(game.board.get_piece(Square::E4), None);
+    /// assert_eq!(game.history.last(), Some(&Event::DrawByThreefoldRepetition));
+    /// ```
+    ///
+    /// Make a move that results in checkmate:
+    /// ```
+    /// use chessframe::{chess_move::ChessMove, game::{Event, Game}, square::Square};
+    ///
+    /// let mut game = Game::from_fen("7k/7p/7K/5Q2/8/8/8/8 w - - 0 1");
+    ///
+    /// let mv = ChessMove::new(Square::F5, Square::F8);
+    ///
+    /// let _ = game.play_move(mv);
+    ///
+    /// assert_eq!(game.history.last(), Some(&Event::Checkmate));
+
     /// ```
     pub fn play_move(&mut self, mv: ChessMove) -> Result<(), Error> {
         if let Some(event) = self.history.last() {
@@ -116,9 +138,11 @@ impl Game {
 
         self.make_move(mv)?;
 
-        let legal_moves = self.board.generate_moves_vec(!EMPTY)
+        let legal_moves = self
+            .board
+            .generate_moves_vec(!EMPTY)
             .into_iter()
-            .filter(|x| self.board.make_move_new(&x).is_ok())
+            .filter(|x| self.board.make_move_new(x).is_ok())
             .collect::<Vec<ChessMove>>();
 
         if legal_moves.is_empty() {
