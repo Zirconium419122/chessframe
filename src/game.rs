@@ -127,7 +127,19 @@ impl Game {
     /// let _ = game.play_move(mv);
     ///
     /// assert_eq!(game.history.last(), Some(&Event::Checkmate));
-
+    /// ```
+    ///
+    /// Make a move that results in stalemate:
+    /// ```
+    /// use chessframe::{chess_move::ChessMove, game::{Event, Game}, square::Square};
+    ///
+    /// let mut game = Game::from_fen("7k/7p/7K/5Q2/8/8/8/8 w - - 0 1");
+    ///
+    /// let mv = ChessMove::new(Square::F5, Square::F7);
+    ///
+    /// let _ = game.play_move(mv);
+    ///
+    /// assert_eq!(game.history.last(), Some(&Event::Stalemate));
     /// ```
     pub fn play_move(&mut self, mv: ChessMove) -> Result<(), Error> {
         if let Some(event) = self.history.last() {
