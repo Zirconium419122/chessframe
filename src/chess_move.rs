@@ -131,6 +131,7 @@ impl ChessMove {
 pub enum MoveMetaData {
     #[default]
     None,
+    PawnMove,
     Capture(Piece, Square),
     EnPassant(Square),
     Castle,
@@ -157,13 +158,14 @@ impl MoveMetaData {
     /// ```
     /// use chessframe::{chess_move::MoveMetaData, color::Color, piece::Piece, square::Square};
     ///
+    /// let piece = Piece::Pawn;
     /// let captured = Some(Piece::Pawn);
     /// let square = Square::D5;
     /// let en_passant = false;
     /// let castle = false;
     /// let color = Color::White;
     ///
-    /// let move_metadata = MoveMetaData::new(captured, square, en_passant, castle, color);
+    /// let move_metadata = MoveMetaData::new(square, piece, captured, en_passant, castle, color);
     ///
     /// assert_eq!(
     ///     move_metadata,
@@ -171,8 +173,9 @@ impl MoveMetaData {
     /// );
     /// ```
     pub fn new(
-        captured: Option<Piece>,
         square: Square,
+        moved: Piece,
+        captured: Option<Piece>,
         en_passant: bool,
         castle: bool,
         color: Color,
@@ -181,7 +184,13 @@ impl MoveMetaData {
             (Some(captured), _, _) => MoveMetaData::Capture(captured, square),
             (_, true, _) => MoveMetaData::EnPassant(square.wrapping_backward(color)),
             (_, _, true) => MoveMetaData::Castle,
-            _ => MoveMetaData::None,
+            _ => {
+                if moved != Piece::Pawn {
+                    MoveMetaData::None
+                } else {
+                    MoveMetaData::PawnMove
+                }
+            }
         }
     }
 

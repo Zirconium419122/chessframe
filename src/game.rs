@@ -17,6 +17,7 @@ pub enum Event {
     Checkmate,
     Stalemate,
     DrawByThreefoldRepetition,
+    DrawByFiftyMoveRule,
     Resignation(Color),
     Timeout(Color),
 }
@@ -33,6 +34,7 @@ pub struct Game {
     pub history: Vec<Event>,
     hashes: Vec<u64>,
     pub ply: usize,
+    half_moves: usize,
 }
 
 impl Game {
@@ -52,6 +54,7 @@ impl Game {
             history: vec![],
             hashes: vec![board.hash()],
             ply: 0,
+            half_moves: 0,
         }
     }
 
@@ -76,6 +79,12 @@ impl Game {
             history: vec![],
             hashes: vec![board.hash()],
             ply: 0,
+            half_moves: fen
+                .split_whitespace()
+                .nth(4)
+                .unwrap_or("0")
+                .parse()
+                .unwrap_or(0),
         }
     }
 
@@ -150,6 +159,20 @@ impl Game {
 
         self.make_move(mv)?;
 
+        if let Some(Event::Move((_, metadata))) = self
+            .history
+            .iter()
+            .filter(|x| matches!(x, Event::Move(_)))
+            .last()
+        {
+            match metadata {
+                MoveMetaData::Capture(..) | MoveMetaData::PawnMove => {
+                    self.half_moves = 0;
+                }
+                _ => self.half_moves += 1,
+            }
+        }
+
         let legal_moves = self
             .board
             .generate_moves_vec(!EMPTY)
@@ -163,6 +186,8 @@ impl Game {
             } else {
                 self.history.push(Event::Stalemate);
             }
+
+            return Ok(());
         } else {
             let mut count_map = HashMap::new();
 
@@ -172,8 +197,13 @@ impl Game {
 
                 if *count == 3 {
                     self.history.push(Event::DrawByThreefoldRepetition);
+                    return Ok(());
                 }
             }
+        }
+
+        if self.half_moves >= 100 {
+            self.history.push(Event::DrawByFiftyMoveRule);
         }
 
         Ok(())

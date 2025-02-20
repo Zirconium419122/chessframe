@@ -813,7 +813,7 @@ impl Board {
 
         self.side_to_move = !self.side_to_move;
 
-        Ok(MoveMetaData::new(captured, to, en_passant_square == Some(to), castle, !self.side_to_move))
+        Ok(MoveMetaData::new(to, piece, captured, en_passant_square == Some(to), castle, !self.side_to_move))
     }
 
     /// Get the piece at a given square.
