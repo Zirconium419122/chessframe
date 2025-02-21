@@ -88,6 +88,29 @@ impl Game {
         }
     }
 
+    /// Get the hashes vector of the [`Game`].
+    pub fn hashes(&self) -> &Vec<u64> {
+        &self.hashes
+    }
+
+    /// Get the half-move clock of the [`Game`].
+    pub fn half_moves(&self) -> usize {
+        self.half_moves
+    }
+
+    /// Resign the game provided a [`Color`] that resigns.
+    pub fn resign(&mut self, color: Color) -> Result<(), Error>{
+        if let Some(event) = self.history.last() {
+            if event.is_gameending() {
+                return Err(Error::GameEnded);
+            }
+        }
+
+        self.history.push(Event::Resignation(color));
+
+        Ok(())
+    }
+
     /// Play a move on the current [`Board`].
     ///
     /// # Parameters
