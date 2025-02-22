@@ -88,9 +88,24 @@ impl Game {
         }
     }
 
+    /// Get the current [`Board`] of the [`Game`].
+    pub fn board(&self) -> &Board {
+        &self.board
+    }
+
+    /// Get the history vector of the [`Game`].
+    pub fn history(&self) -> &Vec<Event> {
+        &self.history
+    }
+
     /// Get the hashes vector of the [`Game`].
     pub fn hashes(&self) -> &Vec<u64> {
         &self.hashes
+    }
+
+    /// Get the ply of the [`Game`].
+    pub fn ply(&self) -> usize {
+        self.ply
     }
 
     /// Get the half-move clock of the [`Game`].
