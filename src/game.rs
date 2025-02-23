@@ -126,6 +126,37 @@ impl Game {
         Ok(())
     }
 
+    /// Timeout the game provided a [`Color`] that times out.
+    ///
+    /// # Parameters
+    /// - `color`: The [`Color`] that times out, should be the current side to move.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the timeout was successfully recorded.
+    /// - `Err(Error)` if the game has already ended.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{color::Color, game::{Event, Game}};
+    ///
+    /// let mut game = Game::new();
+    ///
+    /// let _ = game.timeout(Color::White);
+    ///
+    /// assert_eq!(game.history.last(), Some(&Event::Timeout(Color::White)));
+    /// ```
+    pub fn timeout(&mut self, color: Color) -> Result<(), Error>{
+        if let Some(event) = self.history.last() {
+            if event.is_gameending() {
+                return Err(Error::GameEnded);
+            }
+        }
+
+        self.history.push(Event::Timeout(color));
+
+        Ok(())
+    }
+
     /// Play a move on the current [`Board`].
     ///
     /// # Parameters
