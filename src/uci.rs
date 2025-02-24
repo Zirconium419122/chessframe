@@ -176,7 +176,7 @@ impl FromStr for UciCommand {
                     }
                 }
 
-                Ok(UciCommand::Go {
+                Ok(UciCommand::Go(Go {
                     wtime,
                     btime,
                     winc,
@@ -188,7 +188,7 @@ impl FromStr for UciCommand {
                     move_time,
                     infinite,
                     ponder,
-                })
+                }))
             }
             Some(&"stop") => Ok(UciCommand::Stop),
             Some(&"ponderhit") => Ok(UciCommand::PonderHit),
@@ -469,6 +469,47 @@ impl FromStr for UciCommand {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
+pub struct Go {
+    pub wtime: Option<usize>,
+    pub btime: Option<usize>,
+    pub winc: Option<usize>,
+    pub binc: Option<usize>,
+    pub moves_to_go: Option<usize>,
+    pub depth: Option<usize>,
+    pub nodes: Option<usize>,
+    pub mate: Option<usize>,
+    pub move_time: Option<usize>,
+    pub infinite: bool,
+    pub ponder: bool,
+}
+
+impl fmt::Display for Go {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "score")?;
+
+        let fields = [
+            self.wtime.map(|v| format!(" wtime {}", v)),
+            self.btime.map(|v| format!(" btime {}", v)),
+            self.winc.map(|v| format!(" winc {}", v)),
+            self.binc.map(|v| format!(" binc {}", v)),
+            self.moves_to_go.map(|v| format!(" movestogo {}", v)),
+            self.depth.map(|v| format!(" depth {}", v)),
+            self.nodes.map(|v| format!(" nodes {}", v)),
+            self.mate.map(|v| format!(" mate {}", v)),
+            self.move_time.map(|v| format!(" movetime {}", v)),
+            self.infinite.then(|| " infinite".to_string()),
+            self.ponder.then(|| " ponder".to_string()),
+        ];
+
+        for field in fields.iter().flatten() {
+            write!(f, "{}", field)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
 pub struct Score {
     pub cp: Option<isize>,
     pub mate: Option<isize>,
@@ -572,19 +613,7 @@ pub enum UciCommand {
         moves: Option<Vec<String>>,
     },
 
-    Go {
-        wtime: Option<usize>,       // White's time left in ms
-        btime: Option<usize>,       // Black's time left in ms
-        winc: Option<usize>,        // White's increment in ms
-        binc: Option<usize>,        // Black's increment in ms
-        moves_to_go: Option<usize>, // Moves to next to next time control
-        depth: Option<usize>,       // Limit search depth
-        nodes: Option<usize>,       // Limit search nodes
-        mate: Option<usize>,        // Search for mate in n moves
-        move_time: Option<usize>,   // Time per move in ms
-        infinite: bool,             // Infinite time control
-        ponder: bool,               // Engine should ponder
-    },
+    Go(Go),
 
     PonderHit,
 
