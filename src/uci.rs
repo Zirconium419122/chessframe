@@ -437,30 +437,6 @@ impl FromStr for UciCommand {
                     refutation,
                     currline,
                 }))
-                // Ok(UciCommand::Info {
-                //     depth,
-                //     seldepth,
-                //     time,
-                //     nodes,
-                //     pv,
-                //     multipv,
-                //     score: Some(Score {
-                //         cp: score_cp,
-                //         mate: score_mate,
-                //         lowerbound: score_lowerbound,
-                //         upperbound: score_upperbound,
-                //     }),
-                //     currmove,
-                //     currmove_number,
-                //     hashfull,
-                //     nps,
-                //     tbhits,
-                //     sbhits,
-                //     cpuload,
-                //     string,
-                //     refutation,
-                //     currline,
-                // })
             }
             Some(&"option") => Ok(UciCommand::Option(tokens[1..].join(" "))),
             _ => Err("Not a command"),

@@ -19,18 +19,13 @@ impl FromStr for Square {
                 .try_into()
                 .unwrap_unchecked()
         };
-        match chars[0] {
-            'a'..='h' => {}
-            _ => return Err(Error::InvalidSquare),
-        }
-        match chars[1] {
-            '1'..='8' => {}
-            _ => return Err(Error::InvalidSquare),
-        }
+
+        let rank = Rank::from_str(&chars[1].to_string())?;
+        let file = File::from_str(&chars[0].to_string())?;
 
         Ok(Square::make_square(
-            Rank::from_index((chars[1] as usize) - ('1' as usize)),
-            File::from_index((chars[0] as usize) - ('a' as usize)),
+            rank,
+            file,
         ))
     }
 }
