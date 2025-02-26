@@ -114,7 +114,7 @@ impl Game {
     }
 
     /// Resign the game provided a [`Color`] that resigns.
-    pub fn resign(&mut self, color: Color) -> Result<(), Error>{
+    pub fn resign(&mut self, color: Color) -> Result<(), Error> {
         if let Some(event) = self.history.last() {
             if event.is_gameending() {
                 return Err(Error::GameEnded);
@@ -145,7 +145,7 @@ impl Game {
     ///
     /// assert_eq!(game.history.last(), Some(&Event::Timeout(Color::White)));
     /// ```
-    pub fn timeout(&mut self, color: Color) -> Result<(), Error>{
+    pub fn timeout(&mut self, color: Color) -> Result<(), Error> {
         if let Some(event) = self.history.last() {
             if event.is_gameending() {
                 return Err(Error::GameEnded);

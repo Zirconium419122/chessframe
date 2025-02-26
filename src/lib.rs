@@ -29,4 +29,5 @@ pub mod magic;
 pub mod piece;
 pub mod rank;
 pub mod square;
+pub mod transpositiontable;
 pub mod uci;

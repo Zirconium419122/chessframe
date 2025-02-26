@@ -23,10 +23,7 @@ impl FromStr for Square {
         let rank = Rank::from_str(&chars[1].to_string())?;
         let file = File::from_str(&chars[0].to_string())?;
 
-        Ok(Square::make_square(
-            rank,
-            file,
-        ))
+        Ok(Square::make_square(rank, file))
     }
 }
 
