@@ -1,18 +1,18 @@
-use chessframe::{bitboard::EMPTY, board::Board};
+use chessframe::{bitboard::EMPTY, board::Board, transpositiontable::TranspositionTable};
 
-struct Perft(std::collections::HashMap<u64, (usize, usize)>);
+struct Perft(TranspositionTable<usize>);
 
 impl Perft {
     pub fn run(board: &Board, depth: usize, divide: bool) -> usize {
-        let mut perft = Perft(std::collections::HashMap::new());
+        let mut perft = Perft(TranspositionTable::with_size_mb(256));
 
         perft.perft(&board, depth, divide)
     }
 
     fn perft(&mut self, board: &Board, depth: usize, divide: bool) -> usize {
-        if let Some((perft_result, transposition_depth)) = self.0.get(&board.hash()) {
-            if *transposition_depth == depth {
-                return *perft_result;
+        if let Some(entry) = self.0.get(board.hash()) {
+            if entry.depth == depth as u8 {
+                return entry.value;
             }
         }
 
@@ -33,7 +33,7 @@ impl Perft {
             }
         }
 
-        self.0.insert(board.hash(), (count, depth));
+        self.0.store(board.hash(), count, depth as u8);
 
         count
     }
