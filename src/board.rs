@@ -932,7 +932,7 @@ impl Board {
                         & !self.combined())
                         != EMPTY
                     {
-                        get_pawn_moves(src, self.side_to_move) & !self.combined()
+                        get_pawn_moves(src, self.side_to_move) & !self.combined() & mask
                     } else {
                         EMPTY
                     }
