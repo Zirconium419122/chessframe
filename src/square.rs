@@ -152,7 +152,7 @@ impl Square {
         }
     }
 
-    /// Convert this `Square` to an integer (`u8`).
+    /// Convert this [`Square`] to an integer [`u8`].
     #[inline]
     pub fn to_int(self) -> u8 {
         self.0

@@ -37,6 +37,17 @@ impl<T: Debug + Clone + Copy + PartialEq + PartialOrd + Hash + Default> Transpos
     }
 
     /// Store the given value in the [`TranspositionTable`] provided `zobrist`, `depth` and the `value`.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{transpositiontable::{Entry, TranspositionTable}};
+    ///
+    /// let mut table = TranspositionTable::<i32>::with_capacity(64);
+    ///
+    /// table.store(0x123456789ABCDEF, -16, 4);
+    ///
+    /// assert_eq!(table.get(0x123456789ABCDEF), Some(&Entry { zobrist: 0x123456789ABCDEF, value: -16, depth: 4 }));
+    /// ```
     pub fn store(&mut self, zobrist: u64, value: T, depth: u8) {
         let index = self.index(zobrist);
 
@@ -53,12 +64,38 @@ impl<T: Debug + Clone + Copy + PartialEq + PartialOrd + Hash + Default> Transpos
     }
 
     /// Get the value stored in the [`TranspositionTable`] provided `zobrist`.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{transpositiontable::{Entry, TranspositionTable}};
+    ///
+    /// let mut table = TranspositionTable::<i32>::with_capacity(64);
+    ///
+    /// table.store(0x10101010, 64, 8);
+    ///
+    /// assert_eq!(table.get(0x10101010), Some(&Entry { zobrist: 0x10101010, value: 64, depth: 8 }));
+    /// ```
     pub fn get(&self, zobrist: u64) -> Option<&Entry<T>> {
         let index = self.index(zobrist);
         self.table[index].as_ref().filter(|e| e.zobrist == zobrist)
     }
 
     /// Clear the [`TranspositionTable`].
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{transpositiontable::{Entry, TranspositionTable}};
+    ///
+    /// let mut table = TranspositionTable::<i32>::with_capacity(64);
+    ///
+    /// table.store(0x20202020, 0, 6);
+    ///
+    /// assert_eq!(table.get(0x20202020), Some(&Entry { zobrist: 0x20202020, value: 0, depth: 6 }));
+    ///
+    /// table.clear();
+    ///
+    /// assert_eq!(table.get(0x20202020), None);
+    /// ```
     pub fn clear(&mut self) {
         self.table.fill(None);
     }
