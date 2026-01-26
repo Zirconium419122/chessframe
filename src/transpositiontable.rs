@@ -51,7 +51,11 @@ impl<T: Debug + Clone + Copy + PartialEq + PartialOrd + Hash + Default> Transpos
     pub fn store(&mut self, zobrist: u64, value: T, depth: u8) {
         let index = self.index(zobrist);
 
-        let entry = Entry { zobrist, value, depth };
+        let entry = Entry {
+            zobrist,
+            value,
+            depth,
+        };
 
         match &self.table[index] {
             Some(existing) if existing.zobrist == zobrist => {

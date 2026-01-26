@@ -1,21 +1,20 @@
-use std::fs::File;
 use std::io::Write;
+use std::{fs::File, sync::Mutex};
 
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 
 use crate::{color::COLORS, piece::PIECES, square::SQUARES};
 
-static mut ZOBRIST_SIDE_TO_MOVE: u64 = 0;
-static mut ZOBRIST_PIECES: [[[u64; 64]; 6]; 2] = [[[0; 64]; 6]; 2];
-static mut ZOBRIST_CASTLE: [[u64; 4]; 2] = [[0; 4]; 2];
-static mut ZOBRIST_ENPASSANT: [[u64; 8]; 2] = [[0; 8]; 2];
+static ZOBRIST_SIDE_TO_MOVE: Mutex<u64> = Mutex::new(0);
+static ZOBRIST_PIECES: Mutex<[[[u64; 64]; 6]; 2]> = Mutex::new([[[0; 64]; 6]; 2]);
+static ZOBRIST_CASTLE: Mutex<[[u64; 4]; 2]> = Mutex::new([[0; 4]; 2]);
+static ZOBRIST_ENPASSANT: Mutex<[[u64; 8]; 2]> = Mutex::new([[0; 8]; 2]);
 
 pub fn generate_zobrist_side_to_move() {
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
 
-    unsafe {
-        ZOBRIST_SIDE_TO_MOVE = rng.next_u64();
-    }
+    let mut zobrist_side_to_move = ZOBRIST_SIDE_TO_MOVE.lock().unwrap();
+    *zobrist_side_to_move = rng.next_u64();
 }
 
 pub fn generate_zobrist_pieces() {
@@ -24,9 +23,8 @@ pub fn generate_zobrist_pieces() {
     for (color, _) in COLORS.iter().enumerate() {
         for (piece, _) in PIECES.iter().enumerate() {
             for (square, _) in SQUARES.iter().enumerate() {
-                unsafe {
-                    ZOBRIST_PIECES[color][piece][square] = rng.next_u64();
-                }
+                let mut zobrist_pieces = ZOBRIST_PIECES.lock().unwrap();
+                zobrist_pieces[color][piece][square] = rng.next_u64();
             }
         }
     }
@@ -37,9 +35,8 @@ pub fn generate_zobrist_castle() {
 
     for (color, _) in COLORS.iter().enumerate() {
         for i in 0..4 {
-            unsafe {
-                ZOBRIST_CASTLE[color][i] = rng.next_u64();
-            }
+            let mut zobrist_castle = ZOBRIST_CASTLE.lock().unwrap();
+            zobrist_castle[color][i] = rng.next_u64();
         }
     }
 }
@@ -49,9 +46,8 @@ pub fn generate_zobrist_enpassant() {
 
     for (color, _) in COLORS.iter().enumerate() {
         for i in 0..8 {
-            unsafe {
-                ZOBRIST_ENPASSANT[color][i] = rng.next_u64();
-            }
+            let mut zobrist_enpassant = ZOBRIST_ENPASSANT.lock().unwrap();
+            zobrist_enpassant[color][i] = rng.next_u64();
         }
     }
 }
@@ -59,53 +55,45 @@ pub fn generate_zobrist_enpassant() {
 pub fn write_zobrist_side_to_move(f: &mut File) {
     generate_zobrist_side_to_move();
 
-    unsafe {
-        writeln!(
-            f,
-            "pub const ZOBRIST_SIDE_TO_MOVE: u64 = {};",
-            ZOBRIST_SIDE_TO_MOVE
-        )
-        .unwrap();
-    }
+    writeln!(
+        f,
+        "pub const ZOBRIST_SIDE_TO_MOVE: u64 = {};",
+        ZOBRIST_SIDE_TO_MOVE.lock().unwrap(),
+    )
+    .unwrap();
 }
 
 pub fn write_zobrist_pieces(f: &mut File) {
     generate_zobrist_pieces();
 
-    unsafe {
-        writeln!(
-            f,
-            "pub const ZOBRIST_PIECES: [[[u64; 64]; 6]; 2] = {:?};",
-            ZOBRIST_PIECES
-        )
-        .unwrap();
-    }
+    writeln!(
+        f,
+        "pub const ZOBRIST_PIECES: [[[u64; 64]; 6]; 2] = {:?};",
+        ZOBRIST_PIECES.lock().unwrap(),
+    )
+    .unwrap();
 }
 
 pub fn write_zobrist_castle(f: &mut File) {
     generate_zobrist_castle();
 
-    unsafe {
-        writeln!(
-            f,
-            "pub const ZOBRIST_CASTLE: [[u64; 4]; 2] = {:?};",
-            ZOBRIST_CASTLE,
-        )
-        .unwrap();
-    }
+    writeln!(
+        f,
+        "pub const ZOBRIST_CASTLE: [[u64; 4]; 2] = {:?};",
+        ZOBRIST_CASTLE.lock().unwrap(),
+    )
+    .unwrap();
 }
 
 pub fn write_zobrist_enpassant(f: &mut File) {
     generate_zobrist_enpassant();
 
-    unsafe {
-        writeln!(
-            f,
-            "pub const ZOBRIST_ENPASSANT: [[u64; 8]; 2] = {:?};",
-            ZOBRIST_ENPASSANT,
-        )
-        .unwrap();
-    }
+    writeln!(
+        f,
+        "pub const ZOBRIST_ENPASSANT: [[u64; 8]; 2] = {:?};",
+        ZOBRIST_ENPASSANT.lock().unwrap(),
+    )
+    .unwrap();
 }
 
 pub fn write_zobrist(f: &mut File) {

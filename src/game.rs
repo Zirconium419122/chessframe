@@ -235,7 +235,9 @@ impl Game {
             .last()
         {
             match metadata {
-                MoveMetaData::Capture(..) | MoveMetaData::PawnMove => {
+                MoveMetaData::Capture(..)
+                | MoveMetaData::PawnMove
+                | MoveMetaData::EnPassant(..) => {
                     self.half_moves = 0;
                 }
                 _ => self.half_moves += 1,
