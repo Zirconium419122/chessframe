@@ -544,16 +544,16 @@ impl fmt::Display for Info {
             self.seldepth.map(|v| format!(" seldepth {}", v)),
             self.time.map(|v| format!(" time {}", v)),
             self.nodes.map(|v| format!(" nodes {}", v)),
-            self.pv.as_ref().map(|v| format!(" pv {}", v)),
-            self.multipv.map(|v| format!(" multipv {}", v)),
+            self.nps.map(|v| format!(" nps {}", v)),
             self.score.as_ref().map(|v| format!(" {}", v)),
+            self.tbhits.map(|v| format!(" tbhits {}", v)),
+            self.sbhits.map(|v| format!(" sbhits {}", v)),
+            self.pv.as_ref().map(|v| format!(" pv {}", v)),
+            self.cpuload.map(|v| format!(" cpuload {}", v)),
             self.currmove.as_ref().map(|v| format!(" currmove {}", v)),
             self.currmove_number.map(|v| format!(" currmovenumber {}", v)),
             self.hashfull.map(|v| format!(" hashfull {}", v)),
-            self.nps.map(|v| format!(" nps {}", v)),
-            self.tbhits.map(|v| format!(" tbhits {}", v)),
-            self.sbhits.map(|v| format!(" sbhits {}", v)),
-            self.cpuload.map(|v| format!(" cpuload {}", v)),
+            self.multipv.map(|v| format!(" multipv {}", v)),
         ];
 
         for field in fields.iter().flatten() {

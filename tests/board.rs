@@ -3,6 +3,7 @@ use chessframe::{
     board::*,
     chess_move::ChessMove,
     color::Color,
+    error::Error,
     piece::Piece,
     square::Square,
 };
@@ -115,7 +116,7 @@ fn test_validate_move() {
 
         assert_eq!(
             board.validate_move(&ChessMove::new(Square::E2, Square::E5)),
-            Err("Invalid move!")
+            Err(Error::InvalidMove)
         );
 
         assert_eq!(board.side_to_move, Color::White);
@@ -138,7 +139,7 @@ fn test_validate_move() {
 
         assert_eq!(
             board.validate_move(&ChessMove::new(Square::E1, Square::D1)),
-            Err("Invalid move!")
+            Err(Error::InvalidMove)
         );
 
         assert_eq!(board.side_to_move, Color::White);
@@ -158,7 +159,7 @@ fn test_validate_move() {
 
         assert_eq!(
             board.validate_move(&ChessMove::new(Square::E1, Square::G1)),
-            Err("Invalid move!")
+            Err(Error::InvalidMove)
         );
 
         assert_eq!(board.side_to_move, Color::White);
