@@ -1,6 +1,6 @@
 [package]
 name = "chessframe"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 description = "A Rust library for working with chess positions, generating psudo-legal moves, and interacting with the UCI protocol."
 readme = "README.md"
@@ -10,15 +10,15 @@ keywords = ["chess", "bitboards", "uci", "move-generation"]
 build = "src/build.rs"
 
 [dependencies]
-thiserror = "2.0.11"
-rand_chacha = { version = "0.3.1", optional = true }
+thiserror = "2.0.18"
+rand_chacha = { version = "0.9.0", optional = true }
 
 [dev-dependencies]
-rand_chacha = "0.3.1"
+rand_chacha = "0.9.0"
 
 [build-dependencies]
-rand_chacha = "0.3.1"
-thiserror = "2.0.11"
+rand_chacha = "0.9.0"
+thiserror = "2.0.18"
 
 [features]
 rand-chacha = ["rand_chacha"]
