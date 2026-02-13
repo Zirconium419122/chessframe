@@ -36,12 +36,10 @@ pub fn generate_pawn_attacks() {
 
             if let Some(i_need_a_good_name_for_this) = src.forward(*color) {
                 if let Some(dest) = i_need_a_good_name_for_this.left() {
-                    pawn_attacks[color.to_index()][src.to_index()] |=
-                        BitBoard::from_square(dest)
+                    pawn_attacks[color.to_index()][src.to_index()] |= BitBoard::from_square(dest)
                 }
                 if let Some(dest) = i_need_a_good_name_for_this.right() {
-                    pawn_attacks[color.to_index()][src.to_index()] |=
-                        BitBoard::from_square(dest)
+                    pawn_attacks[color.to_index()][src.to_index()] |= BitBoard::from_square(dest)
                 }
             }
         }

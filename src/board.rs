@@ -448,9 +448,9 @@ impl Board {
 
             let mv = ChessMove::new(from, to);
 
-            if self.validate_move(&mv).is_ok() {
-                return Ok(mv);
-            }
+            let _ = self.validate_move(&mv)?;
+
+            return Ok(mv);
         }
 
         Err(Error::NoPieceOnSquare)
@@ -480,8 +480,19 @@ impl Board {
             return Err(Error::InvalidMove);
         }
 
-        if self.pinned.is_set(from) {
-            return Err(Error::CannotMovePinned);
+        let king_square = self.pieces_color(Piece::King, self.side_to_move).to_square();
+
+        if self.pinned().is_set(from) && from != king_square {
+            let pinned_mask = get_tangent(king_square, from) & !BitBoard::from_square(king_square);
+            let enemy_pieces = pinned_mask & self.occupancy(!self.side_to_move);
+
+            if pinned_mask != EMPTY && enemy_pieces != EMPTY {
+                let allowed = piece_moves & pinned_mask;
+
+                if !allowed.is_set(to) {
+                    return Err(Error::CannotMovePinned);
+                }
+            }
         }
 
         Ok(piece)
@@ -652,18 +663,6 @@ impl Board {
             self.xor(end, Piece::Rook, self.side_to_move);
         }
 
-        let attackers = self.occupancy(self.side_to_move) & ((get_bishop_moves(king_square, EMPTY) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
-            | (get_rook_moves(king_square, EMPTY) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
-
-        for square in attackers {
-            let between = get_between(square, king_square) & self.combined();
-            if between.count_ones() == 1 {
-                self.pinned ^= between & self.occupancy(!self.side_to_move);
-            } else if between == EMPTY {
-                self.check += 1;
-            }
-        }
-
         if self
             .get_attackers(
                 self.pieces_color(Piece::King, self.side_to_move)
@@ -672,6 +671,22 @@ impl Board {
             .is_not_zero()
         {
             return Err(Error::CannotMovePinned);
+        }
+
+        self.pinned = EMPTY;
+
+        for color in COLORS {
+            let attackers = self.occupancy(color) & ((get_bishop_moves(king_square, EMPTY) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
+                | (get_rook_moves(king_square, EMPTY) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
+    
+            for square in attackers {
+                let between = get_between(square, king_square) & self.combined();
+                if between.count_ones() == 1 {
+                    self.pinned ^= between & self.occupancy(!color);
+                } else if between == EMPTY && self.side_to_move == color {
+                    self.check += 1;
+                }
+            }
         }
 
         self.side_to_move = !self.side_to_move;

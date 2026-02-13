@@ -168,6 +168,29 @@ fn test_validate_move() {
             BitBoard(0x000000000000010)
         );
     }
+
+    // Test that you can't move a pinned piece.
+    {
+        let fen = "r1bqk2r/ppp2ppp/2np1n2/4p3/1bB1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 6";
+        let mut board = Board::from_fen(fen);
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(
+            board.pieces_color(Piece::Knight, Color::White),
+            BitBoard(0x000000000240000)
+        );
+
+        assert_eq!(
+            board.validate_move(&ChessMove::new(Square::C3, Square::D5)),
+            Err(Error::CannotMovePinned)
+        );
+
+        assert_eq!(board.side_to_move, Color::White);
+        assert_eq!(
+            board.pieces_color(Piece::Knight, Color::White),
+            BitBoard(0x000000000240000)
+        );
+    }
 }
 
 #[test]

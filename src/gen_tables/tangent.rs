@@ -26,7 +26,11 @@ pub fn generate_tangent() {
                         false
                     }
                 })
-                .fold(EMPTY, |acc, square| acc | BitBoard::from_square(*square))
+                .fold(EMPTY, |acc, square| acc | BitBoard::from_square(*square));
+
+            if src == dest {
+                tangent[src.to_index()][dest.to_index()] = EMPTY;
+            }
         }
     }
 }
