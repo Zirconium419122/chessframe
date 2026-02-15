@@ -2,20 +2,20 @@ use std::{
     fs::File,
     io::{self, Write},
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     thread,
 };
 
 use rand_chacha::{
-    rand_core::{RngCore, SeedableRng},
     ChaCha8Rng,
+    rand_core::{RngCore, SeedableRng},
 };
 
 use chessframe::{
     bitboard::{BitBoard, EMPTY},
-    square::{Square, SQUARES},
+    square::{SQUARES, Square},
 };
 
 #[allow(dead_code)]

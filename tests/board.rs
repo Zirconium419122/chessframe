@@ -115,7 +115,7 @@ fn test_validate_move() {
         assert_eq!(board.en_passant_square, None);
 
         assert_eq!(
-            board.validate_move(&ChessMove::new(Square::E2, Square::E5)),
+            board.validate_move(ChessMove::new(Square::E2, Square::E5)),
             Err(Error::InvalidMove)
         );
 
@@ -138,7 +138,7 @@ fn test_validate_move() {
         );
 
         assert_eq!(
-            board.validate_move(&ChessMove::new(Square::E1, Square::D1)),
+            board.validate_move(ChessMove::new(Square::E1, Square::D1)),
             Err(Error::InvalidMove)
         );
 
@@ -158,7 +158,7 @@ fn test_validate_move() {
         );
 
         assert_eq!(
-            board.validate_move(&ChessMove::new(Square::E1, Square::G1)),
+            board.validate_move(ChessMove::new(Square::E1, Square::G1)),
             Err(Error::InvalidMove)
         );
 
@@ -181,7 +181,7 @@ fn test_validate_move() {
         );
 
         assert_eq!(
-            board.validate_move(&ChessMove::new(Square::C3, Square::D5)),
+            board.validate_move(ChessMove::new(Square::C3, Square::D5)),
             Err(Error::CannotMovePinned)
         );
 
@@ -210,7 +210,7 @@ fn test_make_move() {
         assert_eq!(board.en_passant_square, None);
 
         assert_eq!(
-            board.make_move(&ChessMove::new(Square::E2, Square::E4)),
+            board.make_move(ChessMove::new(Square::E2, Square::E4)),
             Ok(())
         );
 
@@ -231,11 +231,11 @@ fn test_pinned_bitboard() {
     assert_eq!(board.pinned, EMPTY);
 
     board
-        .make_move(&ChessMove::new(Square::B1, Square::C3))
+        .make_move(ChessMove::new(Square::B1, Square::C3))
         .unwrap();
 
     board
-        .make_move(&ChessMove::new(Square::E8, Square::G8))
+        .make_move(ChessMove::new(Square::E8, Square::G8))
         .unwrap();
 
     assert_eq!(board.pinned, BitBoard(0x40000));
@@ -250,7 +250,7 @@ fn test_hash() {
     assert_eq!(board.hash(), 0x1D0D28B8BD0816CA);
 
     board
-        .make_move(&ChessMove::new(Square::E2, Square::E4))
+        .make_move(ChessMove::new(Square::E2, Square::E4))
         .unwrap();
 
     assert_eq!(board.hash, 0xD392461D4BD9B816);
@@ -281,7 +281,7 @@ fn test_can_castle() {
     }
 
     assert_eq!(
-        board.make_move(&ChessMove::new(Square::E1, Square::G1)),
+        board.make_move(ChessMove::new(Square::E1, Square::G1)),
         Ok(())
     );
     assert_eq!(

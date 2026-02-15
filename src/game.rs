@@ -115,10 +115,10 @@ impl Game {
 
     /// Resign the game provided a [`Color`] that resigns.
     pub fn resign(&mut self, color: Color) -> Result<(), Error> {
-        if let Some(event) = self.history.last() {
-            if event.is_gameending() {
-                return Err(Error::GameEnded);
-            }
+        if let Some(event) = self.history.last()
+            && event.is_gameending()
+        {
+            return Err(Error::GameEnded);
         }
 
         self.history.push(Event::Resignation(color));
@@ -146,10 +146,10 @@ impl Game {
     /// assert_eq!(game.history.last(), Some(&Event::Timeout(Color::White)));
     /// ```
     pub fn timeout(&mut self, color: Color) -> Result<(), Error> {
-        if let Some(event) = self.history.last() {
-            if event.is_gameending() {
-                return Err(Error::GameEnded);
-            }
+        if let Some(event) = self.history.last()
+            && event.is_gameending()
+        {
+            return Err(Error::GameEnded);
         }
 
         self.history.push(Event::Timeout(color));
@@ -220,10 +220,10 @@ impl Game {
     /// assert_eq!(game.history.last(), Some(&Event::Stalemate));
     /// ```
     pub fn play_move(&mut self, mv: ChessMove) -> Result<(), Error> {
-        if let Some(event) = self.history.last() {
-            if event.is_gameending() {
-                return Err(Error::GameEnded);
-            }
+        if let Some(event) = self.history.last()
+            && event.is_gameending()
+        {
+            return Err(Error::GameEnded);
         }
 
         self.make_move(mv)?;
@@ -232,7 +232,7 @@ impl Game {
             .history
             .iter()
             .filter(|x| matches!(x, Event::Move(_)))
-            .last()
+            .next_back()
         {
             match metadata {
                 MoveMetaData::Capture(..)
@@ -248,7 +248,7 @@ impl Game {
             .board
             .generate_moves_vec(!EMPTY)
             .into_iter()
-            .filter(|x| self.board.make_move_new(x).is_ok())
+            .filter(|x| self.board.make_move_new(*x).is_ok())
             .collect::<Vec<ChessMove>>();
 
         if legal_moves.is_empty() {
@@ -295,7 +295,7 @@ impl Game {
     /// assert_eq!(game.board.en_passant_square, Some(Square::H6));
     /// ```
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
-        let metadata = self.board.make_move_metadata(&mv)?;
+        let metadata = self.board.make_move_metadata(mv)?;
         self.history.push(Event::Move((mv, metadata)));
         self.hashes.push(self.board.hash());
         self.ply += 1;

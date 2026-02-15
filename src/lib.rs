@@ -13,7 +13,7 @@
 //!
 //! let mv = ChessMove::new(Square::E2, Square::E4);
 //!
-//! let _ = board.make_move(&mv);
+//! let _ = board.make_move(mv);
 //! assert_eq!(board.get_piece(Square::E4), Some(Piece::Pawn));
 //! ```
 

@@ -7,7 +7,7 @@ use crate::{
     bitboard::{BitBoard, EMPTY},
     castling_rights::CastlingRights,
     chess_move::{ChessMove, MoveMetaData},
-    color::{Color, COLORS},
+    color::{COLORS, Color},
     error::Error,
     file::File,
     magic::*,
@@ -441,14 +441,14 @@ impl Board {
             if let Some(promotion) = promotion {
                 let mv = ChessMove::new_promotion(from, to, promotion);
 
-                if self.validate_move(&mv).is_ok() {
+                if self.validate_move(mv).is_ok() {
                     return Ok(mv);
                 }
             }
 
             let mv = ChessMove::new(from, to);
 
-            let _ = self.validate_move(&mv)?;
+            let _ = self.validate_move(mv)?;
 
             return Ok(mv);
         }
@@ -457,7 +457,7 @@ impl Board {
     }
 
     /// Checks that a [`ChessMove`] is a valid move for the current board state. Does not check if the move leaves the king in check.
-    pub fn validate_move(&mut self, mv: &ChessMove) -> Result<Piece, Error> {
+    pub fn validate_move(&mut self, mv: ChessMove) -> Result<Piece, Error> {
         let (from, to) = mv.get_move();
         let piece = self.get_piece(from).ok_or(Error::NoPieceOnSquare)?;
 
@@ -480,7 +480,9 @@ impl Board {
             return Err(Error::InvalidMove);
         }
 
-        let king_square = self.pieces_color(Piece::King, self.side_to_move).to_square();
+        let king_square = self
+            .pieces_color(Piece::King, self.side_to_move)
+            .to_square();
 
         if self.pinned().is_set(from) && from != king_square {
             let pinned_mask = get_tangent(king_square, from) & !BitBoard::from_square(king_square);
@@ -520,7 +522,7 @@ impl Board {
     /// let board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
     ///
-    /// assert_eq!(board.make_move_new(&mv), Ok(Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")));
+    /// assert_eq!(board.make_move_new(mv), Ok(Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")));
     /// ```
     ///
     /// # Notes
@@ -529,7 +531,7 @@ impl Board {
     /// certain rules (e.g., pinned pieces cannot move) during processing.
     ///
     /// [`generate_moves_vec`]: #method.generate_moves_vec
-    pub fn make_move_new(&self, mv: &ChessMove) -> Result<Board, Error> {
+    pub fn make_move_new(&self, mv: ChessMove) -> Result<Board, Error> {
         let mut board = *self;
 
         board.make_move(mv)?;
@@ -559,7 +561,7 @@ impl Board {
     /// let mut board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
     ///
-    /// assert_eq!(board.make_move(&mv), Ok(()));
+    /// assert_eq!(board.make_move(mv), Ok(()));
     /// ```
     ///
     /// # Notes
@@ -569,7 +571,7 @@ impl Board {
     ///
     /// [`generate_moves_vec`]: #method.generate_moves_vec
     #[rustfmt::skip]
-    pub fn make_move(&mut self, mv: &ChessMove) -> Result<(), Error> {
+    pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
         let (from, to) = mv.get_move();
 
         self.check = 0;
@@ -678,7 +680,7 @@ impl Board {
         for color in COLORS {
             let attackers = self.occupancy(color) & ((get_bishop_moves(king_square, EMPTY) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
                 | (get_rook_moves(king_square, EMPTY) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
-    
+
             for square in attackers {
                 let between = get_between(square, king_square) & self.combined();
                 if between.count_ones() == 1 {
@@ -716,7 +718,7 @@ impl Board {
     /// let board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
     ///
-    /// assert_eq!(board.make_move_new_metadata(&mv), Ok((Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"), MoveMetaData::PawnMove)));
+    /// assert_eq!(board.make_move_new_metadata(mv), Ok((Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"), MoveMetaData::PawnMove)));
     /// ```
     ///
     /// # Notes
@@ -725,7 +727,7 @@ impl Board {
     /// certain rules (e.g., pinned pieces cannot move) during processing.
     ///
     /// [`generate_moves_vec`]: #method.generate_moves_vec
-    pub fn make_move_new_metadata(&self, mv: &ChessMove) -> Result<(Board, MoveMetaData), Error> {
+    pub fn make_move_new_metadata(&self, mv: ChessMove) -> Result<(Board, MoveMetaData), Error> {
         let mut board = *self;
 
         let metadata = board.make_move_metadata(mv)?;
@@ -755,7 +757,7 @@ impl Board {
     /// let mut board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
     ///
-    /// assert!(board.make_move_metadata(&mv).is_ok());
+    /// assert!(board.make_move_metadata(mv).is_ok());
     /// ```
     ///
     /// # Notes
@@ -765,7 +767,7 @@ impl Board {
     ///
     /// [`generate_moves_vec`]: #method.generate_moves_vec
     #[rustfmt::skip]
-    pub fn make_move_metadata(&mut self, mv: &ChessMove) -> Result<MoveMetaData, Error> {
+    pub fn make_move_metadata(&mut self, mv: ChessMove) -> Result<MoveMetaData, Error> {
         let (from, to) = mv.get_move();
 
         self.check = 0;
@@ -1010,7 +1012,7 @@ impl Board {
                 } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy) & mask;
 
                 pawn_moves.into_iter().for_each(|dest| {
-                    if self.is_promotion(&dest) {
+                    if self.is_promotion(dest) {
                         moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
                         moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
                         moves.push(ChessMove::new_promotion(src, dest, Piece::Rook));
@@ -1021,14 +1023,13 @@ impl Board {
                 });
             }
 
-            if let Some(en_passant) = self.en_passant_square {
-                if mask & BitBoard::from_square(en_passant) != EMPTY {
+            if let Some(en_passant) = self.en_passant_square
+                && mask & BitBoard::from_square(en_passant) != EMPTY {
                     for src in get_pawn_attacks(en_passant, !self.side_to_move)
                         & self.pieces_color(Piece::Pawn, self.side_to_move)
                     {
                         moves.push(ChessMove::new(src, en_passant));
                     }
-                }
             }
         } else {
             for src in self
@@ -1138,13 +1139,12 @@ impl Board {
     /// ```
     #[inline]
     pub fn generate_en_passant(&self) -> BitBoard {
-        if let Some(en_passant) = self.en_passant_square {
-            if (get_pawn_attacks(en_passant, !self.side_to_move)
+        if let Some(en_passant) = self.en_passant_square
+            && (get_pawn_attacks(en_passant, !self.side_to_move)
                 & self.pieces_color(Piece::Pawn, self.side_to_move))
                 != EMPTY
-            {
-                return BitBoard::from_square(en_passant);
-            }
+        {
+            return BitBoard::from_square(en_passant);
         }
 
         EMPTY
@@ -1152,7 +1152,7 @@ impl Board {
 
     /// Check if a square is a promotion square.
     #[inline]
-    pub fn is_promotion(&self, square: &Square) -> bool {
+    pub fn is_promotion(&self, square: Square) -> bool {
         match self.side_to_move {
             Color::White => square.rank() == Rank::Eighth,
             Color::Black => square.rank() == Rank::First,

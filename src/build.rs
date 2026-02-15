@@ -51,19 +51,18 @@ fn main() {
     } else if let Ok(mut file) = OpenOptions::new()
         .write(true)
         .open(format!("{}/magic_tables.rs", out_dir))
+        && file.metadata().expect("file metadata not found").len() == 0
     {
-        if file.metadata().expect("file metadata not found").len() == 0 {
-            let reader = BufReader::new(
-                OpenOptions::new()
-                    .read(true)
-                    .open(format!("{}/magic_tables.rs", out_dir))
-                    .unwrap(),
-            );
-            if reader.lines().count() != 4 {
-                write_bishop_moves(&mut file);
+        let reader = BufReader::new(
+            OpenOptions::new()
+                .read(true)
+                .open(format!("{}/magic_tables.rs", out_dir))
+                .unwrap(),
+        );
+        if reader.lines().count() != 4 {
+            write_bishop_moves(&mut file);
 
-                write_rook_moves(&mut file);
-            }
+            write_rook_moves(&mut file);
         }
     }
 }

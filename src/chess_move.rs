@@ -57,7 +57,7 @@ impl ChessMove {
     /// let board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
     ///
-    /// assert_eq!(board.make_move_new(&mv), Ok(Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")));
+    /// assert_eq!(board.make_move_new(mv), Ok(Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")));
     /// ```
     pub fn new(from: Square, to: Square) -> ChessMove {
         ChessMove {
@@ -82,7 +82,7 @@ impl ChessMove {
     /// let board = Board::from_fen(fen);
     /// let mv = ChessMove::new_promotion(Square::B7, Square::B8, Piece::Queen);
     ///
-    /// assert_eq!(board.make_move_new(&mv), Ok(Board::from_fen("1Q5r/2k5/8/K7/8/8/8/1R6 b - - 0 1")));
+    /// assert_eq!(board.make_move_new(mv), Ok(Board::from_fen("1Q5r/2k5/8/K7/8/8/8/1R6 b - - 0 1")));
     /// ```
     pub fn new_promotion(from: Square, to: Square, promotion: Piece) -> ChessMove {
         ChessMove {

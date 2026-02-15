@@ -65,7 +65,7 @@ impl Piece {
         self as usize
     }
 
-    pub fn piece_index(&self, color: &Color) -> usize {
+    pub fn piece_index(&self, color: Color) -> usize {
         let offset = match color {
             Color::White => 0,
             Color::Black => 6,

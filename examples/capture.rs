@@ -95,7 +95,7 @@ impl Uci for CaptureMaker {
                         for mv in moves {
                             let mv = board.infer_move(&mv).unwrap();
 
-                            let _ = board.make_move(&mv);
+                            let _ = board.make_move(mv);
                         }
                     }
                 }
@@ -104,14 +104,14 @@ impl Uci for CaptureMaker {
                         let mut moves = Vec::new();
 
                         for mv in board.generate_moves_vec(board.occupancy(!board.side_to_move)) {
-                            if let Ok(_) = board.make_move_new(&mv) {
+                            if let Ok(_) = board.make_move_new(mv) {
                                 moves.push(mv);
                             }
                         }
 
                         if moves.is_empty() {
                             for mv in board.generate_moves_vec(!EMPTY) {
-                                if let Ok(_) = board.make_move_new(&mv) {
+                                if let Ok(_) = board.make_move_new(mv) {
                                     moves.push(mv);
                                 }
                             }

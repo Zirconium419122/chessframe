@@ -5,7 +5,7 @@ use chessframe::{
     board::Board,
     chess_move::ChessMove,
     color::Color,
-    piece::{Piece, PIECES},
+    piece::{PIECES, Piece},
     uci::*,
 };
 
@@ -65,7 +65,7 @@ impl SimpleMoveMaker {
         let mut moves = board.generate_moves_vec(!EMPTY);
         Self::sort_moves(board, &mut moves);
         for mv in moves {
-            if let Ok(board) = board.make_move_new(&mv) {
+            if let Ok(board) = board.make_move_new(mv) {
                 let score = -Self::search(&board, alpha, beta, depth - 1);
 
                 if score > max {
@@ -90,7 +90,7 @@ impl SimpleMoveMaker {
         let mut moves = board.generate_moves_vec(!EMPTY);
         Self::sort_moves(board, &mut moves);
         for mv in moves {
-            if let Ok(board) = board.make_move_new(&mv) {
+            if let Ok(board) = board.make_move_new(mv) {
                 legal_moves = true;
                 let score = -Self::search(&board, -beta, -alpha, depth - 1);
 
@@ -130,7 +130,7 @@ impl SimpleMoveMaker {
         Self::sort_moves(board, &mut moves);
 
         for mv in moves {
-            if let Ok(board) = board.make_move_new(&mv) {
+            if let Ok(board) = board.make_move_new(mv) {
                 let score = -Self::quiescence_search(&board, -beta, -alpha);
 
                 if score >= beta {
@@ -252,7 +252,7 @@ impl Uci for SimpleMoveMaker {
                         for mv in moves {
                             let mv = board.infer_move(&mv).unwrap();
 
-                            let _ = board.make_move(&mv);
+                            let _ = board.make_move(mv);
                         }
                     }
                 }

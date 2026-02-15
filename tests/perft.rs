@@ -19,11 +19,11 @@ impl Perft {
         let mut count = 0;
 
         for mv in board.generate_moves_vec(!EMPTY) {
-            if let Ok(ref board) = board.make_move_new(&mv) {
+            if let Ok(board) = board.make_move_new(mv) {
                 let perft_results = if depth == 1 {
                     1
                 } else {
-                    self.perft(board, depth - 1, false)
+                    self.perft(&board, depth - 1, false)
                 };
                 count += perft_results;
 
