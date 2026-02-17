@@ -6,6 +6,7 @@ mod knight;
 mod magic;
 mod pawn;
 mod ranks;
+mod rays;
 mod tangent;
 mod zobrist;
 
@@ -16,5 +17,6 @@ pub use self::knight::write_knight_moves;
 pub use self::magic::{write_bishop_moves, write_rook_moves};
 pub use self::pawn::{write_pawn_attacks, write_pawn_moves};
 pub use self::ranks::write_ranks;
+pub use self::rays::{write_bishop_rays, write_rook_rays};
 pub use self::tangent::write_tangent;
 pub use self::zobrist::write_zobrist;

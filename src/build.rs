@@ -36,6 +36,10 @@ fn main() {
 
     write_king_moves(&mut file);
 
+    write_bishop_rays(&mut file);
+
+    write_rook_rays(&mut file);
+
     write_zobrist(&mut file);
 
     if OpenOptions::new()

@@ -630,12 +630,12 @@ impl Board {
             self.check = (get_knight_moves(king_square) & to_bitboard != EMPTY) as u8;
         } else if let Piece::Pawn = piece {
             if let Some(Piece::Knight) = mv.promotion() {
-                self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
-                self.xor(BitBoard::from_square(to), Piece::Knight, self.side_to_move);
+                self.xor(to_bitboard, Piece::Pawn, self.side_to_move);
+                self.xor(to_bitboard, Piece::Knight, self.side_to_move);
                 self.check = (get_knight_moves(king_square) & to_bitboard != EMPTY) as u8;
             } else if let Some(promotion) = mv.promotion() {
-                self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
-                self.xor(BitBoard::from_square(to), promotion, self.side_to_move);
+                self.xor(to_bitboard, Piece::Pawn, self.side_to_move);
+                self.xor(to_bitboard, promotion, self.side_to_move);
             } else if from.rank() == self.side_to_move.to_second_rank()
                 && to.rank() == self.side_to_move.to_fourth_rank()
             {
@@ -678,8 +678,8 @@ impl Board {
         self.pinned = EMPTY;
 
         for color in COLORS {
-            let attackers = self.occupancy(color) & ((get_bishop_moves(king_square, EMPTY) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
-                | (get_rook_moves(king_square, EMPTY) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
+            let attackers = self.occupancy(color) & ((get_bishop_rays(king_square) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
+                | (get_rook_rays(king_square) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
 
             for square in attackers {
                 let between = get_between(square, king_square) & self.combined();

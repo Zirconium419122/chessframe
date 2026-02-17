@@ -74,6 +74,16 @@ pub fn get_castle_moves() -> BitBoard {
 }
 
 #[inline]
+pub fn get_bishop_rays(square: Square) -> BitBoard {
+    unsafe { *BISHOP_RAYS.get_unchecked(square.to_index()) }
+}
+
+#[inline]
+pub fn get_rook_rays(square: Square) -> BitBoard {
+    unsafe { *ROOK_RAYS.get_unchecked(square.to_index()) }
+}
+
+#[inline]
 pub fn get_file(file: File) -> BitBoard {
     unsafe { *FILES.get_unchecked(file.to_index()) }
 }
