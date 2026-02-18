@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use crate::{color::Color, error::Error, file::File, rank::Rank};
 
@@ -24,6 +24,20 @@ impl FromStr for Square {
         let file = File::from_str(&chars[0].to_string())?;
 
         Ok(Square::make_square(rank, file))
+    }
+}
+
+impl fmt::Display for Square {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let file = self.file().to_index() as u8 + b'a';
+        let rank = self.rank().to_index() as u8 + b'1';
+
+        write!(
+            f,
+            "{}{}",
+            file as char,
+            rank as char,
+        )
     }
 }
 

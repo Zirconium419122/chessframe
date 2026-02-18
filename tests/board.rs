@@ -81,6 +81,14 @@ fn test_from_fen_starting_position() {
 }
 
 #[test]
+fn test_to_fen() {
+    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    let board = Board::from_fen(fen);
+
+    assert_eq!(fen, board.to_fen());
+}
+
+#[test]
 fn test_infer_move() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(fen);

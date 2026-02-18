@@ -11,34 +11,21 @@ pub struct ChessMove {
 
 impl fmt::Display for ChessMove {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let (rank_from, file_from) = (
-            unsafe { self.from.rank().to_index().unchecked_add(1) },
-            self.from.file().to_index(),
-        );
-        let (rank_to, file_to) = (
-            unsafe { self.to.rank().to_index().unchecked_add(1) },
-            self.to.file().to_index(),
-        );
-
-        let file_from_char = (file_from as u8 + b'a') as char;
-        let file_to_char = (file_to as u8 + b'a') as char;
-
         if let Some(promotion) = self.promotion {
             return write!(
                 f,
-                "{}{}{}{}{}",
-                file_from_char,
-                rank_from,
-                file_to_char,
-                rank_to,
+                "{}{}{}",
+                self.from,
+                self.to,
                 promotion.to_fen()
             );
         }
 
         write!(
             f,
-            "{}{}{}{}",
-            file_from_char, rank_from, file_to_char, rank_to
+            "{}{}",
+            self.from,
+            self.to,
         )
     }
 }

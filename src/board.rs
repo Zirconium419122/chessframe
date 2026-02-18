@@ -187,6 +187,69 @@ impl Board {
         }
     }
 
+    pub fn to_fen(&self) -> String {
+        let mut fen = String::new();
+
+        let mut empty = 0;
+
+        for rank in (0..8).rev() {
+            for file in 0..8 {
+                let square = Square::make_square(Rank::from_index(rank), File::from_index(file));
+
+                if let Some(piece) = self.get_piece(square) {
+                    let piece_fen = if self.occupancy(Color::White).is_set(square) {
+                        piece.to_fen().to_ascii_uppercase()
+                    } else {
+                        piece.to_fen()
+                    };
+
+                    if empty != 0 {
+                        fen.push_str(&empty.to_string());
+                        empty = 0;
+                    }
+
+                    fen.push(piece_fen);
+                } else {
+                    empty += 1;
+                }
+
+                if file == 7 {
+                    if empty != 0 {
+                        fen.push_str(&empty.to_string());
+                        empty = 0;
+                    }
+                    if rank != 0 {
+                        fen.push('/');
+                    }
+                }
+            }
+        }
+
+        fen.push(' ');
+
+        match self.side_to_move {
+            Color::White => fen.push('w'),
+            Color::Black => fen.push('b'),
+        }
+
+        fen.push(' ');
+        
+        fen.push_str(&self.castling_rights.to_fen());
+
+        fen.push(' ');
+
+        match self.en_passant_square() {
+            Some(en_passant_square) => fen.push_str(&en_passant_square.to_string()),
+            None => fen.push('-'),
+        }
+
+        fen.push(' ');
+
+        fen.push_str("0 1");
+
+        fen
+    }
+
     /// Get the combined bitboard of all pieces on the board.
     /// ```
     /// use chessframe::{bitboard::BitBoard, board::Board};

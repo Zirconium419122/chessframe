@@ -38,7 +38,7 @@ impl CastlingRights {
             0b1101 => 13,
             0b1110 => 14,
             0b1111 => 15,
-            _ => usize::MAX,
+            _ => unreachable!(),
         }
     }
 
@@ -65,6 +65,26 @@ impl CastlingRights {
         }
 
         castling_rights
+    }
+
+    /// Create a fen string containing the castling rights.
+    pub fn to_fen(&self) -> String {
+        let mut fen = String::new();
+
+        if self.can_castle(Color::White, true) {
+            fen.push('K');
+        }
+        if self.can_castle(Color::White, false) {
+            fen.push('Q');
+        }
+        if self.can_castle(Color::Black, true) {
+            fen.push('k');
+        }
+        if self.can_castle(Color::Black, false) {
+            fen.push('q');
+        }
+
+        fen
     }
 
     /// Get the castling rights for a specific color.
