@@ -432,6 +432,10 @@ impl Board {
         self.castling_rights = self.castling_rights.remove(castling_rights);
     }
 
+    pub fn add_castling_rights(&mut self, castling_rights: CastlingRights) {
+        self.castling_rights = self.castling_rights.add(castling_rights);
+    }
+
     pub(crate) fn xor(&mut self, bitboard: BitBoard, piece: Piece, color: Color) {
         *self.pieces_mut(piece) ^= bitboard;
         *self.occupancy_mut(color) ^= bitboard;
@@ -759,6 +763,108 @@ impl Board {
         Ok(())
     }
 
+    /// Unmake a [`ChessMove`] on the current [`Board`].
+    pub fn unmake_move(&mut self, mv: ChessMove, metadata: MoveMetaData, en_passant_square: Option<Square>, castling_rights: CastlingRights) -> Result<(), Error> {
+        let (from, to) = mv.get_move();
+
+        let from_bitboard = BitBoard::from_square(from);
+        let to_bitboard = BitBoard::from_square(to);
+        let _move_bitboard = from_bitboard ^ to_bitboard;
+
+        let piece = self.get_piece(to).ok_or(Error::NoPieceOnSquare)?;
+
+        self.remove_en_passant();
+        self.en_passant_square = en_passant_square;
+
+        self.castling_rights = castling_rights;
+
+        // Implement this and en_passant correctly later.
+        // self.add_castling_rights(CastlingRights::square_to_castle_rights(
+        //     !self.side_to_move,
+        //     to,
+        // ));
+
+        // self.add_castling_rights(CastlingRights::square_to_castle_rights(
+        //     self.side_to_move,
+        //     from,
+        // ));
+
+        const CASTLE_ROOK_START: [File; 8] = [
+            File::A,
+            File::A,
+            File::A,
+            File::A,
+            File::H,
+            File::H,
+            File::H,
+            File::H,
+        ];
+        const CASTLE_ROOK_END: [File; 8] = [
+            File::D,
+            File::D,
+            File::D,
+            File::D,
+            File::F,
+            File::F,
+            File::F,
+            File::F,
+        ];
+
+        self.side_to_move = !self.side_to_move;
+
+        self.xor(to_bitboard, piece, self.side_to_move);
+        self.xor(from_bitboard, piece, self.side_to_move);
+
+        match metadata {
+            MoveMetaData::PawnMove => {
+                if let Some(_) = mv.promotion() {
+                    self.xor(from_bitboard, piece, self.side_to_move);
+                    self.xor(from_bitboard, Piece::Pawn, self.side_to_move);
+                }
+            },
+            MoveMetaData::Capture(captured, _) => {
+                self.xor(to_bitboard, captured, !self.side_to_move);
+            },
+            MoveMetaData::EnPassant(square) => {
+                self.xor(BitBoard::from_square(square), Piece::Pawn, !self.side_to_move);
+            },
+            MoveMetaData::Castle => {
+                let index = to.file().to_index();
+                let start = BitBoard::set(self.side_to_move.to_backrank(), unsafe {
+                    *CASTLE_ROOK_START.get_unchecked(index)
+                });
+                let end = BitBoard::set(self.side_to_move.to_backrank(), unsafe {
+                    *CASTLE_ROOK_END.get_unchecked(index)
+                });
+
+                self.xor(end, Piece::Rook, self.side_to_move);
+                self.xor(start, Piece::Rook, self.side_to_move);
+            },
+            _ => {},
+        }
+
+        let king_square = self.pieces_color(Piece::King, self.side_to_move).to_square();
+
+        self.check = 0;
+        self.pinned = EMPTY;
+
+        for color in COLORS {
+            let attackers = self.occupancy(color) & ((get_bishop_rays(king_square) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
+                | (get_rook_rays(king_square) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
+
+            for square in attackers {
+                let between = get_between(square, king_square) & self.combined();
+                if between.count_ones() == 1 {
+                    self.pinned ^= between & self.occupancy(!color);
+                } else if between == EMPTY && self.side_to_move == color {
+                    self.check += 1;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Make a [`ChessMove`] on a copy of the current [`Board`] and return [`MoveMetaData`].
     ///
     /// # Parameters
@@ -851,6 +957,24 @@ impl Board {
         self.xor(from_bitboard, piece, self.side_to_move);
         self.xor(to_bitboard, piece, self.side_to_move);
 
+        if self
+            .get_attackers(
+                self.pieces_color(Piece::King, self.side_to_move)
+                    .to_square(),
+            )
+            .is_not_zero()
+        {
+            self.xor(to_bitboard, piece, self.side_to_move);
+            self.xor(from_bitboard, piece, self.side_to_move);
+            if let Some(captured) = captured {
+                self.xor(to_bitboard, captured, !self.side_to_move);
+            }
+
+            self.en_passant_square = en_passant_square;
+
+            return Err(Error::CannotMovePinned);
+        }
+
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
             !self.side_to_move,
             to,
@@ -937,19 +1061,9 @@ impl Board {
             }
         }
 
-        if self
-            .get_attackers(
-                self.pieces_color(Piece::King, self.side_to_move)
-                    .to_square(),
-            )
-            .is_not_zero()
-        {
-            return Err(Error::CannotMovePinned);
-        }
-
         self.side_to_move = !self.side_to_move;
 
-        Ok(MoveMetaData::new(to, piece, captured, en_passant_square == Some(to), castle, !self.side_to_move))
+        Ok(MoveMetaData::new(to, piece, captured, en_passant_square == Some(to) && piece == Piece::Pawn, castle, !self.side_to_move))
     }
 
     /// Get the piece at a given square.

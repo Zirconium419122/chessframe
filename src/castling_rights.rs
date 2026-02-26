@@ -52,16 +52,16 @@ impl CastlingRights {
         let mut castling_rights = CastlingRights::new();
 
         if fen.contains('K') {
-            castling_rights = castling_rights.add(Color::White, true);
+            castling_rights = castling_rights.add_right(Color::White, true);
         }
         if fen.contains('Q') {
-            castling_rights = castling_rights.add(Color::White, false);
+            castling_rights = castling_rights.add_right(Color::White, false);
         }
         if fen.contains('k') {
-            castling_rights = castling_rights.add(Color::Black, true);
+            castling_rights = castling_rights.add_right(Color::Black, true);
         }
         if fen.contains('q') {
-            castling_rights = castling_rights.add(Color::Black, false);
+            castling_rights = castling_rights.add_right(Color::Black, false);
         }
 
         castling_rights
@@ -97,11 +97,11 @@ impl CastlingRights {
     /// Convert a square to the castling rights it represents.
     pub fn square_to_castle_rights(color: Color, square: Square) -> CastlingRights {
         if square == Square::make_square(color.to_backrank(), File::E) {
-            CastlingRights::new().add(color, true).add(color, false)
+            CastlingRights::new().add_right(color, true).add_right(color, false)
         } else if square == Square::make_square(color.to_backrank(), File::H) {
-            CastlingRights::new().add(color, true)
+            CastlingRights::new().add_right(color, true)
         } else if square == Square::make_square(color.to_backrank(), File::A) {
-            CastlingRights::new().add(color, false)
+            CastlingRights::new().add_right(color, false)
         } else {
             CastlingRights::new()
         }
@@ -110,6 +110,11 @@ impl CastlingRights {
     /// Remove castling rights provided by the `remove` argument.
     pub fn remove(&self, remove: CastlingRights) -> CastlingRights {
         CastlingRights(self.0 & !remove.0)
+    }
+
+    /// Add castling rights provided by the `add` argument.
+    pub fn add(&self, add: CastlingRights) -> CastlingRights {
+        CastlingRights(self.0 | add.0)
     }
 
     /// Check if a specific color can castle on a specific side.
@@ -123,7 +128,7 @@ impl CastlingRights {
 
     /// Add castling rights for a specific color and side.
     #[rustfmt::skip]
-    pub fn add(&mut self, color: Color, kingside: bool) -> CastlingRights {
+    pub fn add_right(&mut self, color: Color, kingside: bool) -> CastlingRights {
         let mut castling_rights = *self;
 
         let offset = if color == Color::Black { CastlingRights::OFFSET } else { 0 };
