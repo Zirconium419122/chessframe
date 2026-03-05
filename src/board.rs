@@ -658,6 +658,16 @@ impl Board {
         self.xor(from_bitboard, piece, self.side_to_move);
         self.xor(to_bitboard, piece, self.side_to_move);
 
+        if self
+            .get_attackers(
+                self.pieces_color(Piece::King, self.side_to_move)
+                    .to_square(),
+            )
+            .is_not_zero()
+        {
+            return Err(Error::CannotMovePinned);
+        }
+
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
             !self.side_to_move,
             to,
@@ -730,16 +740,6 @@ impl Board {
 
             self.xor(start, Piece::Rook, self.side_to_move);
             self.xor(end, Piece::Rook, self.side_to_move);
-        }
-
-        if self
-            .get_attackers(
-                self.pieces_color(Piece::King, self.side_to_move)
-                    .to_square(),
-            )
-            .is_not_zero()
-        {
-            return Err(Error::CannotMovePinned);
         }
 
         self.pinned = EMPTY;
