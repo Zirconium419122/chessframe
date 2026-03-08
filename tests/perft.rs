@@ -97,3 +97,11 @@ fn test_perft_depth_7() {
 
     assert_eq!(Perft::run(&board, 7, false), 3195901860);
 }
+
+#[test]
+fn test_perft_endgame() {
+    let fen = "8/p4ppp/P7/1nk4P/4KPP1/4P3/8/8 b - - 2 41";
+    let board = Board::from_fen(fen);
+
+    assert_eq!(Perft::run(&board, 8, false), 151117231);
+}
