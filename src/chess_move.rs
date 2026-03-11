@@ -31,6 +31,8 @@ impl fmt::Display for ChessMove {
 }
 
 impl ChessMove {
+    pub const NULL_MOVE: ChessMove = ChessMove { from: Square::A1, to: Square::A1, promotion: None };
+
     /// Create a new `ChessMove` given a `from` and `to` square.
     ///
     /// # Parameters

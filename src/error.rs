@@ -17,6 +17,12 @@ pub enum Error {
     #[error("Cannot move pinned piece!")]
     CannotMovePinned,
 
+    #[error("Cannot castle kingside")]
+    CannotCastleKingside,
+
+    #[error("Cannot castle queenside")]
+    CannotCastleQueenside,
+
     #[error("Cannot make move when game has ended!")]
     GameEnded,
 

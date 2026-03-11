@@ -59,7 +59,7 @@ impl Board {
             check: 0,
             hash: 0,
             side_to_move: Color::White,
-            castling_rights: CastlingRights::default(),
+            castling_rights: CastlingRights::new(),
             en_passant_square: None,
         }
     }
@@ -168,21 +168,7 @@ impl Board {
 
     fn parse_en_passant(&mut self, en_passant: &str) {
         if en_passant != "-" {
-            let file =
-                unsafe { (en_passant.chars().nth(0).unwrap_unchecked() as u8).unchecked_sub(b'a') };
-            let rank = unsafe {
-                (en_passant
-                    .chars()
-                    .nth(1)
-                    .unwrap_unchecked()
-                    .to_digit(10)
-                    .unwrap_unchecked() as u8)
-                    .unchecked_sub(1)
-            };
-            let square = Square::make_square(
-                Rank::from_index(rank as usize),
-                File::from_index(file as usize),
-            );
+            let square = Square::from_str(en_passant).unwrap();
             self.set_en_passant(square);
         }
     }
@@ -449,36 +435,36 @@ impl Board {
     ///
     /// Starting position:
     /// ```
-    /// use chessframe::board::Board;
+    /// use chessframe::{board::Board, error::Error};
     ///
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
     ///
-    /// assert_eq!(board.can_castle(true), Err("Cannot castle kingside"));
-    /// assert_eq!(board.can_castle(false), Err("Cannot castle queenside"));
+    /// assert_eq!(board.can_castle(true), Err(Error::CannotCastleKingside));
+    /// assert_eq!(board.can_castle(false), Err(Error::CannotCastleQueenside));
     /// ```
     ///
     /// Opening position:
     /// ```
-    /// use chessframe::board::Board;
+    /// use chessframe::{board::Board, error::Error};
     ///
     /// let fen = "r1bqk2r/ppppbppp/2n2n2/4p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R w KQkq - 1 5";
     /// let board = Board::from_fen(fen);
     ///
     /// assert_eq!(board.can_castle(true), Ok(()));
-    /// assert_eq!(board.can_castle(false), Err("Cannot castle queenside"));
+    /// assert_eq!(board.can_castle(false), Err(Error::CannotCastleQueenside));
     /// ```
-    pub fn can_castle(&self, kingside: bool) -> Result<(), &str> {
+    pub fn can_castle(&self, kingside: bool) -> Result<(), Error> {
         let castling_moves = self.generate_castling_moves();
 
         if kingside
             && (castling_moves & BitBoard::set(self.side_to_move.to_backrank(), File::G)).is_zero()
         {
-            return Err("Cannot castle kingside");
+            return Err(Error::CannotCastleKingside);
         } else if !kingside
             && (castling_moves & BitBoard::set(self.side_to_move.to_backrank(), File::C)).is_zero()
         {
-            return Err("Cannot castle queenside");
+            return Err(Error::CannotCastleQueenside);
         }
 
         Ok(())
@@ -1143,7 +1129,7 @@ impl Board {
     /// ```
     #[rustfmt::skip]
     pub fn generate_moves_vec(&self, mask: BitBoard) -> Vec<ChessMove> {
-        let mut moves: Vec<ChessMove> = Vec::with_capacity(218);
+        let mut moves: Vec<ChessMove> = Vec::with_capacity(96);
 
         let allied_pieces = self.occupancy(self.side_to_move);
         let opponent_occupancy = self.occupancy(!self.side_to_move);
@@ -1167,9 +1153,9 @@ impl Board {
                         _ => unreachable!(),
                     } & !allied_pieces & mask;
 
-                    generated_moves
-                        .into_iter()
-                        .for_each(|dest| moves.push(ChessMove::new(src, dest)));
+                    for dest in generated_moves {
+                        moves.push(ChessMove::new(src, dest));
+                    }
                 }
             }
 
@@ -1188,7 +1174,7 @@ impl Board {
                     }
                 } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy) & mask;
 
-                pawn_moves.into_iter().for_each(|dest| {
+                for dest in pawn_moves {
                     if self.is_promotion(dest) {
                         moves.push(ChessMove::new_promotion(src, dest, Piece::Knight));
                         moves.push(ChessMove::new_promotion(src, dest, Piece::Bishop));
@@ -1197,7 +1183,7 @@ impl Board {
                     } else {
                         moves.push(ChessMove::new(src, dest));
                     }
-                });
+                }
             }
 
             if let Some(en_passant) = self.en_passant_square
@@ -1213,11 +1199,11 @@ impl Board {
                 .pieces_color(Piece::King, self.side_to_move)
                 .into_iter()
             {
-                let generated_moves = get_king_moves(src) & !allied_pieces & mask;
+                let king_moves = get_king_moves(src) & !allied_pieces & mask;
 
-                generated_moves
-                    .into_iter()
-                    .for_each(|dest| moves.push(ChessMove::new(src, dest)));
+                for dest in king_moves {
+                    moves.push(ChessMove::new(src, dest));
+                }
             }
         }
 
