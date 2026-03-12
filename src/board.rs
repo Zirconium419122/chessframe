@@ -749,6 +749,51 @@ impl Board {
         Ok(())
     }
 
+    pub fn make_null_move_new(&self) -> Result<Board, Error> {
+        let mut board = *self;
+
+        board.make_null_move()?;
+
+        Ok(board)
+    }
+
+    pub fn make_null_move(&mut self) -> Result<(), Error> {
+        self.remove_en_passant();
+
+        let king_square = self.pieces_color(Piece::King, !self.side_to_move).to_square();
+
+        if self
+            .get_attackers(
+                self.pieces_color(Piece::King, self.side_to_move)
+                    .to_square(),
+            )
+            .is_not_zero()
+        {
+            return Err(Error::InCheck);
+        }
+
+        self.check = 0;
+        self.pinned = EMPTY;
+
+        for color in COLORS {
+            let attackers = self.occupancy(color) & ((get_bishop_rays(king_square) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
+                | (get_rook_rays(king_square) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
+
+            for square in attackers {
+                let between = get_between(square, king_square) & self.combined();
+                if between.count_ones() == 1 {
+                    self.pinned ^= between & self.occupancy(!color);
+                } else if between == EMPTY && self.side_to_move == color {
+                    self.check += 1;
+                }
+            }
+        }
+
+        self.side_to_move = !self.side_to_move;
+
+        Ok(())
+    }
+
     /// Unmake a [`ChessMove`] on the current [`Board`].
     pub fn unmake_move(&mut self, mv: ChessMove, metadata: MoveMetaData, en_passant_square: Option<Square>, castling_rights: CastlingRights) -> Result<(), Error> {
         let (from, to) = mv.get_move();

@@ -85,7 +85,7 @@ fn test_to_fen() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let board = Board::from_fen(fen);
 
-    assert_eq!(fen, board.to_fen());
+    assert_eq!(board.to_fen(), fen);
 }
 
 #[test]

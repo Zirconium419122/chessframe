@@ -17,6 +17,9 @@ pub enum Error {
     #[error("Cannot move pinned piece!")]
     CannotMovePinned,
 
+    #[error("Not legal operation in check!")]
+    InCheck,
+
     #[error("Cannot castle kingside")]
     CannotCastleKingside,
 
