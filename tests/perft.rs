@@ -6,14 +6,14 @@ impl Perft {
     pub fn run(board: &Board, depth: usize, divide: bool) -> usize {
         let mut perft = Perft(TranspositionTable::with_size_mb(256));
 
-        perft.perft(&board, depth, divide)
+        perft.perft(board, depth, divide)
     }
 
     fn perft(&mut self, board: &Board, depth: usize, divide: bool) -> usize {
-        if let Some(entry) = self.0.get(board.hash()) {
-            if entry.depth == depth as u8 {
-                return entry.value;
-            }
+        if let Some(entry) = self.0.get(board.hash())
+            && entry.depth == depth as u8
+        {
+            return entry.value;
         }
 
         let mut count = 0;

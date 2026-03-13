@@ -113,7 +113,7 @@ fn test_validate_move() {
 
     // Test that you can't push a pawn three squares
     {
-        let mut board = board.clone();
+        let mut board = board;
 
         assert_eq!(board.side_to_move, Color::White);
         assert_eq!(
@@ -137,7 +137,7 @@ fn test_validate_move() {
 
     // Test that you can't capture your own pieces
     {
-        let mut board = board.clone();
+        let mut board = board;
 
         assert_eq!(board.side_to_move, Color::White);
         assert_eq!(
@@ -208,7 +208,7 @@ fn test_make_move() {
 
     // Test that you can push a pawn
     {
-        let mut board = board.clone();
+        let mut board = board;
 
         assert_eq!(board.side_to_move, Color::White);
         assert_eq!(
@@ -271,7 +271,7 @@ fn test_can_castle() {
     let mut board = Board::from_fen(fen);
 
     {
-        let board = board.clone();
+        let board = board;
 
         assert_eq!(board.side_to_move, Color::White);
         assert_eq!(
