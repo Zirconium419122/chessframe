@@ -833,14 +833,13 @@ impl Board {
         self.xor(to_bitboard, piece, self.side_to_move);
         self.xor(from_bitboard, piece, self.side_to_move);
 
+        if mv.promotion().is_some() {
+            self.xor(from_bitboard, piece, self.side_to_move);
+            self.xor(from_bitboard, Piece::Pawn, self.side_to_move);
+        }
+
         match metadata {
-            MoveMetaData::PawnMove => {
-                if mv.promotion().is_some() {
-                    self.xor(from_bitboard, piece, self.side_to_move);
-                    self.xor(from_bitboard, Piece::Pawn, self.side_to_move);
-                }
-            },
-            MoveMetaData::Capture(captured, _) => {
+            MoveMetaData::Capture(captured) => {
                 self.xor(to_bitboard, captured, !self.side_to_move);
             },
             MoveMetaData::EnPassant(square) => {
@@ -976,24 +975,7 @@ impl Board {
         self.xor(from_bitboard, piece, self.side_to_move);
         self.xor(to_bitboard, piece, self.side_to_move);
 
-        if self
-            .get_attackers(
-                self.pieces_color(Piece::King, self.side_to_move)
-                    .to_square(),
-            )
-            .is_not_zero()
-        {
-            self.xor(to_bitboard, piece, self.side_to_move);
-            self.xor(from_bitboard, piece, self.side_to_move);
-            if let Some(captured) = captured {
-                self.xor(to_bitboard, captured, !self.side_to_move);
-            }
-
-            self.en_passant_square = en_passant_square;
-
-            return Err(Error::CannotMovePinned);
-        }
-
+        let castling_rights = self.castling_rights;
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
             !self.side_to_move,
             to,
@@ -1069,6 +1051,22 @@ impl Board {
             self.xor(end, Piece::Rook, self.side_to_move);
         }
 
+        let metadata = MoveMetaData::new(to, piece, captured, en_passant, castle, self.side_to_move);
+
+        if self
+            .get_attackers(
+                self.pieces_color(Piece::King, self.side_to_move)
+                    .to_square(),
+            )
+            .is_not_zero()
+        {
+
+            self.side_to_move = !self.side_to_move;
+            self.unmake_move(mv, metadata, en_passant_square, castling_rights)?;
+
+            return Err(Error::CannotMovePinned);
+        }
+
         let attackers = self.occupancy(self.side_to_move) & ((get_bishop_moves(king_square, EMPTY) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
             | (get_rook_moves(king_square, EMPTY) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
 
@@ -1083,7 +1081,7 @@ impl Board {
 
         self.side_to_move = !self.side_to_move;
 
-        Ok(MoveMetaData::new(to, piece, captured, en_passant, castle, !self.side_to_move))
+        Ok(metadata)
     }
 
     /// Get the piece at a given square.

@@ -121,7 +121,7 @@ pub enum MoveMetaData {
     #[default]
     None,
     PawnMove,
-    Capture(Piece, Square),
+    Capture(Piece),
     EnPassant(Square),
     Castle,
 }
@@ -158,7 +158,7 @@ impl MoveMetaData {
     ///
     /// assert_eq!(
     ///     move_metadata,
-    ///     MoveMetaData::Capture(Piece::Pawn, Square::D5),
+    ///     MoveMetaData::Capture(Piece::Pawn),
     /// );
     /// ```
     pub fn new(
@@ -170,7 +170,7 @@ impl MoveMetaData {
         color: Color,
     ) -> MoveMetaData {
         match (captured, en_passant, castle) {
-            (Some(captured), _, _) => MoveMetaData::Capture(captured, square),
+            (Some(captured), _, _) => MoveMetaData::Capture(captured),
             (_, true, _) => MoveMetaData::EnPassant(square.wrapping_backward(color)),
             (_, _, true) => MoveMetaData::Castle,
             _ => {
@@ -188,9 +188,9 @@ impl MoveMetaData {
     /// # Returns
     /// - `Some((Piece, Square))` if the move captured a piece.
     /// - `None` if no piece was captured.
-    pub fn capture(&self) -> Option<(Piece, Square)> {
-        if let MoveMetaData::Capture(captured, square) = *self {
-            Some((captured, square))
+    pub fn capture(&self) -> Option<Piece> {
+        if let MoveMetaData::Capture(captured) = *self {
+            Some(captured)
         } else {
             None
         }

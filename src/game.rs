@@ -394,9 +394,9 @@ impl Game {
             );
 
             match mv.1 {
-                MoveMetaData::Capture(captured, square) => {
+                MoveMetaData::Capture(captured) => {
                     self.board.xor(
-                        BitBoard::from_square(square),
+                        BitBoard::from_square(mv.0.to),
                         captured,
                         self.board.side_to_move,
                     );
