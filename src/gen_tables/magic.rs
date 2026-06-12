@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::fs::File;
 use std::io::Write;
 
@@ -11,8 +12,9 @@ use crate::{
     square::{SQUARES, Square},
 };
 
-#[allow(dead_code)]
-enum MagicPiece {
+
+#[derive(Debug, Clone, Copy)]
+pub enum MagicPiece {
     Bishop,
     Rook,
 }
@@ -77,32 +79,32 @@ fn flatten_data(data: ([Magic; 64], [Vec<BitBoard>; 64])) -> ([Magic; 64], Vec<B
 
     let flattened_moves = moves_array
         .iter()
-        .flat_map(|moves| moves.clone())
+        .flat_map(|moves| moves.iter().copied())
         .collect::<Vec<BitBoard>>();
 
     (updated_magic, flattened_moves)
 }
 
 #[rustfmt::skip]
-fn find_magic(piece: MagicPiece, square: Square) -> Result<(Magic, Vec<BitBoard>), &'static str> {
+fn find_magic(piece: MagicPiece, square: Square, rng: &mut ChaCha8Rng) -> Result<(Magic, Vec<BitBoard>), &'static str> {
     let mask = match piece {
         MagicPiece::Bishop => generate_bishop_moves(square, BitBoard(0)) & BitBoard(0x007e7e7e7e7e7e00),
         MagicPiece::Rook => generate_rook_mask(square),
     };
 
-    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
+    let bits = mask.count_ones() as u8;
 
     // Try magic numbers until we find one that works
     for _ in 0..1_000_000 {
-        let magic_number = generate_magic_candidate(&mut rng);
+        let magic_number = generate_magic_candidate(rng);
         let magic = Magic {
             mask,
             magic: magic_number,
-            shift: 64 - mask.0.count_ones() as u8,
+            shift: 64 - bits,
             offset: 0,
         };
 
-        if let Ok(table) = try_make_table(&piece, square, magic) {
+        if let Ok(table) = try_make_table(&piece, square, magic, bits) {
             return Ok((magic, table));
         }
     }
@@ -110,9 +112,8 @@ fn find_magic(piece: MagicPiece, square: Square) -> Result<(Magic, Vec<BitBoard>
     Err("Failed to find magic!")
 }
 
-fn try_make_table(piece: &MagicPiece, square: Square, magic: Magic) -> Result<Vec<BitBoard>, &str> {
-    let mut table: Vec<BitBoard> =
-        vec![BitBoard::default(); 1 << magic.mask.0.count_ones() as usize];
+fn try_make_table(piece: &MagicPiece, square: Square, magic: Magic, bits: u8) -> Result<Vec<BitBoard>, &str> {
+    let mut table: Vec<BitBoard> = vec![BitBoard::default(); 1 << bits];
 
     for blockers in subsets(magic.mask) {
         let moves = match piece {
@@ -146,8 +147,10 @@ fn generate_bishop_magics_and_moves() -> ([Magic; 64], Vec<BitBoard>) {
     let mut magics = [Magic::default(); 64];
     let mut moves = [const { Vec::new() }; 64];
 
+    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
+
     for square in SQUARES {
-        let magic_moves = find_magic(MagicPiece::Bishop, square).unwrap();
+        let magic_moves = find_magic(MagicPiece::Bishop, square, &mut rng).unwrap();
         magics[square.to_index()] = magic_moves.0;
         moves[square.to_index()] = magic_moves.1;
     }
@@ -155,7 +158,7 @@ fn generate_bishop_magics_and_moves() -> ([Magic; 64], Vec<BitBoard>) {
     flatten_data((magics, moves))
 }
 
-fn generate_bishop_moves(square: Square, blockers: BitBoard) -> BitBoard {
+pub(crate) fn generate_bishop_moves(square: Square, blockers: BitBoard) -> BitBoard {
     let mut moves = BitBoard(0);
 
     for mv in bishop_directions() {
@@ -173,7 +176,7 @@ fn generate_bishop_moves(square: Square, blockers: BitBoard) -> BitBoard {
     moves
 }
 
-fn generate_rook_mask(square: Square) -> BitBoard {
+pub(crate) fn generate_rook_mask(square: Square) -> BitBoard {
     let mut mask = BitBoard(0);
 
     let (file, rank) = (square.to_index() % 8, square.to_index() / 8);
@@ -193,8 +196,10 @@ fn generate_rook_moves_and_magics() -> ([Magic; 64], Vec<BitBoard>) {
     let mut magics = [Magic::default(); 64];
     let mut moves = [const { Vec::new() }; 64];
 
+    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123456789);
+
     for square in SQUARES {
-        let magic_moves = find_magic(MagicPiece::Rook, square).unwrap();
+        let magic_moves = find_magic(MagicPiece::Rook, square, &mut rng).unwrap();
         magics[square.to_index()] = magic_moves.0;
         moves[square.to_index()] = magic_moves.1;
     }
@@ -202,7 +207,7 @@ fn generate_rook_moves_and_magics() -> ([Magic; 64], Vec<BitBoard>) {
     flatten_data((magics, moves))
 }
 
-fn generate_rook_moves(square: Square, blockers: BitBoard) -> BitBoard {
+pub(crate) fn generate_rook_moves(square: Square, blockers: BitBoard) -> BitBoard {
     let mut moves = BitBoard(0);
 
     for mv in rook_directions() {
@@ -220,7 +225,7 @@ fn generate_rook_moves(square: Square, blockers: BitBoard) -> BitBoard {
     moves
 }
 
-fn subsets(mask: BitBoard) -> Vec<BitBoard> {
+pub(crate) fn subsets(mask: BitBoard) -> Vec<BitBoard> {
     let mut subsets = Vec::new();
 
     let mut subset: BitBoard = BitBoard(0);

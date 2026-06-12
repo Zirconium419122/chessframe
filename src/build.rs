@@ -49,9 +49,19 @@ fn main() {
     {
         let mut file = File::create(format!("{}/magic_tables.rs", out_dir)).unwrap();
 
-        write_bishop_moves(&mut file);
+        #[cfg(not(feature = "bmi2"))]
+        {
+            write_bishop_moves(&mut file);
 
-        write_rook_moves(&mut file);
+            write_rook_moves(&mut file);
+        }
+
+        #[cfg(feature = "bmi2")]
+        {
+            write_bishop_pext(&mut file);
+
+            write_rook_pext(&mut file);
+        }
     } else if let Ok(mut file) = OpenOptions::new()
         .write(true)
         .open(format!("{}/magic_tables.rs", out_dir))
@@ -64,9 +74,19 @@ fn main() {
                 .unwrap(),
         );
         if reader.lines().count() != 4 {
-            write_bishop_moves(&mut file);
+            #[cfg(not(feature = "bmi2"))]
+            {
+                write_bishop_moves(&mut file);
 
-            write_rook_moves(&mut file);
+                write_rook_moves(&mut file);
+            }
+
+            #[cfg(feature = "bmi2")]
+            {
+                write_bishop_pext(&mut file);
+
+                write_rook_pext(&mut file);
+            }
         }
     }
 }

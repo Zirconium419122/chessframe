@@ -804,21 +804,8 @@ impl Board {
 
         let piece = self.get_piece(to).ok_or(Error::NoPieceOnSquare)?;
 
-        self.remove_en_passant();
         self.en_passant_square = en_passant_square;
-
         self.castling_rights = castling_rights;
-
-        // Implement this and en_passant correctly later.
-        // self.add_castling_rights(CastlingRights::square_to_castle_rights(
-        //     !self.side_to_move,
-        //     to,
-        // ));
-
-        // self.add_castling_rights(CastlingRights::square_to_castle_rights(
-        //     self.side_to_move,
-        //     from,
-        // ));
 
         const CASTLE_ROOK_START: [File; 8] = [
             File::A,
@@ -977,6 +964,7 @@ impl Board {
         let move_bitboard = from_bitboard ^ to_bitboard;
 
         let piece = self.get_piece(from).ok_or(Error::NoPieceOnSquare)?;
+        let mut en_passant = false;
 
         let en_passant_square = self.en_passant_square();
         self.remove_en_passant();
@@ -1057,11 +1045,12 @@ impl Board {
                 self.set_en_passant(to.wrapping_backward(self.side_to_move));
                 self.check = (get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY) as u8;
             } else if Some(to) == en_passant_square {
-                let side_to_move = self.side_to_move;
+                en_passant = true;
+
                 self.xor(
-                    BitBoard::from_square(to.wrapping_backward(side_to_move)),
+                    BitBoard::from_square(to.wrapping_backward(self.side_to_move)),
                     Piece::Pawn,
-                    !side_to_move,
+                    !self.side_to_move,
                 );
                 self.check = (get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY) as u8;
             } else {
@@ -1094,7 +1083,7 @@ impl Board {
 
         self.side_to_move = !self.side_to_move;
 
-        Ok(MoveMetaData::new(to, piece, captured, en_passant_square == Some(to) && piece == Piece::Pawn, castle, !self.side_to_move))
+        Ok(MoveMetaData::new(to, piece, captured, en_passant, castle, !self.side_to_move))
     }
 
     /// Get the piece at a given square.

@@ -1,3 +1,6 @@
+#[cfg(feature = "bmi2")]
+use std::arch::x86_64::_pext_u64;
+
 use crate::{
     bitboard::BitBoard, castling_rights::CastlingRights, color::Color, file::File, piece::Piece,
     rank::Rank, square::Square,
@@ -6,6 +9,7 @@ use crate::{
 include!(concat!(env!("OUT_DIR"), "/tables.rs"));
 include!(concat!(env!("OUT_DIR"), "/magic_tables.rs"));
 
+#[cfg(not(feature = "bmi2"))]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Magic {
     pub mask: BitBoard,
@@ -14,12 +18,28 @@ pub struct Magic {
     pub offset: u32,
 }
 
-#[inline]
+#[cfg(feature = "bmi2")]
+#[derive(Debug, Clone, Copy)]
+pub struct PextEntry {
+    mask: BitBoard,
+    offset: u32,
+}
+
+#[inline(always)]
+#[cfg(not(feature = "bmi2"))]
 pub fn magic_index(magic: Magic, blockers: BitBoard) -> usize {
     let blockers = blockers & magic.mask;
     let hash = blockers.0.wrapping_mul(magic.magic);
     let index = (hash >> magic.shift) as usize;
     magic.offset as usize + index
+}
+
+#[inline(always)]
+#[cfg(feature = "bmi2")]
+pub fn pext_index(entry: PextEntry, blockers: BitBoard) -> usize {
+    unsafe {
+        entry.offset as usize + _pext_u64(blockers.0, entry.mask.0) as usize
+    }
 }
 
 #[inline]
@@ -45,7 +65,8 @@ pub fn get_knight_moves(square: Square) -> BitBoard {
     unsafe { *KNIGHT_MOVES.get_unchecked(square.to_index()) }
 }
 
-#[inline]
+#[inline(always)]
+#[cfg(not(feature = "bmi2"))]
 pub fn get_bishop_moves(square: Square, blockers: BitBoard) -> BitBoard {
     unsafe {
         let magic = BISHOP_MAGICS.get_unchecked(square.to_index());
@@ -54,7 +75,18 @@ pub fn get_bishop_moves(square: Square, blockers: BitBoard) -> BitBoard {
     }
 }
 
-#[inline]
+#[inline(always)]
+#[cfg(feature = "bmi2")]
+pub fn get_bishop_moves(square: Square, blockers: BitBoard) -> BitBoard {
+    unsafe {
+        let entry = BISHOP_PEXT_ENTRIES.get_unchecked(square.to_index());
+        let moves = BISHOP_MOVES_TABLE.get_unchecked(pext_index(*entry, blockers));
+        *moves
+    }
+}
+
+#[inline(always)]
+#[cfg(not(feature = "bmi2"))]
 pub fn get_rook_moves(square: Square, blockers: BitBoard) -> BitBoard {
     unsafe {
         let magic = ROOK_MAGICS.get_unchecked(square.to_index());
@@ -63,7 +95,16 @@ pub fn get_rook_moves(square: Square, blockers: BitBoard) -> BitBoard {
     }
 }
 
-#[inline]
+#[inline(always)]
+#[cfg(feature = "bmi2")]
+pub fn get_rook_moves(square: Square, blockers: BitBoard) -> BitBoard {
+    unsafe {
+        let entry = ROOK_PEXT_ENTRIES.get_unchecked(square.to_index());
+        let moves = ROOK_MOVES_TABLE.get_unchecked(pext_index(*entry, blockers));
+        *moves
+    }
+}
+
 pub fn get_king_moves(square: Square) -> BitBoard {
     unsafe { *KING_MOVES.get_unchecked(square.to_index()) }
 }
