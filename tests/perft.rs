@@ -1,12 +1,16 @@
-use chessframe::{bitboard::EMPTY, board::Board};
+use chessframe::{bitboard::EMPTY, board::Board, chess_move::ChessMove};
 
-struct Perft;
+struct Perft([[ChessMove; 96]; 10]);
 
 impl Perft {
     fn perft(&mut self, board: &Board, depth: usize, divide: bool) -> usize {
         let mut count = 0;
 
-        for mv in board.generate_moves_vec(!EMPTY) {
+        let num_moves = board.generate_moves(!EMPTY, &mut self.0[depth]);
+
+        for i in 0..num_moves {
+            let mv = self.0[depth][i];
+
             if let Ok(board) = board.make_move_new(mv) {
                 let perft_results = if depth == 1 {
                     1
@@ -29,7 +33,11 @@ impl Perft {
 
         let unmake_data = board.unmake_data();
 
-        for mv in board.generate_moves_vec(!EMPTY) {
+        let num_moves = board.generate_moves(!EMPTY, &mut self.0[depth]);
+
+        for i in 0..num_moves {
+            let mv = self.0[depth][i];
+
             if let Ok(metadata) = board.make_move_metadata(mv) {
                 let perft_results = if depth == 1 {
                     1
@@ -59,7 +67,7 @@ struct Unmake;
 
 impl PerftImpl for MakeNew {
     fn run(board: &Board, depth: usize, divide: bool) -> usize {
-        let mut perft = Perft;
+        let mut perft = Perft([[ChessMove::NULL_MOVE; 96]; 10]);
         let board = *board;
 
         perft.perft(&board, depth, divide)
@@ -68,7 +76,7 @@ impl PerftImpl for MakeNew {
 
 impl PerftImpl for Unmake {
     fn run(board: &Board, depth: usize, divide: bool) -> usize {
-        let mut perft = Perft;
+        let mut perft = Perft([[ChessMove::NULL_MOVE; 96]; 10]);
         let mut board = *board;
 
         perft.perft_unmake(&mut board, depth, divide)

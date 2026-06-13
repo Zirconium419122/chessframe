@@ -1185,9 +1185,9 @@ impl Board {
     /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     /// let board = Board::from_fen(fen);
     ///
-    /// assert_eq!(board.generate_moves(), BitBoard(0xFFFF0000))
+    /// assert_eq!(board.generate_moves_bitboard(), BitBoard(0xFFFF0000))
     /// ```
-    pub fn generate_moves(&self) -> BitBoard {
+    pub fn generate_moves_bitboard(&self) -> BitBoard {
         self.generate_pawn_moves()
             | self.generate_knight_moves()
             | self.generate_bishop_moves()
@@ -1229,7 +1229,7 @@ impl Board {
                         Piece::Bishop => get_bishop_moves(src, blockers),
                         Piece::Rook => get_rook_moves(src, blockers),
                         Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
-                        Piece::King => get_king_moves(src) | if self.check < 1 { self.generate_castling_moves() } else { EMPTY },
+                        Piece::King => get_king_moves(src) | self.generate_castling_moves(),
                         _ => unreachable!(),
                     } & !allied_pieces & mask;
 
@@ -1288,6 +1288,130 @@ impl Board {
         }
 
         moves
+    }
+
+    /// Generate a psudo-legal [`ChessMove`]'s and put them into `moves`.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{board::Board, bitboard::EMPTY, chess_move::ChessMove};
+    ///
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    ///
+    /// let mut moves = [ChessMove::NULL_MOVE; 48];
+    ///
+    /// assert_eq!(
+    ///     board.generate_moves(!EMPTY, &mut moves),
+    ///     20
+    /// );
+    /// ```
+    #[rustfmt::skip]
+    pub fn generate_moves(&self, mask: BitBoard, moves: &mut [ChessMove]) -> usize {
+        let allied_pieces = self.occupancy(self.side_to_move);
+        let opponent_occupancy = self.occupancy(!self.side_to_move);
+        let blockers = self.combined();
+
+        let mut index = 0;
+
+        if self.check >= 2 {
+            for src in self
+                .pieces_color(Piece::King, self.side_to_move)
+                .into_iter()
+            {
+                let king_moves = get_king_moves(src) & !allied_pieces & mask;
+
+                for dest in king_moves {
+                    Self::push_move(moves, &mut index, ChessMove::new(src, dest));
+                }
+            }
+
+            return index;
+        }
+
+        for src in self.pieces_color(Piece::Knight, self.side_to_move).into_iter() {
+            let generated_moves = get_knight_moves(src) & !allied_pieces & mask;
+
+            for dest in generated_moves {
+                Self::push_move(moves, &mut index, ChessMove::new(src, dest));
+            }
+        }
+
+        for piece in [
+            Piece::Bishop,
+            Piece::Rook,
+            Piece::Queen,
+        ] {
+            for src in self.pieces_color(piece, self.side_to_move).into_iter() {
+                let generated_moves = match piece {
+                    Piece::Bishop => get_bishop_moves(src, blockers),
+                    Piece::Rook => get_rook_moves(src, blockers),
+                    Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
+                    _ => unreachable!(),
+                } & !allied_pieces & mask;
+
+                for dest in generated_moves {
+                    Self::push_move(moves, &mut index, ChessMove::new(src, dest));
+                }
+            }
+        }
+
+        for src in self.pieces_color(Piece::King, self.side_to_move).into_iter() {
+            let generated_moves = (get_king_moves(src) | self.generate_castling_moves())
+                & !allied_pieces & mask;
+
+            for dest in generated_moves {
+                Self::push_move(moves, &mut index, ChessMove::new(src, dest));
+            }
+        }
+
+        for src in self
+            .pieces_color(Piece::Pawn, self.side_to_move)
+            .into_iter()
+        {
+            let pawn_moves = {
+                if (BitBoard::from_square(src.wrapping_forward(self.side_to_move))
+                    & !self.combined())
+                    != EMPTY
+                {
+                    get_pawn_moves(src, self.side_to_move) & !self.combined() & mask
+                } else {
+                    EMPTY
+                }
+            } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy) & mask;
+
+            for dest in pawn_moves {
+                if self.is_promotion(dest) {
+                    Self::push_move(moves, &mut index, ChessMove::new_promotion(src, dest, Piece::Knight));
+                    Self::push_move(moves, &mut index, ChessMove::new_promotion(src, dest, Piece::Bishop));
+                    Self::push_move(moves, &mut index, ChessMove::new_promotion(src, dest, Piece::Rook));
+                    Self::push_move(moves, &mut index, ChessMove::new_promotion(src, dest, Piece::Queen));
+                } else {
+                    Self::push_move(moves, &mut index, ChessMove::new(src, dest));
+                }
+            }
+        }
+
+        if let Some(en_passant) = self.en_passant_square
+            && mask & BitBoard::from_square(en_passant) != EMPTY {
+                for src in get_pawn_attacks(en_passant, !self.side_to_move)
+                    & self.pieces_color(Piece::Pawn, self.side_to_move)
+                {
+                    Self::push_move(moves, &mut index, ChessMove::new(src, en_passant));
+                }
+        }
+
+        index
+    }
+
+    #[inline(always)]
+    fn push_move(moves: &mut [ChessMove], index: &mut usize, mv: ChessMove) {
+        debug_assert!(*index < moves.len());
+
+        unsafe {
+            *moves.get_unchecked_mut(*index) = mv;
+        }
+        *index += 1;
     }
 
     /// Generate all moves for ray pieces.
@@ -1542,6 +1666,10 @@ impl Board {
         const BLACK_QUEEN_SIDE: BitBoard = BitBoard(0x0E00000000000000);
         const BLACK_QUEEN_SIDE_ATTACKS: BitBoard = BitBoard(0x0C00000000000000);
 
+        if self.check != 0 {
+            return EMPTY;
+        }
+
         let (king_side, queen_side, queen_side_attacks) = match self.side_to_move {
             Color::White => (WHITE_KING_SIDE, WHITE_QUEEN_SIDE, WHITE_QUEEN_SIDE_ATTACKS),
             Color::Black => (BLACK_KING_SIDE, BLACK_QUEEN_SIDE, BLACK_QUEEN_SIDE_ATTACKS),
@@ -1553,10 +1681,6 @@ impl Board {
         let empty_queenside = (combined & queen_side) == EMPTY;
 
         if !empty_kingside && !empty_queenside {
-            return EMPTY;
-        }
-
-        if self.check != 0 {
             return EMPTY;
         }
 

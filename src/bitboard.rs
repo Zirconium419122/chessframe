@@ -157,7 +157,7 @@ impl Shr<usize> for BitBoard {
 impl Iterator for BitBoard {
     type Item = Square;
 
-    #[inline]
+    #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         if self.0 == 0 {
             None
