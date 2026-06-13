@@ -1,19 +1,16 @@
 use std::collections::HashMap;
 
 use crate::{
-    bitboard::{BitBoard, EMPTY},
-    board::Board,
+    bitboard::EMPTY,
+    board::{Board, UnmakeData},
     chess_move::{ChessMove, MoveMetaData},
     color::Color,
     error::Error,
-    file::File,
-    piece::Piece,
-    square::Square,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
 pub enum Event {
-    Move((ChessMove, MoveMetaData)),
+    Move((ChessMove, MoveMetaData, UnmakeData)),
     Checkmate,
     Stalemate,
     DrawByThreefoldRepetition,
@@ -228,7 +225,7 @@ impl Game {
 
         self.make_move(mv)?;
 
-        if let Some(Event::Move((_, metadata))) = self
+        if let Some(Event::Move((_, metadata, _))) = self
             .history
             .iter()
             .filter(|x| matches!(x, Event::Move(_)))
@@ -295,8 +292,10 @@ impl Game {
     /// assert_eq!(game.board.en_passant_square, Some(Square::H6));
     /// ```
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
+        let unmake_data = self.board.unmake_data();
         let metadata = self.board.make_move_metadata(mv)?;
-        self.history.push(Event::Move((mv, metadata)));
+
+        self.history.push(Event::Move((mv, metadata, unmake_data)));
         self.hashes.push(self.board.hash());
         self.ply += 1;
         Ok(())
@@ -362,7 +361,7 @@ impl Game {
     /// assert_eq!(game.board.get_piece(Square::B7), Some(Piece::Pawn));
     /// ```
     pub fn undo_move(&mut self) {
-        let moves: Vec<(usize, (ChessMove, MoveMetaData))> = self
+        let moves: Vec<(usize, (ChessMove, MoveMetaData, UnmakeData))> = self
             .history
             .iter()
             .enumerate()
@@ -377,68 +376,9 @@ impl Game {
             .collect();
         let mv_with_index = moves[self.ply - 1];
 
-        let mv = mv_with_index.1;
-        let (from, to) = mv.0.get_move();
+        let _ = self.board.unmake_move(mv_with_index.1.0, mv_with_index.1.1, mv_with_index.1.2);
 
-        if let Some(piece) = self.board.get_piece(to) {
-            self.board
-                .xor(BitBoard::from_square(to), piece, !self.board.side_to_move);
-            self.board.xor(
-                BitBoard::from_square(from),
-                if mv.0.promotion().is_some() {
-                    Piece::Pawn
-                } else {
-                    piece
-                },
-                !self.board.side_to_move,
-            );
-
-            match mv.1 {
-                MoveMetaData::Capture(captured) => {
-                    self.board.xor(
-                        BitBoard::from_square(mv.0.to),
-                        captured,
-                        self.board.side_to_move,
-                    );
-                }
-                MoveMetaData::EnPassant(square) => {
-                    self.board.xor(
-                        BitBoard::from_square(square),
-                        Piece::Pawn,
-                        self.board.side_to_move,
-                    );
-                }
-                MoveMetaData::Castle => {
-                    let backrank = (!self.board.side_to_move).to_backrank();
-                    let (rook_start, rook_end) = match to.file() {
-                        File::G => (
-                            Square::make_square(backrank, File::F),
-                            Square::make_square(backrank, File::H),
-                        ),
-                        File::C => (
-                            Square::make_square(backrank, File::D),
-                            Square::make_square(backrank, File::A),
-                        ),
-                        _ => unreachable!(),
-                    };
-
-                    self.board.xor(
-                        BitBoard::from_square(rook_start),
-                        Piece::Rook,
-                        !self.board.side_to_move,
-                    );
-                    self.board.xor(
-                        BitBoard::from_square(rook_end),
-                        Piece::Rook,
-                        !self.board.side_to_move,
-                    );
-                }
-                _ => {}
-            }
-
-            self.board.side_to_move = !self.board.side_to_move;
-            self.ply -= 1;
-            self.history.truncate(mv_with_index.0);
-        }
+        self.ply -= 1;
+        self.history.truncate(mv_with_index.0);
     }
 }

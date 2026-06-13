@@ -1,15 +1,9 @@
-use chessframe::{bitboard::EMPTY, board::Board, transpositiontable::TranspositionTable};
+use chessframe::{bitboard::EMPTY, board::Board};
 
-struct Perft(TranspositionTable<usize>);
+struct Perft;
 
 impl Perft {
     fn perft(&mut self, board: &Board, depth: usize, divide: bool) -> usize {
-        if let Some(entry) = self.0.get(board.hash())
-            && entry.depth == depth as u8
-        {
-            return entry.value;
-        }
-
         let mut count = 0;
 
         for mv in board.generate_moves_vec(!EMPTY) {
@@ -27,22 +21,13 @@ impl Perft {
             }
         }
 
-        self.0.store(board.hash(), count, depth as u8);
-
         count
     }
 
     fn perft_unmake(&mut self, board: &mut Board, depth: usize, divide: bool) -> usize {
-        if let Some(entry) = self.0.get(board.hash())
-            && entry.depth == depth as u8
-        {
-            return entry.value;
-        }
-
         let mut count = 0;
 
-        let en_passant_square = board.en_passant_square();
-        let castling_rights = board.castling_rights;
+        let unmake_data = board.unmake_data();
 
         for mv in board.generate_moves_vec(!EMPTY) {
             if let Ok(metadata) = board.make_move_metadata(mv) {
@@ -53,15 +38,13 @@ impl Perft {
                 };
                 count += perft_results;
 
-                board.unmake_move(mv, metadata, en_passant_square, castling_rights).unwrap();
+                board.unmake_move(mv, metadata, unmake_data).unwrap();
 
                 if divide {
                     println!("{}: {}", mv, perft_results);
                 }
             }
         }
-
-        self.0.store(board.hash(), count, depth as u8);
 
         count
     }
@@ -76,7 +59,7 @@ struct Unmake;
 
 impl PerftImpl for MakeNew {
     fn run(board: &Board, depth: usize, divide: bool) -> usize {
-        let mut perft = Perft(TranspositionTable::with_size_mb(256));
+        let mut perft = Perft;
         let board = *board;
 
         perft.perft(&board, depth, divide)
@@ -85,7 +68,7 @@ impl PerftImpl for MakeNew {
 
 impl PerftImpl for Unmake {
     fn run(board: &Board, depth: usize, divide: bool) -> usize {
-        let mut perft = Perft(TranspositionTable::with_size_mb(256));
+        let mut perft = Perft;
         let mut board = *board;
 
         perft.perft_unmake(&mut board, depth, divide)
@@ -169,6 +152,24 @@ macro_rules! generate_perft_tests {
                     "8/p4ppp/P7/1nk4P/4KPP1/4P3/8/8 b - - 2 41",
                     8,
                     151117231,
+                );
+            }
+
+            #[test]
+            fn [<test_perft_kiwipete_ $suffix>]() {
+                perft_test::<$impl>(
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+                    5,
+                    193690690,
+                );
+            }
+
+            #[test]
+            fn [<test_perft_position_5_ $suffix>]() {
+                perft_test::<$impl>(
+                    "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+                    5,
+                    89941194,
                 );
             }
         }

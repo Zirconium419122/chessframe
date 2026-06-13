@@ -16,6 +16,15 @@ use crate::{
     square::Square,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
+pub struct UnmakeData {
+    pub castling_rights: CastlingRights,
+    pub en_passant_square: Option<Square>,
+    // Technically not needed, but it's faster.
+    pub pinned: BitBoard,
+    pub check: u8,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Board {
     pub pieces: [BitBoard; 6],    // 6 for both, compute white and black using occupancy
@@ -627,6 +636,7 @@ impl Board {
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
         let (from, to) = mv.get_move();
 
+        let in_check = self.check > 0;
         self.check = 0;
 
         let from_bitboard = BitBoard::from_square(from);
@@ -718,14 +728,16 @@ impl Board {
             self.xor(end, Piece::Rook, self.side_to_move);
         }
 
-        if self
-            .get_attackers(
-                self.pieces_color(Piece::King, self.side_to_move)
-                    .to_square(),
-            )
-            .is_not_zero()
-        {
-            return Err(Error::CannotMovePinned);
+        if in_check || self.pinned.is_set(from) || piece == Piece::King {
+            if self
+                .get_attackers(
+                    self.pieces_color(Piece::King, self.side_to_move)
+                        .to_square(),
+                )
+                .is_not_zero()
+            {
+                return Err(Error::CannotMovePinned);
+            }
         }
 
         self.pinned = EMPTY;
@@ -794,8 +806,18 @@ impl Board {
         Ok(())
     }
 
+    /// Get [`UnmakeData`] for the current [`Board`].
+    pub fn unmake_data(&self) -> UnmakeData {
+        UnmakeData {
+            castling_rights: self.castling_rights,
+            en_passant_square: self.en_passant_square,
+            pinned: self.pinned,
+            check: self.check
+        }
+    }
+
     /// Unmake a [`ChessMove`] on the current [`Board`].
-    pub fn unmake_move(&mut self, mv: ChessMove, metadata: MoveMetaData, en_passant_square: Option<Square>, castling_rights: CastlingRights) -> Result<(), Error> {
+    pub fn unmake_move(&mut self, mv: ChessMove, metadata: MoveMetaData, unmake_data: UnmakeData) -> Result<(), Error> {
         let (from, to) = mv.get_move();
 
         let from_bitboard = BitBoard::from_square(from);
@@ -804,8 +826,11 @@ impl Board {
 
         let piece = self.get_piece(to).ok_or(Error::NoPieceOnSquare)?;
 
-        self.en_passant_square = en_passant_square;
-        self.castling_rights = castling_rights;
+        self.en_passant_square = unmake_data.en_passant_square;
+        self.castling_rights = unmake_data.castling_rights;
+
+        self.pinned = unmake_data.pinned;
+        self.check = unmake_data.check;
 
         const CASTLE_ROOK_START: [File; 8] = [
             File::A,
@@ -860,25 +885,6 @@ impl Board {
             _ => {},
         }
 
-        let king_square = self.pieces_color(Piece::King, self.side_to_move).to_square();
-
-        self.check = 0;
-        self.pinned = EMPTY;
-
-        for color in COLORS {
-            let attackers = self.occupancy(color) & ((get_bishop_rays(king_square) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
-                | (get_rook_rays(king_square) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
-
-            for square in attackers {
-                let between = get_between(square, king_square) & self.combined();
-                if between.count_ones() == 1 {
-                    self.pinned ^= between & self.occupancy(!color);
-                } else if between == EMPTY && self.side_to_move == color {
-                    self.check += 1;
-                }
-            }
-        }
-
         Ok(())
     }
 
@@ -899,12 +905,18 @@ impl Board {
     ///
     /// # Example
     /// ```
-    /// use chessframe::{board::Board, chess_move::{ChessMove, MoveMetaData}, square::Square};
+    /// use chessframe::{bitboard::EMPTY, board::{Board, UnmakeData}, castling_rights::CastlingRights, chess_move::{ChessMove, MoveMetaData}, square::Square};
     ///
     /// let board = Board::default();
     /// let mv = ChessMove::new(Square::E2, Square::E4);
     ///
-    /// assert_eq!(board.make_move_new_metadata(mv), Ok((Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"), MoveMetaData::PawnMove)));
+    /// assert_eq!(
+    ///     board.make_move_new_metadata(mv),
+    ///     Ok((
+    ///         Board::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"),
+    ///         MoveMetaData::PawnMove,
+    ///     ))
+    /// );
     /// ```
     ///
     /// # Notes
@@ -936,7 +948,7 @@ impl Board {
     /// - Returns an error if the resulting board state places or leaves the king in check.
     /// - Errors when attempting to move a piece from an empty square or with other invalid conditions.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// use chessframe::{board::Board, chess_move::ChessMove, square::Square};
     ///
@@ -944,6 +956,37 @@ impl Board {
     /// let mv = ChessMove::new(Square::E2, Square::E4);
     ///
     /// assert!(board.make_move_metadata(mv).is_ok());
+    /// ```
+    ///
+    /// ```
+    /// use chessframe::{bitboard::BitBoard, board::Board, chess_move::{ChessMove, MoveMetaData}, piece::Piece, square::Square};
+    ///
+    /// let fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8";
+    /// let mut board = Board::from_fen(fen);
+    ///
+    /// let mv = ChessMove::new_promotion(Square::D7, Square::C8, Piece::Queen);
+    /// 
+    /// assert_eq!(
+    ///     board.make_move_metadata(mv),
+    ///     Ok(MoveMetaData::Capture(Piece::Bishop)),
+    /// );
+    ///
+    /// assert_eq!(
+    ///     board.pinned,
+    ///     BitBoard::from_square(Square::D8),
+    /// );
+    ///
+    /// let mv = ChessMove::new(Square::E7, Square::H4);
+    ///
+    /// assert_eq!(
+    ///     board.make_move_metadata(mv),
+    ///     Ok(MoveMetaData::None),
+    /// );
+    ///
+    /// assert_eq!(
+    ///     board.pinned,
+    ///     BitBoard::from_square(Square::D8),
+    /// );
     /// ```
     ///
     /// # Notes
@@ -956,6 +999,9 @@ impl Board {
     pub fn make_move_metadata(&mut self, mv: ChessMove) -> Result<MoveMetaData, Error> {
         let (from, to) = mv.get_move();
 
+        let unmake_data = self.unmake_data();
+
+        let in_check = self.check > 0;
         self.check = 0;
 
         let from_bitboard = BitBoard::from_square(from);
@@ -975,7 +1021,6 @@ impl Board {
         self.xor(from_bitboard, piece, self.side_to_move);
         self.xor(to_bitboard, piece, self.side_to_move);
 
-        let castling_rights = self.castling_rights;
         self.remove_castling_rights(CastlingRights::square_to_castle_rights(
             !self.side_to_move,
             to,
@@ -1053,22 +1098,25 @@ impl Board {
 
         let metadata = MoveMetaData::new(to, piece, captured, en_passant, castle, self.side_to_move);
 
-        if self
-            .get_attackers(
-                self.pieces_color(Piece::King, self.side_to_move)
-                    .to_square(),
-            )
-            .is_not_zero()
-        {
+        if in_check || self.pinned.is_set(from) || piece == Piece::King {
+            if self
+                .get_attackers(
+                    self.pieces_color(Piece::King, self.side_to_move)
+                        .to_square(),
+                )
+                .is_not_zero()
+            {
+                self.side_to_move = !self.side_to_move;
+                self.unmake_move(mv, metadata, unmake_data)?;
 
-            self.side_to_move = !self.side_to_move;
-            self.unmake_move(mv, metadata, en_passant_square, castling_rights)?;
-
-            return Err(Error::CannotMovePinned);
+                return Err(Error::CannotMovePinned);
+            }
         }
 
-        let attackers = self.occupancy(self.side_to_move) & ((get_bishop_moves(king_square, EMPTY) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
-            | (get_rook_moves(king_square, EMPTY) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
+        self.pinned &= !self.occupancy(!self.side_to_move);
+
+        let attackers = self.occupancy(self.side_to_move) & ((get_bishop_rays(king_square) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
+            | (get_rook_rays(king_square) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
 
         for square in attackers {
             let between = get_between(square, king_square) & self.combined();
