@@ -728,16 +728,15 @@ impl Board {
             self.xor(end, Piece::Rook, self.side_to_move);
         }
 
-        if in_check || self.pinned.is_set(from) || piece == Piece::King {
-            if self
+        if (in_check || self.pinned.is_set(from) || piece == Piece::King)
+            && self
                 .get_attackers(
                     self.pieces_color(Piece::King, self.side_to_move)
                         .to_square(),
                 )
                 .is_not_zero()
-            {
-                return Err(Error::CannotMovePinned);
-            }
+        {
+            return Err(Error::CannotMovePinned);
         }
 
         self.pinned = EMPTY;
@@ -1098,19 +1097,18 @@ impl Board {
 
         let metadata = MoveMetaData::new(to, piece, captured, en_passant, castle, self.side_to_move);
 
-        if in_check || self.pinned.is_set(from) || piece == Piece::King {
-            if self
+        if (in_check || self.pinned.is_set(from) || piece == Piece::King)
+            && self
                 .get_attackers(
                     self.pieces_color(Piece::King, self.side_to_move)
                         .to_square(),
                 )
                 .is_not_zero()
-            {
-                self.side_to_move = !self.side_to_move;
-                self.unmake_move(mv, metadata, unmake_data)?;
+        {
+            self.side_to_move = !self.side_to_move;
+            self.unmake_move(mv, metadata, unmake_data)?;
 
-                return Err(Error::CannotMovePinned);
-            }
+            return Err(Error::CannotMovePinned);
         }
 
         self.pinned &= !self.occupancy(!self.side_to_move);
@@ -1310,77 +1308,49 @@ impl Board {
     pub fn generate_moves(&self, mask: BitBoard, moves: &mut [ChessMove]) -> usize {
         let allied_pieces = self.occupancy(self.side_to_move);
         let opponent_occupancy = self.occupancy(!self.side_to_move);
-        let blockers = self.combined();
+        let combined = self.combined();
 
         let mut index = 0;
 
-        if self.check >= 2 {
-            for src in self
-                .pieces_color(Piece::King, self.side_to_move)
-                .into_iter()
-            {
-                let king_moves = get_king_moves(src) & !allied_pieces & mask;
+        macro_rules! generate_moves {
+            ($piece:expr, $moves:expr) => {
+                for src in self.pieces_color($piece, self.side_to_move).into_iter() {
+                    let generated_moves = ($moves)(src) & !allied_pieces & mask;
 
-                for dest in king_moves {
-                    Self::push_move(moves, &mut index, ChessMove::new(src, dest));
+                    for dest in generated_moves {
+                        Self::push_move(moves, &mut index, ChessMove::new(src, dest));
+                    }
                 }
-            }
+            };
+        }
+
+        if self.check >= 2 {
+            generate_moves!(Piece::King, get_king_moves);
 
             return index;
         }
 
-        for src in self.pieces_color(Piece::Knight, self.side_to_move).into_iter() {
-            let generated_moves = get_knight_moves(src) & !allied_pieces & mask;
+        generate_moves!(Piece::Knight, get_knight_moves);
 
-            for dest in generated_moves {
-                Self::push_move(moves, &mut index, ChessMove::new(src, dest));
-            }
-        }
+        generate_moves!(Piece::Bishop, |src| get_bishop_moves(src, combined));
 
-        for piece in [
-            Piece::Bishop,
-            Piece::Rook,
-            Piece::Queen,
-        ] {
-            for src in self.pieces_color(piece, self.side_to_move).into_iter() {
-                let generated_moves = match piece {
-                    Piece::Bishop => get_bishop_moves(src, blockers),
-                    Piece::Rook => get_rook_moves(src, blockers),
-                    Piece::Queen => get_bishop_moves(src, blockers) | get_rook_moves(src, blockers),
-                    _ => unreachable!(),
-                } & !allied_pieces & mask;
+        generate_moves!(Piece::Rook, |src| get_rook_moves(src, combined));
 
-                for dest in generated_moves {
-                    Self::push_move(moves, &mut index, ChessMove::new(src, dest));
-                }
-            }
-        }
+        generate_moves!(Piece::Queen, |src| get_bishop_moves(src, combined) | get_rook_moves(src, combined));
 
-        for src in self.pieces_color(Piece::King, self.side_to_move).into_iter() {
-            let generated_moves = (get_king_moves(src) | self.generate_castling_moves())
-                & !allied_pieces & mask;
-
-            for dest in generated_moves {
-                Self::push_move(moves, &mut index, ChessMove::new(src, dest));
-            }
-        }
+        generate_moves!(Piece::King, |src| get_king_moves(src) | self.generate_castling_moves());
 
         for src in self
             .pieces_color(Piece::Pawn, self.side_to_move)
             .into_iter()
         {
-            let pawn_moves = {
-                if (BitBoard::from_square(src.wrapping_forward(self.side_to_move))
-                    & !self.combined())
-                    != EMPTY
-                {
-                    get_pawn_moves(src, self.side_to_move) & !self.combined() & mask
-                } else {
-                    EMPTY
-                }
-            } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy) & mask;
+            let pawn_moves = if BitBoard::from_square(src.wrapping_forward(self.side_to_move)) & !combined != EMPTY {
+                get_pawn_moves(src, self.side_to_move) & !combined
+            } else {
+                EMPTY
+            } | (get_pawn_attacks(src, self.side_to_move) & opponent_occupancy);
 
-            for dest in pawn_moves {
+            for dest in pawn_moves & mask {
                 if self.is_promotion(dest) {
                     Self::push_move(moves, &mut index, ChessMove::new_promotion(src, dest, Piece::Knight));
                     Self::push_move(moves, &mut index, ChessMove::new_promotion(src, dest, Piece::Bishop));
