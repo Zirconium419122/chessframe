@@ -2,7 +2,10 @@ use std::io::Write;
 use std::{fs::File, sync::Mutex};
 
 use crate::gen_tables::helpers::orthagonal;
-use crate::{bitboard::{BitBoard, EMPTY}, square::SQUARES};
+use crate::{
+    bitboard::{BitBoard, EMPTY},
+    square::SQUARES,
+};
 
 use super::helpers::diagonal;
 
@@ -15,9 +18,7 @@ pub fn generate_bishop_rays() {
 
         bishop_rays[src.to_index()] = SQUARES
             .iter()
-            .filter(|dest| {
-                diagonal(*src, **dest) && src != *dest
-            })
+            .filter(|dest| diagonal(*src, **dest) && src != *dest)
             .fold(EMPTY, |acc, square| acc | BitBoard::from_square(*square));
     }
 }
@@ -28,9 +29,7 @@ pub fn generate_rook_rays() {
 
         rook_rays[src.to_index()] = SQUARES
             .iter()
-            .filter(|dest| {
-                orthagonal(*src, **dest) && src != *dest
-            })
+            .filter(|dest| orthagonal(*src, **dest) && src != *dest)
             .fold(EMPTY, |acc, square| acc | BitBoard::from_square(*square));
     }
 }

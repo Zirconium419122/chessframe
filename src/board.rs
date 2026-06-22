@@ -16,6 +16,7 @@ use crate::{
     square::Square,
 };
 
+#[repr(packed)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
 pub struct UnmakeData {
     pub castling_rights: CastlingRights,
@@ -23,6 +24,7 @@ pub struct UnmakeData {
     // Technically not needed, but it's faster.
     pub pinned: BitBoard,
     pub check: u8,
+    pub half_moves: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
@@ -32,6 +34,7 @@ pub struct Board {
     pub combined: BitBoard,       // combined occupancy
     pub pinned: BitBoard,
     pub check: u8,
+    pub half_moves: u8,
     pub hash: u64,
     pub side_to_move: Color,
     pub castling_rights: CastlingRights,
@@ -66,6 +69,7 @@ impl Board {
             combined: EMPTY,
             pinned: EMPTY,
             check: 0,
+            half_moves: 0,
             hash: 0,
             side_to_move: Color::White,
             castling_rights: CastlingRights::new(),
@@ -125,6 +129,8 @@ impl Board {
         board.parse_en_passant(parts[3]);
 
         board.side_to_move = !board.side_to_move;
+
+        board.half_moves = parts[4].parse::<u8>().unwrap();
 
         board
     }
@@ -228,7 +234,7 @@ impl Board {
         }
 
         fen.push(' ');
-        
+
         fen.push_str(&self.castling_rights.to_fen());
 
         fen.push(' ');
@@ -378,6 +384,39 @@ impl Board {
     #[inline]
     pub fn in_check(&self) -> bool {
         self.check > 0
+    }
+
+    /// Checks if the game is drawn based on the Fifty-move rule. Note does not check for
+    /// checkmates.
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::{board::Board, chess_move::ChessMove, square::Square};
+    ///
+    /// let fen = "3rq3/r1b3k1/1pb1p1pn/p1pnPpNp/P2p1P1P/NP1P1BP1/2PB3K/R3R2Q b - - 97 69";
+    /// let mut board = Board::from_fen(fen);
+    ///
+    /// let mv = ChessMove::new(Square::D8, Square::D7);
+    ///
+    /// assert!(board.make_move(mv).is_ok());
+    ///
+    /// let mv = ChessMove::new(Square::H2, Square::G1);
+    ///
+    /// assert!(board.make_move(mv).is_ok());
+    ///
+    /// let mv = ChessMove::new(Square::D7, Square::D8);
+    ///
+    /// assert!(board.make_move(mv).is_ok());
+    ///
+    /// assert!(board.is_fifty_move());
+    /// assert_eq!(
+    ///     board.half_moves,
+    ///     100,
+    /// );
+    /// ```
+    #[inline]
+    pub fn is_fifty_move(&self) -> bool {
+        self.half_moves >= 100
     }
 
     /// Get the en passant square, returns [`Option<Square>`].
@@ -639,6 +678,8 @@ impl Board {
         let in_check = self.check > 0;
         self.check = 0;
 
+        self.half_moves += 1;
+
         let from_bitboard = BitBoard::from_square(from);
         let to_bitboard = BitBoard::from_square(to);
         let move_bitboard = from_bitboard ^ to_bitboard;
@@ -649,6 +690,7 @@ impl Board {
         self.remove_en_passant();
 
         if let Some(captured) = self.get_piece(to) {
+            self.half_moves = 0;
             self.xor(to_bitboard, captured, !self.side_to_move);
         }
         self.xor(from_bitboard, piece, self.side_to_move);
@@ -692,6 +734,8 @@ impl Board {
         if let Piece::Knight = piece {
             self.check = (get_knight_moves(king_square) & to_bitboard != EMPTY) as u8;
         } else if let Piece::Pawn = piece {
+            self.half_moves = 0;
+
             if let Some(Piece::Knight) = mv.promotion() {
                 self.xor(to_bitboard, Piece::Pawn, self.side_to_move);
                 self.xor(to_bitboard, Piece::Knight, self.side_to_move);
@@ -811,12 +855,18 @@ impl Board {
             castling_rights: self.castling_rights,
             en_passant_square: self.en_passant_square,
             pinned: self.pinned,
-            check: self.check
+            check: self.check,
+            half_moves: self.half_moves,
         }
     }
 
     /// Unmake a [`ChessMove`] on the current [`Board`].
-    pub fn unmake_move(&mut self, mv: ChessMove, metadata: MoveMetaData, unmake_data: UnmakeData) -> Result<(), Error> {
+    pub fn unmake_move(
+        &mut self,
+        mv: ChessMove,
+        metadata: MoveMetaData,
+        unmake_data: UnmakeData,
+    ) -> Result<(), Error> {
         let (from, to) = mv.get_move();
 
         let from_bitboard = BitBoard::from_square(from);
@@ -830,6 +880,8 @@ impl Board {
 
         self.pinned = unmake_data.pinned;
         self.check = unmake_data.check;
+
+        self.half_moves = unmake_data.half_moves;
 
         const CASTLE_ROOK_START: [File; 8] = [
             File::A,
@@ -865,10 +917,14 @@ impl Board {
         match metadata {
             MoveMetaData::Capture(captured) => {
                 self.xor(to_bitboard, captured, !self.side_to_move);
-            },
+            }
             MoveMetaData::EnPassant(square) => {
-                self.xor(BitBoard::from_square(square), Piece::Pawn, !self.side_to_move);
-            },
+                self.xor(
+                    BitBoard::from_square(square),
+                    Piece::Pawn,
+                    !self.side_to_move,
+                );
+            }
             MoveMetaData::Castle => {
                 let index = to.file().to_index();
                 let start = BitBoard::set(self.side_to_move.to_backrank(), unsafe {
@@ -880,8 +936,8 @@ impl Board {
 
                 self.xor(end, Piece::Rook, self.side_to_move);
                 self.xor(start, Piece::Rook, self.side_to_move);
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
         Ok(())
@@ -964,7 +1020,7 @@ impl Board {
     /// let mut board = Board::from_fen(fen);
     ///
     /// let mv = ChessMove::new_promotion(Square::D7, Square::C8, Piece::Queen);
-    /// 
+    ///
     /// assert_eq!(
     ///     board.make_move_metadata(mv),
     ///     Ok(MoveMetaData::Capture(Piece::Bishop)),
@@ -1003,6 +1059,8 @@ impl Board {
         let in_check = self.check > 0;
         self.check = 0;
 
+        self.half_moves += 1;
+
         let from_bitboard = BitBoard::from_square(from);
         let to_bitboard = BitBoard::from_square(to);
         let move_bitboard = from_bitboard ^ to_bitboard;
@@ -1015,6 +1073,7 @@ impl Board {
 
         let captured = self.get_piece(to);
         if let Some(captured) = captured {
+            self.half_moves = 0;
             self.xor(to_bitboard, captured, !self.side_to_move);
         }
         self.xor(from_bitboard, piece, self.side_to_move);
@@ -1058,6 +1117,8 @@ impl Board {
         if let Piece::Knight = piece {
             self.check = (get_knight_moves(king_square) & to_bitboard != EMPTY) as u8;
         } else if let Piece::Pawn = piece {
+            self.half_moves = 0;
+
             if let Some(Piece::Knight) = mv.promotion() {
                 self.xor(BitBoard::from_square(to), Piece::Pawn, self.side_to_move);
                 self.xor(BitBoard::from_square(to), Piece::Knight, self.side_to_move);

@@ -37,9 +37,7 @@ pub fn magic_index(magic: Magic, blockers: BitBoard) -> usize {
 #[inline(always)]
 #[cfg(feature = "bmi2")]
 pub fn pext_index(entry: PextEntry, blockers: BitBoard) -> usize {
-    unsafe {
-        entry.offset as usize + _pext_u64(blockers.0, entry.mask.0) as usize
-    }
+    unsafe { entry.offset as usize + _pext_u64(blockers.0, entry.mask.0) as usize }
 }
 
 #[inline]

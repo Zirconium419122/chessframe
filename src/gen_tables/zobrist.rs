@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::{fs::File, sync::Mutex};
 
-use rand_chacha::rand_core::{RngCore, SeedableRng};
+use rand_chacha::rand_core::{Rng, SeedableRng};
 
 use crate::{color::COLORS, piece::PIECES, square::SQUARES};
 

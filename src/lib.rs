@@ -24,6 +24,7 @@ pub mod chess_move;
 pub mod color;
 pub mod error;
 pub mod file;
+#[cfg(feature = "game")]
 pub mod game;
 pub mod magic;
 pub mod piece;

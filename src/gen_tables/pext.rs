@@ -1,7 +1,13 @@
-use std::{arch::x86_64::_pext_u64, fs::File};
 use std::io::Write;
+use std::{arch::x86_64::_pext_u64, fs::File};
 
-use crate::{bitboard::{BitBoard, EMPTY}, gen_tables::magic::{MagicPiece, generate_bishop_moves, generate_rook_mask, generate_rook_moves, subsets}, square::{SQUARES, Square}};
+use crate::{
+    bitboard::{BitBoard, EMPTY},
+    gen_tables::magic::{
+        MagicPiece, generate_bishop_moves, generate_rook_mask, generate_rook_moves, subsets,
+    },
+    square::{SQUARES, Square},
+};
 
 #[allow(unused)]
 #[derive(Debug)]
@@ -11,9 +17,7 @@ struct PextEntry {
 }
 
 fn pext_index(mask: BitBoard, blockers: BitBoard) -> usize {
-    unsafe {
-        _pext_u64(blockers.0, mask.0) as usize
-    }
+    unsafe { _pext_u64(blockers.0, mask.0) as usize }
 }
 
 fn generate_table(piece: MagicPiece, square: Square) -> (BitBoard, Vec<BitBoard>) {
@@ -45,7 +49,7 @@ fn generate_tables(piece: MagicPiece) -> Vec<(BitBoard, Vec<BitBoard>)> {
 }
 
 fn flatten_tables(tables: Vec<(BitBoard, Vec<BitBoard>)>) -> ([PextEntry; 64], Vec<BitBoard>) {
-    let (masks, moves): (Vec<BitBoard>, Vec<Vec<BitBoard>>) = tables.iter().map(|(m, mv)| (m, mv.clone())).unzip();
+    let (masks, moves): (Vec<BitBoard>, Vec<Vec<BitBoard>>) = tables.iter().cloned().unzip();
 
     let mut offset = 0;
 

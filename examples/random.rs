@@ -1,7 +1,7 @@
 use std::{io, str::FromStr};
 
 use chessframe::{bitboard::EMPTY, board::Board, uci::*};
-use rand_chacha::rand_core::{RngCore, SeedableRng};
+use rand_chacha::rand_core::{Rng, SeedableRng};
 
 struct RandomMoveMaker {
     board: Option<Board>,

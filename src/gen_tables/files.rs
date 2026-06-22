@@ -27,8 +27,7 @@ pub fn generate_adjacent_files() {
         adjacent_files[i] = SQUARES
             .iter()
             .filter(|x| {
-                x.file().to_index() == i.wrapping_add(1)
-                    || x.file().to_index() == i.wrapping_sub(1)
+                x.file().to_index() == i.wrapping_add(1) || x.file().to_index() == i.wrapping_sub(1)
             })
             .fold(EMPTY, |acc, square| acc | BitBoard::from_square(*square))
     }

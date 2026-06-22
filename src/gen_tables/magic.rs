@@ -4,14 +4,13 @@ use std::io::Write;
 
 use rand_chacha::{
     ChaCha8Rng,
-    rand_core::{RngCore, SeedableRng},
+    rand_core::{Rng, SeedableRng},
 };
 
 use crate::{
     bitboard::{BitBoard, EMPTY},
     square::{SQUARES, Square},
 };
-
 
 #[derive(Debug, Clone, Copy)]
 pub enum MagicPiece {
@@ -112,7 +111,12 @@ fn find_magic(piece: MagicPiece, square: Square, rng: &mut ChaCha8Rng) -> Result
     Err("Failed to find magic!")
 }
 
-fn try_make_table(piece: &MagicPiece, square: Square, magic: Magic, bits: u8) -> Result<Vec<BitBoard>, &str> {
+fn try_make_table(
+    piece: &MagicPiece,
+    square: Square,
+    magic: Magic,
+    bits: u8,
+) -> Result<Vec<BitBoard>, &str> {
     let mut table: Vec<BitBoard> = vec![BitBoard::default(); 1 << bits];
 
     for blockers in subsets(magic.mask) {

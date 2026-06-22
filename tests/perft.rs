@@ -180,6 +180,15 @@ macro_rules! generate_perft_tests {
                     89941194,
                 );
             }
+
+            #[test]
+            fn [<test_perft_filipowicz_vs_smederevac_ $suffix>]() {
+                perft_test::<$impl>(
+                    "3rq3/r1b3k1/1pb1p1pn/p1pnPpNp/P2p1P1P/NP1P1BP1/2PB3K/R3R2Q b - - 97 69",
+                    6,
+                    3353764309,
+                )
+            }
         }
     };
 }
