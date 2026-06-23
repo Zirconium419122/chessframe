@@ -3,13 +3,13 @@ use std::fs::File;
 use std::io::Write;
 
 use rand_chacha::{
-    ChaCha8Rng,
     rand_core::{Rng, SeedableRng},
+    ChaCha8Rng,
 };
 
 use crate::{
     bitboard::{BitBoard, EMPTY},
-    square::{SQUARES, Square},
+    square::{Square, SQUARES},
 };
 
 #[derive(Debug, Clone, Copy)]

@@ -25,7 +25,7 @@ impl FromStr for UciCommand {
                     + 1;
 
                 let name = tokens.get(name_index).unwrap_or(&"").to_string();
-                let value = tokens.get(value_index).unwrap_or(&"").to_string();
+                let value = tokens.get(value_index).map(|value| value.to_string());
 
                 Ok(UciCommand::SetOption { name, value })
             }
@@ -95,100 +95,78 @@ impl FromStr for UciCommand {
                 }
             }
             Some(&"go") => {
-                let mut wtime = None;
-                let mut btime = None;
-                let mut winc = None;
-                let mut binc = None;
-                let mut moves_to_go = None;
-                let mut depth = None;
-                let mut nodes = None;
-                let mut mate = None;
-                let mut move_time = None;
-                let mut infinite = false;
-                let mut ponder = false;
+                let mut go = Go::default();
 
                 let mut i = 1;
                 while i < tokens.len() {
                     match tokens[i] {
                         "wtime" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                wtime = val.parse().ok();
+                                go.wtime = val.parse().ok();
                             }
                             i += 2;
                         }
                         "btime" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                btime = val.parse().ok();
+                                go.btime = val.parse().ok();
                             }
                             i += 2;
                         }
                         "winc" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                winc = val.parse().ok();
+                                go.winc = val.parse().ok();
                             }
                             i += 2;
                         }
                         "binc" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                binc = val.parse().ok();
+                                go.binc = val.parse().ok();
                             }
                             i += 2;
                         }
                         "movestogo" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                moves_to_go = val.parse().ok();
+                                go.moves_to_go = val.parse().ok();
                             }
                             i += 2;
                         }
                         "depth" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                depth = val.parse().ok();
+                                go.depth = val.parse().ok();
                             }
                             i += 2;
                         }
                         "nodes" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                nodes = val.parse().ok();
+                                go.nodes = val.parse().ok();
                             }
                             i += 2;
                         }
                         "mate" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                mate = val.parse().ok();
+                                go.mate = val.parse().ok();
                             }
                             i += 2;
                         }
                         "movetime" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                move_time = val.parse().ok();
+                                go.move_time = val.parse().ok();
                             }
                             i += 2;
                         }
                         "infinite" => {
-                            infinite = true;
+                            go.infinite = true;
                             i += 1;
                         }
                         "ponder" => {
-                            ponder = true;
+                            go.ponder = true;
                             i += 1;
                         }
                         _ => i += 1,
                     }
                 }
 
-                Ok(UciCommand::Go(Go {
-                    wtime,
-                    btime,
-                    winc,
-                    binc,
-                    moves_to_go,
-                    depth,
-                    nodes,
-                    mate,
-                    move_time,
-                    infinite,
-                    ponder,
-                }))
+                Ok(UciCommand::Go(go))
             }
             Some(&"stop") => Ok(UciCommand::Stop),
             Some(&"ponderhit") => Ok(UciCommand::PonderHit),
@@ -270,61 +248,43 @@ impl FromStr for UciCommand {
                 Err("Invalid registration command")
             }
             Some(&"info") => {
-                let mut depth = None;
-                let mut seldepth = None;
-                let mut time = None;
-                let mut nodes = None;
-                let mut pv = None;
-                let mut multipv = None;
-                let mut score_cp = None;
-                let mut score_mate = None;
-                let mut score_lowerbound = false;
-                let mut score_upperbound = false;
-                let mut currmove = None;
-                let mut currmove_number = None;
-                let mut hashfull = None;
-                let mut nps = None;
-                let mut tbhits = None;
-                let mut sbhits = None;
-                let mut cpuload = None;
-                let mut string = None;
-                let mut refutation = None;
-                let mut currline = None;
+                let mut info = Info::default();
+                let mut score = Score::default();
 
                 let mut i = 1;
                 while i < tokens.len() {
                     match tokens[i] {
                         "depth" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                depth = val.parse().ok();
+                                info.depth = val.parse().ok();
                             }
                             i += 2;
                         }
                         "seldepth" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                seldepth = val.parse().ok();
+                                info.seldepth = val.parse().ok();
                             }
                             i += 2;
                         }
                         "time" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                time = val.parse().ok();
+                                info.time = val.parse().ok();
                             }
                             i += 2;
                         }
                         "nodes" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                nodes = val.parse().ok();
+                                info.nodes = val.parse().ok();
                             }
                             i += 2;
                         }
                         "pv" => {
-                            pv = tokens.get(i + 1).map(|s| s.to_string());
+                            info.pv = tokens.get(i + 1).map(|s| s.to_string());
                             i += 2;
                         }
                         "multipv" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                multipv = val.parse().ok();
+                                info.multipv = val.parse().ok();
                             }
                             i += 2;
                         }
@@ -333,22 +293,22 @@ impl FromStr for UciCommand {
                                 match *score_type {
                                     "cp" => {
                                         if let Some(val) = tokens.get(i + 2) {
-                                            score_cp = val.parse().ok();
+                                            score.cp = val.parse().ok();
                                         }
                                         i += 3;
                                     }
                                     "mate" => {
                                         if let Some(val) = tokens.get(i + 2) {
-                                            score_mate = val.parse().ok();
+                                            score.mate = val.parse().ok();
                                         }
                                         i += 3;
                                     }
                                     "lowerbound" => {
-                                        score_lowerbound = true;
+                                        score.lowerbound = true;
                                         i += 2;
                                     }
                                     "upperbound" => {
-                                        score_upperbound = true;
+                                        score.upperbound = true;
                                         i += 2;
                                     }
                                     _ => i += 1,
@@ -358,85 +318,64 @@ impl FromStr for UciCommand {
                             }
                         }
                         "currmove" => {
-                            currmove = tokens.get(i + 1).map(|s| s.to_string());
+                            info.currmove = tokens.get(i + 1).map(|s| s.to_string());
                             i += 2;
                         }
                         "currmovenumber" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                currmove_number = val.parse().ok();
+                                info.currmove_number = val.parse().ok();
                             }
                             i += 2;
                         }
                         "hashfull" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                hashfull = val.parse().ok();
+                                info.hashfull = val.parse().ok();
                             }
                             i += 2;
                         }
                         "nps" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                nps = val.parse().ok();
+                                info.nps = val.parse().ok();
                             }
                             i += 2;
                         }
                         "tbhits" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                tbhits = val.parse().ok();
+                                info.tbhits = val.parse().ok();
                             }
                             i += 2;
                         }
                         "sbhits" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                sbhits = val.parse().ok();
+                                info.sbhits = val.parse().ok();
                             }
                             i += 2;
                         }
                         "cpuload" => {
                             if let Some(val) = tokens.get(i + 1) {
-                                cpuload = val.parse().ok();
+                                info.cpuload = val.parse().ok();
                             }
                             i += 2;
                         }
                         "string" => {
-                            string = tokens.get(i + 1).map(|s| s.to_string());
+                            info.string = tokens.get(i + 1).map(|s| s.to_string());
                             i += 2;
                         }
                         "refutation" => {
-                            refutation = tokens.get(i + 1).map(|s| s.to_string());
+                            info.refutation = tokens.get(i + 1).map(|s| s.to_string());
                             i += 2;
                         }
                         "currline" => {
-                            currline = tokens.get(i + 1).map(|s| s.to_string());
+                            info.currline = tokens.get(i + 1).map(|s| s.to_string());
                             i += 2;
                         }
                         _ => i += 1,
                     }
                 }
 
-                Ok(UciCommand::Info(Info {
-                    depth,
-                    seldepth,
-                    time,
-                    nodes,
-                    pv,
-                    multipv,
-                    score: Some(Score {
-                        cp: score_cp,
-                        mate: score_mate,
-                        lowerbound: score_lowerbound,
-                        upperbound: score_upperbound,
-                    }),
-                    currmove,
-                    currmove_number,
-                    hashfull,
-                    nps,
-                    tbhits,
-                    sbhits,
-                    cpuload,
-                    string,
-                    refutation,
-                    currline,
-                }))
+                info.score = Some(score);
+
+                Ok(UciCommand::Info(info))
             }
             Some(&"option") => Ok(UciCommand::Option(tokens[1..].join(" "))),
             _ => Err("Not a command"),
@@ -545,14 +484,14 @@ impl fmt::Display for Info {
             self.time.map(|v| format!(" time {}", v)),
             self.nodes.map(|v| format!(" nodes {}", v)),
             self.nps.map(|v| format!(" nps {}", v)),
-            self.score.as_ref().map(|v| format!(" {}", v)),
             self.tbhits.map(|v| format!(" tbhits {}", v)),
             self.sbhits.map(|v| format!(" sbhits {}", v)),
-            self.pv.as_ref().map(|v| format!(" pv {}", v)),
             self.cpuload.map(|v| format!(" cpuload {}", v)),
+            self.hashfull.map(|v| format!(" hashfull {}", v)),
             self.currmove.as_ref().map(|v| format!(" currmove {}", v)),
             self.currmove_number.map(|v| format!(" currmovenumber {}", v)),
-            self.hashfull.map(|v| format!(" hashfull {}", v)),
+            self.score.as_ref().map(|v| format!(" {}", v)),
+            self.pv.as_ref().map(|v| format!(" pv {}", v)),
             self.multipv.map(|v| format!(" multipv {}", v)),
         ];
 
@@ -573,7 +512,7 @@ pub enum UciCommand {
 
     SetOption {
         name: String,
-        value: String,
+        value: Option<String>,
     },
 
     Register {

@@ -1,7 +1,8 @@
 use std::{
     fs::{File, OpenOptions},
-    io::{BufRead, BufReader},
 };
+#[cfg(not(feature = "bmi2"))]
+use std::thread;
 
 use crate::gen_tables::*;
 
@@ -42,18 +43,27 @@ fn main() {
 
     write_zobrist(&mut file);
 
-    if OpenOptions::new()
-        .read(true)
-        .open(format!("{}/magic_tables.rs", out_dir))
-        .is_err()
-    {
-        let mut file = File::create(format!("{}/magic_tables.rs", out_dir)).unwrap();
+    let path = format!("{}/magic_tables.rs", out_dir);
 
+    let mut file = if OpenOptions::new().read(true).open(&path).is_err() {
+        File::create(&path).unwrap()
+    } else {
+        OpenOptions::new().write(true).open(&path).unwrap()
+    };
+
+    if file.metadata().expect("file metadata not found").len() != 4 {
         #[cfg(not(feature = "bmi2"))]
         {
-            write_bishop_moves(&mut file);
+            let mut bishop_file = file.try_clone().unwrap();
+            let bishop_thread = thread::spawn(move || {
+                write_bishop_moves(&mut bishop_file);
+            });
+            let rook_thread = thread::spawn(move || {
+                write_rook_moves(&mut file);
+            });
 
-            write_rook_moves(&mut file);
+            let _ = bishop_thread.join();
+            let _ = rook_thread.join();
         }
 
         #[cfg(feature = "bmi2")]
@@ -61,32 +71,6 @@ fn main() {
             write_bishop_pext(&mut file);
 
             write_rook_pext(&mut file);
-        }
-    } else if let Ok(mut file) = OpenOptions::new()
-        .write(true)
-        .open(format!("{}/magic_tables.rs", out_dir))
-        && file.metadata().expect("file metadata not found").len() == 0
-    {
-        let reader = BufReader::new(
-            OpenOptions::new()
-                .read(true)
-                .open(format!("{}/magic_tables.rs", out_dir))
-                .unwrap(),
-        );
-        if reader.lines().count() != 4 {
-            #[cfg(not(feature = "bmi2"))]
-            {
-                write_bishop_moves(&mut file);
-
-                write_rook_moves(&mut file);
-            }
-
-            #[cfg(feature = "bmi2")]
-            {
-                write_bishop_pext(&mut file);
-
-                write_rook_pext(&mut file);
-            }
         }
     }
 }

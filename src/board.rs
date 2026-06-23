@@ -13,10 +13,9 @@ use crate::{
     magic::*,
     piece::Piece,
     rank::Rank,
-    square::Square,
+    square::{SQUARES, Square},
 };
 
-#[repr(packed)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
 pub struct UnmakeData {
     pub castling_rights: CastlingRights,
@@ -50,6 +49,29 @@ impl Default for Board {
 impl Hash for Board {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.hash().hash(state);
+    }
+}
+
+impl std::fmt::Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "+---+---+---+---+---+---+---+---+")?;
+
+        for square in SQUARES.iter().rev() {
+            let piece = match self.get_piece(*square) {
+                Some(piece) if self.occupancy(Color::White).is_set(*square) => piece.to_fen().to_ascii_uppercase(),
+                Some(piece) => piece.to_fen(),
+                None => ' ',
+            };
+
+            write!(f, "| {} ", piece)?;
+
+            if square.to_int() % 8 == 0 {
+                writeln!(f, "| {}", square.to_int() / 8 + 1)?;
+                writeln!(f, "+---+---+---+---+---+---+---+---+")?;
+            }
+        }
+
+        writeln!(f, "  a   b   c   d   e   f   g   h")
     }
 }
 
@@ -188,6 +210,7 @@ impl Board {
         }
     }
 
+    /// Convert the current [`Board`] to a FEN.
     pub fn to_fen(&self) -> String {
         let mut fen = String::new();
 
@@ -249,6 +272,21 @@ impl Board {
         fen.push_str("0 1");
 
         fen
+    }
+
+    /// Display the current [`Board`].
+    ///
+    /// # Example
+    /// ```
+    /// use chessframe::board::Board;
+    ///
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    /// let board = Board::from_fen(fen);
+    ///
+    /// board.display();
+    /// ```
+    pub fn display(&self) {
+        println!("{}", self);
     }
 
     /// Get the combined bitboard of all pieces on the board.
