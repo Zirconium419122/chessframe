@@ -1,6 +1,4 @@
-use std::{
-    fs::{File, OpenOptions},
-};
+use std::fs::{File, OpenOptions};
 #[cfg(not(feature = "bmi2"))]
 use std::thread;
 
@@ -25,6 +23,10 @@ fn main() {
 
     write_ranks(&mut file);
 
+    write_forward_ranks(&mut file);
+
+    write_backward_ranks(&mut file);
+
     write_between(&mut file);
 
     write_tangent(&mut file);
@@ -32,6 +34,8 @@ fn main() {
     write_pawn_moves(&mut file);
 
     write_pawn_attacks(&mut file);
+
+    write_passed_pawn(&mut file);
 
     write_knight_moves(&mut file);
 

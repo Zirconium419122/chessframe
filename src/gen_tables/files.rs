@@ -6,8 +6,8 @@ use crate::{
     square::SQUARES,
 };
 
-static FILES: Mutex<[BitBoard; 8]> = Mutex::new([EMPTY; 8]);
-static ADJACENT_FILES: Mutex<[BitBoard; 8]> = Mutex::new([EMPTY; 8]);
+pub static FILES: Mutex<[BitBoard; 8]> = Mutex::new([EMPTY; 8]);
+pub static ADJACENT_FILES: Mutex<[BitBoard; 8]> = Mutex::new([EMPTY; 8]);
 
 pub fn generate_files() {
     for i in 0..8 {

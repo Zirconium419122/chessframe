@@ -58,7 +58,9 @@ impl std::fmt::Display for Board {
 
         for square in SQUARES.iter().rev() {
             let piece = match self.get_piece(*square) {
-                Some(piece) if self.occupancy(Color::White).is_set(*square) => piece.to_fen().to_ascii_uppercase(),
+                Some(piece) if self.occupancy(Color::White).is_set(*square) => {
+                    piece.to_fen().to_ascii_uppercase()
+                }
                 Some(piece) => piece.to_fen(),
                 None => ' ',
             };
@@ -853,7 +855,9 @@ impl Board {
     pub fn make_null_move(&mut self) -> Result<(), Error> {
         self.remove_en_passant();
 
-        let king_square = self.pieces_color(Piece::King, !self.side_to_move).to_square();
+        let king_square = self
+            .pieces_color(Piece::King, !self.side_to_move)
+            .to_square();
 
         if self
             .get_attackers(
@@ -869,8 +873,11 @@ impl Board {
         self.pinned = EMPTY;
 
         for color in COLORS {
-            let attackers = self.occupancy(color) & ((get_bishop_rays(king_square) & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
-                | (get_rook_rays(king_square) & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
+            let attackers = self.occupancy(color)
+                & ((get_bishop_rays(king_square)
+                    & (self.pieces(Piece::Bishop) | self.pieces(Piece::Queen)))
+                    | (get_rook_rays(king_square)
+                        & (self.pieces(Piece::Rook) | self.pieces(Piece::Queen))));
 
             for square in attackers {
                 let between = get_between(square, king_square) & self.combined();
@@ -1246,15 +1253,10 @@ impl Board {
         let bitboard = BitBoard::from_square(square);
         if self.combined() & bitboard == EMPTY {
             None
-        } else if (self.pieces(Piece::Pawn)
-            ^ self.pieces(Piece::Knight)
-            ^ self.pieces(Piece::Bishop))
-            & bitboard
-            != EMPTY
-        {
-            if self.pieces(Piece::Pawn) & bitboard != EMPTY {
-                Some(Piece::Pawn)
-            } else if self.pieces(Piece::Knight) & bitboard != EMPTY {
+        } else if self.pieces(Piece::Pawn) & bitboard != EMPTY {
+            Some(Piece::Pawn)
+        } else if (self.pieces(Piece::Knight) ^ self.pieces(Piece::Bishop)) & bitboard != EMPTY {
+            if self.pieces(Piece::Knight) & bitboard != EMPTY {
                 Some(Piece::Knight)
             } else {
                 Some(Piece::Bishop)

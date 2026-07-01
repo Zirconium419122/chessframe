@@ -32,12 +32,7 @@ impl fmt::Display for Square {
         let file = self.file().to_index() as u8 + b'a';
         let rank = self.rank().to_index() as u8 + b'1';
 
-        write!(
-            f,
-            "{}{}",
-            file as char,
-            rank as char,
-        )
+        write!(f, "{}{}", file as char, rank as char,)
     }
 }
 

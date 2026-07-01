@@ -376,7 +376,9 @@ impl Game {
             .collect();
         let mv_with_index = moves[self.ply - 1];
 
-        let _ = self.board.unmake_move(mv_with_index.1.0, mv_with_index.1.1, mv_with_index.1.2);
+        let _ = self
+            .board
+            .unmake_move(mv_with_index.1.0, mv_with_index.1.1, mv_with_index.1.2);
 
         self.ply -= 1;
         self.history.truncate(mv_with_index.0);

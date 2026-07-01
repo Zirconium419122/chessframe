@@ -4,9 +4,9 @@ use std::{arch::x86_64::_pext_u64, fs::File};
 use crate::{
     bitboard::{BitBoard, EMPTY},
     gen_tables::magic::{
-        generate_bishop_moves, generate_rook_mask, generate_rook_moves, subsets, MagicPiece,
+        MagicPiece, generate_bishop_moves, generate_rook_mask, generate_rook_moves, subsets,
     },
-    square::{Square, SQUARES},
+    square::{SQUARES, Square},
 };
 
 #[allow(unused)]

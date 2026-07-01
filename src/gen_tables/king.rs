@@ -3,7 +3,7 @@ use std::{fs::File, sync::Mutex};
 
 use crate::{
     bitboard::{BitBoard, EMPTY},
-    square::{Square, SQUARES},
+    square::{SQUARES, Square},
 };
 
 static KING_MOVES: Mutex<[BitBoard; 64]> = Mutex::new([EMPTY; 64]);
