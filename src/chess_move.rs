@@ -20,7 +20,7 @@ impl FromStr for ChessMove {
 
         let from = Square::from_str(&s[..2])?;
         let to = Square::from_str(&s[2..4])?;
-        let promotion = s.chars().nth(5).map(Piece::from);
+        let promotion = s.chars().nth(4).map(Piece::from);
 
         Ok(ChessMove {
             from,

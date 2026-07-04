@@ -13,6 +13,11 @@ fn test_from_str() {
         ChessMove::from_str("b1c3"),
         Ok(ChessMove::new(Square::B1, Square::C3)),
     );
+
+    assert_eq!(
+        ChessMove::from_str("d7d8q"),
+        Ok(ChessMove::new_promotion(Square::D7, Square::D8, Piece::Queen)),
+    );
 }
 
 #[test]
