@@ -1,4 +1,19 @@
+use std::str::FromStr;
+
 use chessframe::{board::Board, chess_move::ChessMove, piece::Piece, square::Square};
+
+#[test]
+fn test_from_str() {
+    assert_eq!(
+        ChessMove::from_str("e2e4"),
+        Ok(ChessMove::new(Square::E2, Square::E4)),
+    );
+
+    assert_eq!(
+        ChessMove::from_str("b1c3"),
+        Ok(ChessMove::new(Square::B1, Square::C3)),
+    );
+}
 
 #[test]
 fn test_pretty_print() {

@@ -1,12 +1,33 @@
 use core::fmt;
+use std::str::FromStr;
 
-use crate::{color::Color, piece::Piece, square::Square};
+use crate::{color::Color, error::Error, piece::Piece, square::Square};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
 pub struct ChessMove {
     pub from: Square,
     pub to: Square,
     pub promotion: Option<Piece>,
+}
+
+impl FromStr for ChessMove {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 4 && s.len() != 5 {
+            return Err(Error::InvalidMove);
+        }
+
+        let from = Square::from_str(&s[..2])?;
+        let to = Square::from_str(&s[2..4])?;
+        let promotion = s.chars().nth(5).map(Piece::from);
+
+        Ok(ChessMove {
+            from,
+            to,
+            promotion,
+        })
+    }
 }
 
 impl fmt::Display for ChessMove {

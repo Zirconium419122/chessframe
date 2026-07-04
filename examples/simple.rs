@@ -167,7 +167,7 @@ impl SimpleMoveMaker {
         score * perspective
     }
 
-    fn sort_moves(board: &Board, moves: &mut Vec<ChessMove>) {
+    fn sort_moves(board: &Board, moves: &mut [ChessMove]) {
         moves.sort_by_key(|mv| -Self::score_move(board, *mv));
     }
 
@@ -250,7 +250,8 @@ impl Uci for SimpleMoveMaker {
                         let board = self.board.as_mut().unwrap();
 
                         for mv in moves {
-                            let mv = board.infer_move(&mv).unwrap();
+                            let mv = ChessMove::from_str(&mv).unwrap();
+                            board.validate_move(mv).unwrap();
 
                             let _ = board.make_move(mv);
                         }
@@ -258,7 +259,7 @@ impl Uci for SimpleMoveMaker {
                 }
                 UciCommand::Go { .. } => {
                     if let Some(ref board) = self.board {
-                        let (score, best_move) = Self::search_base(&board, SimpleMoveMaker::SEARCH_DEPTH);
+                        let (score, best_move) = Self::search_base(board, SimpleMoveMaker::SEARCH_DEPTH);
 
                         if let Some(best_move) = best_move {
                             if score.abs() >= SimpleMoveMaker::MATE_SCORE - 100 {
@@ -266,8 +267,10 @@ impl Uci for SimpleMoveMaker {
                                 let moves_to_mate = SimpleMoveMaker::MATE_SCORE - score.abs();
                                 let mate_in_moves = (moves_to_mate / 2) + 1;
 
-                                let mut score = Score::default();
-                                score.mate = Some(correction * mate_in_moves);
+                                let score = Score {
+                                    mate: Some(correction * mate_in_moves),
+                                    ..Default::default()
+                                };
 
                                 self.send_command(UciCommand::Info(Info {
                                     pv: Some(best_move.to_string()),
@@ -277,8 +280,10 @@ impl Uci for SimpleMoveMaker {
                             } else {
                                 let cp = score;
 
-                                let mut score = Score::default();
-                                score.cp = Some(cp);
+                                let score = Score {
+                                    cp: Some(cp),
+                                    ..Default::default()
+                                };
 
                                 self.send_command(UciCommand::Info(Info {
                                     pv: Some(best_move.to_string()),

@@ -1,5 +1,243 @@
 use std::{fmt, str::FromStr};
 
+use crate::chess_move::ChessMove;
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
+pub struct Go {
+    pub wtime: Option<usize>,
+    pub btime: Option<usize>,
+    pub winc: Option<usize>,
+    pub binc: Option<usize>,
+    pub moves_to_go: Option<usize>,
+    pub depth: Option<usize>,
+    pub nodes: Option<usize>,
+    pub mate: Option<usize>,
+    pub move_time: Option<usize>,
+    pub infinite: bool,
+    pub ponder: bool,
+}
+
+impl fmt::Display for Go {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "go")?;
+
+        let fields = [
+            self.wtime.map(|v| format!(" wtime {}", v)),
+            self.btime.map(|v| format!(" btime {}", v)),
+            self.winc.map(|v| format!(" winc {}", v)),
+            self.binc.map(|v| format!(" binc {}", v)),
+            self.moves_to_go.map(|v| format!(" movestogo {}", v)),
+            self.depth.map(|v| format!(" depth {}", v)),
+            self.nodes.map(|v| format!(" nodes {}", v)),
+            self.mate.map(|v| format!(" mate {}", v)),
+            self.move_time.map(|v| format!(" movetime {}", v)),
+            self.infinite.then(|| " infinite".to_string()),
+            self.ponder.then(|| " ponder".to_string()),
+        ];
+
+        for field in fields.iter().flatten() {
+            write!(f, "{}", field)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
+pub struct Score {
+    pub cp: Option<isize>,
+    pub mate: Option<isize>,
+    pub lowerbound: bool,
+    pub upperbound: bool,
+}
+
+impl fmt::Display for Score {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(cp) = self.cp {
+            write!(f, "score cp {}", cp)?;
+        } else if let Some(mate) = self.mate {
+            write!(f, "score mate {}", mate)?;
+        } else {
+            return Ok(()); // No score info
+        }
+
+        if self.lowerbound {
+            write!(f, " lowerbound")?;
+        }
+        if self.upperbound {
+            write!(f, " upperbound")?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Default)]
+pub struct Info {
+    pub depth: Option<usize>,
+    pub seldepth: Option<usize>,
+    pub time: Option<usize>,
+    pub nodes: Option<usize>,
+    pub pv: Option<String>,
+    pub multipv: Option<usize>,
+    pub score: Option<Score>,
+    pub currmove: Option<String>,
+    pub currmove_number: Option<usize>,
+    pub hashfull: Option<usize>,
+    pub nps: Option<usize>,
+    pub tbhits: Option<usize>,
+    pub sbhits: Option<usize>,
+    pub cpuload: Option<usize>,
+    pub string: Option<String>,
+    pub refutation: Option<String>,
+    pub currline: Option<String>,
+}
+
+impl fmt::Display for Info {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "info")?;
+
+        let fields = [
+            self.depth.map(|v| format!(" depth {}", v)),
+            self.seldepth.map(|v| format!(" seldepth {}", v)),
+            self.time.map(|v| format!(" time {}", v)),
+            self.nodes.map(|v| format!(" nodes {}", v)),
+            self.nps.map(|v| format!(" nps {}", v)),
+            self.tbhits.map(|v| format!(" tbhits {}", v)),
+            self.sbhits.map(|v| format!(" sbhits {}", v)),
+            self.cpuload.map(|v| format!(" cpuload {}", v)),
+            self.hashfull.map(|v| format!(" hashfull {}", v)),
+            self.currmove.as_ref().map(|v| format!(" currmove {}", v)),
+            self.currmove_number.map(|v| format!(" currmovenumber {}", v)),
+            self.score.as_ref().map(|v| format!(" {}", v)),
+            self.pv.as_ref().map(|v| format!(" pv {}", v)),
+            self.multipv.map(|v| format!(" multipv {}", v)),
+        ];
+
+        for field in fields.iter().flatten() {
+            write!(f, "{}", field)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Default)]
+pub enum OptionType {
+    Spin,
+    Check,
+    Button,
+    Combo,
+    #[default]
+    String,
+}
+
+impl fmt::Display for OptionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            OptionType::Spin => write!(f, "spin"),
+            OptionType::Check => write!(f, "check"),
+            OptionType::Button => write!(f, "button"),
+            OptionType::Combo => write!(f, "combo"),
+            OptionType::String => write!(f, "string"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Default)]
+pub struct UciOption {
+    pub name: String,
+    pub option_type: OptionType,
+    pub default: Option<String>,
+    pub min: Option<isize>,
+    pub max: Option<isize>,
+    pub vars: Vec<String>,
+}
+
+impl fmt::Display for UciOption {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "option name {} type {}", self.name, self.option_type)?;
+
+        if let Some(default) = &self.default {
+            write!(f, " default {}", default)?;
+        }
+        if let Some(min) = self.min {
+            write!(f, " min {}", min)?;
+        }
+        if let Some(max) = self.max {
+            write!(f, " max {}", max)?;
+        }
+        for var in &self.vars {
+            write!(f, " var {}", var)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl FromStr for UciOption {
+    type Err = &'static str;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let tokens: Vec<&str> = value.split_whitespace().collect();
+
+        let name_start = tokens.iter().position(|&t| t == "name").ok_or("Missing name")? + 1;
+        let type_start = tokens.iter().position(|&t| t == "type").ok_or("Missing type")? + 1;
+
+        // name is everything between "name" and "type"
+        let name = tokens[name_start..type_start - 1].join(" ");
+
+        let type_str = tokens.get(type_start).ok_or("Missing type value")?;
+        let option_type = match *type_str {
+            "spin" => OptionType::Spin,
+            "check" => OptionType::Check,
+            "button" => OptionType::Button,
+            "combo" => OptionType::Combo,
+            "string" => OptionType::String,
+            _ => return Err("Invalid option type"),
+        };
+
+        let mut default = None;
+        let mut min = None;
+        let mut max = None;
+        let mut vars = Vec::new();
+
+        let mut i = type_start + 1;
+        while i < tokens.len() {
+            match tokens[i] {
+                "default" => {
+                    default = tokens.get(i + 1).map(|s| s.to_string());
+                    i += 2;
+                }
+                "min" => {
+                    min = tokens.get(i + 1).and_then(|v| v.parse().ok());
+                    i += 2;
+                }
+                "max" => {
+                    max = tokens.get(i + 1).and_then(|v| v.parse().ok());
+                    i += 2;
+                }
+                "var" => {
+                    if let Some(val) = tokens.get(i + 1) {
+                        vars.push(val.to_string());
+                    }
+                    i += 2;
+                }
+                _ => i += 1,
+            }
+        }
+
+        Ok(UciOption {
+            name,
+            option_type,
+            default,
+            min,
+            max,
+            vars,
+        })
+    }
+}
+
 impl FromStr for UciCommand {
     type Err = &'static str;
 
@@ -279,8 +517,21 @@ impl FromStr for UciCommand {
                             i += 2;
                         }
                         "pv" => {
-                            info.pv = tokens.get(i + 1).map(|s| s.to_string());
-                            i += 2;
+                            let mut moves = Vec::new();
+
+                            while let Some(mv) = tokens
+                                .get(i + 1)
+                                .filter(|mv| ChessMove::from_str(mv).is_ok())
+                            {
+                                moves.push(mv.to_string());
+                                i += 1;
+                            }
+
+                            if !moves.is_empty() {
+                                info.pv = Some(moves.join(" "));
+                            }
+
+                            i += 1;
                         }
                         "multipv" => {
                             if let Some(val) = tokens.get(i + 1) {
@@ -315,6 +566,20 @@ impl FromStr for UciCommand {
                                 }
                             } else {
                                 i += 1;
+                            }
+
+                            while let Some(&next) = tokens.get(i) {
+                                match next {
+                                    "lowerbound" => {
+                                        score.lowerbound = true;
+                                        i += 1;
+                                    }
+                                    "upperbound" => {
+                                        score.upperbound = true;
+                                        i += 1;
+                                    }
+                                    _ => break,
+                                }
                             }
                         }
                         "currmove" => {
@@ -377,129 +642,13 @@ impl FromStr for UciCommand {
 
                 Ok(UciCommand::Info(info))
             }
-            Some(&"option") => Ok(UciCommand::Option(tokens[1..].join(" "))),
+            Some(&"option") => tokens[1..]
+                .join(" ")
+                .parse()
+                .map(UciCommand::Option)
+                .or(Err("Invalid option command")),
             _ => Err("Not a command"),
         }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
-pub struct Go {
-    pub wtime: Option<usize>,
-    pub btime: Option<usize>,
-    pub winc: Option<usize>,
-    pub binc: Option<usize>,
-    pub moves_to_go: Option<usize>,
-    pub depth: Option<usize>,
-    pub nodes: Option<usize>,
-    pub mate: Option<usize>,
-    pub move_time: Option<usize>,
-    pub infinite: bool,
-    pub ponder: bool,
-}
-
-impl fmt::Display for Go {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "score")?;
-
-        let fields = [
-            self.wtime.map(|v| format!(" wtime {}", v)),
-            self.btime.map(|v| format!(" btime {}", v)),
-            self.winc.map(|v| format!(" winc {}", v)),
-            self.binc.map(|v| format!(" binc {}", v)),
-            self.moves_to_go.map(|v| format!(" movestogo {}", v)),
-            self.depth.map(|v| format!(" depth {}", v)),
-            self.nodes.map(|v| format!(" nodes {}", v)),
-            self.mate.map(|v| format!(" mate {}", v)),
-            self.move_time.map(|v| format!(" movetime {}", v)),
-            self.infinite.then(|| " infinite".to_string()),
-            self.ponder.then(|| " ponder".to_string()),
-        ];
-
-        for field in fields.iter().flatten() {
-            write!(f, "{}", field)?;
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
-pub struct Score {
-    pub cp: Option<isize>,
-    pub mate: Option<isize>,
-    pub lowerbound: bool,
-    pub upperbound: bool,
-}
-
-impl fmt::Display for Score {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(cp) = self.cp {
-            write!(f, "score cp {}", cp)?;
-        } else if let Some(mate) = self.mate {
-            write!(f, "score mate {}", mate)?;
-        } else {
-            return Ok(()); // No score info
-        }
-
-        if self.lowerbound {
-            write!(f, " lowerbound")?;
-        }
-        if self.upperbound {
-            write!(f, " upperbound")?;
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Default)]
-pub struct Info {
-    pub depth: Option<usize>,
-    pub seldepth: Option<usize>,
-    pub time: Option<usize>,
-    pub nodes: Option<usize>,
-    pub pv: Option<String>,
-    pub multipv: Option<usize>,
-    pub score: Option<Score>,
-    pub currmove: Option<String>,
-    pub currmove_number: Option<usize>,
-    pub hashfull: Option<usize>,
-    pub nps: Option<usize>,
-    pub tbhits: Option<usize>,
-    pub sbhits: Option<usize>,
-    pub cpuload: Option<usize>,
-    pub string: Option<String>,
-    pub refutation: Option<String>,
-    pub currline: Option<String>,
-}
-
-impl fmt::Display for Info {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "info")?;
-
-        let fields = [
-            self.depth.map(|v| format!(" depth {}", v)),
-            self.seldepth.map(|v| format!(" seldepth {}", v)),
-            self.time.map(|v| format!(" time {}", v)),
-            self.nodes.map(|v| format!(" nodes {}", v)),
-            self.nps.map(|v| format!(" nps {}", v)),
-            self.tbhits.map(|v| format!(" tbhits {}", v)),
-            self.sbhits.map(|v| format!(" sbhits {}", v)),
-            self.cpuload.map(|v| format!(" cpuload {}", v)),
-            self.hashfull.map(|v| format!(" hashfull {}", v)),
-            self.currmove.as_ref().map(|v| format!(" currmove {}", v)),
-            self.currmove_number.map(|v| format!(" currmovenumber {}", v)),
-            self.score.as_ref().map(|v| format!(" {}", v)),
-            self.pv.as_ref().map(|v| format!(" pv {}", v)),
-            self.multipv.map(|v| format!(" multipv {}", v)),
-        ];
-
-        for field in fields.iter().flatten() {
-            write!(f, "{}", field)?;
-        }
-
-        Ok(())
     }
 }
 
@@ -560,7 +709,7 @@ pub enum UciCommand {
     },
 
     Info(Info),
-    Option(String),
+    Option(UciOption),
 }
 
 pub trait Uci {

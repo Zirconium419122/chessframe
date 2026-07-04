@@ -1,6 +1,6 @@
 use std::{io, str::FromStr};
 
-use chessframe::{bitboard::EMPTY, board::Board, uci::*};
+use chessframe::{bitboard::EMPTY, board::Board, chess_move::ChessMove, uci::*};
 
 struct CaptureMaker {
     board: Option<Board>,
@@ -93,7 +93,8 @@ impl Uci for CaptureMaker {
                         let board = self.board.as_mut().unwrap();
 
                         for mv in moves {
-                            let mv = board.infer_move(&mv).unwrap();
+                            let mv = ChessMove::from_str(&mv).unwrap();
+                            board.validate_move(mv).unwrap();
 
                             let _ = board.make_move(mv);
                         }
@@ -104,21 +105,21 @@ impl Uci for CaptureMaker {
                         let mut moves = Vec::new();
 
                         for mv in board.generate_moves_vec(board.occupancy(!board.side_to_move)) {
-                            if let Ok(_) = board.make_move_new(mv) {
+                            if board.make_move_new(mv).is_ok() {
                                 moves.push(mv);
                             }
                         }
 
                         if moves.is_empty() {
                             for mv in board.generate_moves_vec(!EMPTY) {
-                                if let Ok(_) = board.make_move_new(mv) {
+                                if board.make_move_new(mv).is_ok() {
                                     moves.push(mv);
                                 }
                             }
                         }
 
                         dbg!(&moves);
-                        let mv = moves[0].clone();
+                        let mv = moves[0];
 
                         self.send_command(UciCommand::Info(Info {
                             pv: Some(mv.to_string()),

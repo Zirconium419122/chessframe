@@ -569,6 +569,10 @@ impl Board {
     ///
     /// assert_eq!(mv, Ok(ChessMove::new(Square::E2, Square::E4)));
     /// ```
+    #[deprecated(
+        since = "0.4.3",
+        note = "Use ChessMove::from_str followed by Board::validate_move to verify legality."
+    )]
     pub fn infer_move(&mut self, mv: &str) -> Result<ChessMove, Error> {
         let from = Square::from_str(&mv[0..2])?;
         let to = Square::from_str(&mv[2..4])?;
