@@ -16,7 +16,11 @@ fn test_from_str() {
 
     assert_eq!(
         ChessMove::from_str("d7d8q"),
-        Ok(ChessMove::new_promotion(Square::D7, Square::D8, Piece::Queen)),
+        Ok(ChessMove::new_promotion(
+            Square::D7,
+            Square::D8,
+            Piece::Queen
+        )),
     );
 }
 

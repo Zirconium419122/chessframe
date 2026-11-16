@@ -33,21 +33,10 @@ impl FromStr for ChessMove {
 impl fmt::Display for ChessMove {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if let Some(promotion) = self.promotion {
-            return write!(
-                f,
-                "{}{}{}",
-                self.from,
-                self.to,
-                promotion.to_fen()
-            );
+            return write!(f, "{}{}{}", self.from, self.to, promotion.to_fen());
         }
 
-        write!(
-            f,
-            "{}{}",
-            self.from,
-            self.to,
-        )
+        write!(f, "{}{}", self.from, self.to,)
     }
 }
 

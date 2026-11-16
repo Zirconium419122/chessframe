@@ -182,12 +182,21 @@ macro_rules! generate_perft_tests {
             }
 
             #[test]
+            fn [<test_perft_wac_141_ $suffix>]() {
+                perft_test::<$impl>(
+                    "4r1k1/p1qr1p2/2pb1Bp1/1p5p/3P1n1R/1B3P2/PP3PK1/2Q4R w - - 0 1",
+                    6,
+                    431197141,
+                );
+            }
+
+            #[test]
             fn [<test_perft_filipowicz_vs_smederevac_ $suffix>]() {
                 perft_test::<$impl>(
                     "3rq3/r1b3k1/1pb1p1pn/p1pnPpNp/P2p1P1P/NP1P1BP1/2PB3K/R3R2Q b - - 97 69",
                     6,
                     3353764309,
-                )
+                );
             }
         }
     };

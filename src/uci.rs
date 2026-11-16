@@ -181,8 +181,16 @@ impl FromStr for UciOption {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let tokens: Vec<&str> = value.split_whitespace().collect();
 
-        let name_start = tokens.iter().position(|&t| t == "name").ok_or("Missing name")? + 1;
-        let type_start = tokens.iter().position(|&t| t == "type").ok_or("Missing type")? + 1;
+        let name_start = tokens
+            .iter()
+            .position(|&t| t == "name")
+            .ok_or("Missing name")?
+            + 1;
+        let type_start = tokens
+            .iter()
+            .position(|&t| t == "type")
+            .ok_or("Missing type")?
+            + 1;
 
         // name is everything between "name" and "type"
         let name = tokens[name_start..type_start - 1].join(" ");

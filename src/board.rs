@@ -121,9 +121,23 @@ impl Board {
 
         board.combined = board.occupancy(Color::White) | board.occupancy(Color::Black);
 
-        let knights = get_knight_moves(board.pieces_color(Piece::King, !board.side_to_move).to_square())
-            & board.pieces_color(Piece::Knight, board.side_to_move);
-        board.check = (knights.count_ones() > 0) as u8;
+        board.side_to_move = match parts[1] {
+            "w" => Color::White,
+            "b" => Color::Black,
+            _ => panic!("Invalid active color in FEN"),
+        };
+
+        let king_square = board.pieces_color(Piece::King, board.side_to_move).to_square();
+        let opponent = !board.side_to_move;
+
+        let knight_checks = get_knight_moves(king_square)
+            & board.pieces_color(Piece::Knight, opponent)
+            != EMPTY;
+        let pawn_checks = get_pawn_attacks(king_square, board.side_to_move)
+            & board.pieces_color(Piece::Pawn, opponent)
+            != EMPTY;
+
+        board.check = knight_checks as u8 + pawn_checks as u8;
 
         for color in COLORS {
             let king_square = board.pieces_color(Piece::King, !color).to_square();
@@ -134,25 +148,15 @@ impl Board {
                 let between = get_between(square, king_square) & board.combined();
                 if between.count_ones() == 1 {
                     board.pinned ^= between & board.occupancy(!color);
-                } else if between == EMPTY {
+                } else if between == EMPTY && color != board.side_to_move {
                     board.check += 1;
                 }
             }
         }
 
-        board.side_to_move = match parts[1] {
-            "w" => Color::White,
-            "b" => Color::Black,
-            _ => panic!("Invalid active color in FEN"),
-        };
-
         board.castling_rights = CastlingRights::from_fen(parts[2]);
 
-        board.side_to_move = !board.side_to_move;
-
         board.parse_en_passant(parts[3]);
-
-        board.side_to_move = !board.side_to_move;
 
         board.half_moves = parts[4].parse::<u8>().unwrap();
 

@@ -97,7 +97,9 @@ impl CastlingRights {
     /// Convert a square to the castling rights it represents.
     pub fn square_to_castle_rights(color: Color, square: Square) -> CastlingRights {
         if square == Square::make_square(color.to_backrank(), File::E) {
-            CastlingRights::new().add_right(color, true).add_right(color, false)
+            CastlingRights::new()
+                .add_right(color, true)
+                .add_right(color, false)
         } else if square == Square::make_square(color.to_backrank(), File::H) {
             CastlingRights::new().add_right(color, true)
         } else if square == Square::make_square(color.to_backrank(), File::A) {
