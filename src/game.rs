@@ -25,13 +25,18 @@ impl Event {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct Game {
     pub board: Board,
     pub history: Vec<Event>,
     hashes: Vec<u64>,
     pub ply: usize,
-    half_moves: usize,
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Game {
@@ -51,7 +56,6 @@ impl Game {
             history: vec![],
             hashes: vec![board.hash()],
             ply: 0,
-            half_moves: 0,
         }
     }
 
@@ -76,12 +80,6 @@ impl Game {
             history: vec![],
             hashes: vec![board.hash()],
             ply: 0,
-            half_moves: fen
-                .split_whitespace()
-                .nth(4)
-                .unwrap_or("0")
-                .parse()
-                .unwrap_or(0),
         }
     }
 
@@ -107,7 +105,7 @@ impl Game {
 
     /// Get the half-move clock of the [`Game`].
     pub fn half_moves(&self) -> usize {
-        self.half_moves
+        self.board.half_moves as usize
     }
 
     /// Resign the game provided a [`Color`] that resigns.
@@ -225,22 +223,6 @@ impl Game {
 
         self.make_move(mv)?;
 
-        if let Some(Event::Move((_, metadata, _))) = self
-            .history
-            .iter()
-            .filter(|x| matches!(x, Event::Move(_)))
-            .next_back()
-        {
-            match metadata {
-                MoveMetaData::Capture(..)
-                | MoveMetaData::PawnMove
-                | MoveMetaData::EnPassant(..) => {
-                    self.half_moves = 0;
-                }
-                _ => self.half_moves += 1,
-            }
-        }
-
         let legal_moves = self
             .board
             .generate_moves_vec(!EMPTY)
@@ -270,7 +252,7 @@ impl Game {
             }
         }
 
-        if self.half_moves >= 100 {
+        if self.board.is_fifty_move() {
             self.history.push(Event::DrawByFiftyMoveRule);
         }
 
@@ -301,7 +283,7 @@ impl Game {
         Ok(())
     }
 
-    /// Undo the last move made on the [`Board`].
+    /// Undo the last move made on the [`Board`], if any.
     ///
     /// # Examples
     ///
@@ -360,27 +342,39 @@ impl Game {
     /// assert_eq!(game.board.get_piece(Square::B8), None);
     /// assert_eq!(game.board.get_piece(Square::B7), Some(Piece::Pawn));
     /// ```
+    ///
+    /// Restore the move clock and repetition history:
+    /// ```
+    /// use chessframe::{chess_move::ChessMove, game::{Event, Game}, square::Square};
+    ///
+    /// let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 99 10";
+    /// let mut game = Game::from_fen(fen);
+    /// let mv = ChessMove::new(Square::G1, Square::F3);
+    ///
+    /// for _ in 0..3 {
+    ///     game.play_move(mv).unwrap();
+    ///     assert_eq!(game.history().last(), Some(&Event::DrawByFiftyMoveRule));
+    ///     game.undo_move();
+    ///     assert_eq!(game.hashes(), &[game.board().hash()]);
+    ///     assert_eq!(game.half_moves(), 99);
+    /// }
+    /// ```
     pub fn undo_move(&mut self) {
-        let moves: Vec<(usize, (ChessMove, MoveMetaData, UnmakeData))> = self
-            .history
-            .iter()
-            .enumerate()
-            .filter(|x| matches!(x.1, Event::Move(_)))
-            .map(|x| {
-                if let Event::Move(mv) = x.1 {
-                    (x.0, *mv)
-                } else {
-                    unreachable!()
-                }
-            })
-            .collect();
-        let mv_with_index = moves[self.ply - 1];
-
-        let _ = self
-            .board
-            .unmake_move(mv_with_index.1.0, mv_with_index.1.1, mv_with_index.1.2);
-
-        self.ply -= 1;
-        self.history.truncate(mv_with_index.0);
+        let last_move =
+            self.history
+                .iter()
+                .enumerate()
+                .rev()
+                .find_map(|(index, event)| match event {
+                    Event::Move(data) => Some((index, *data)),
+                    _ => None,
+                });
+        if let Some((index, (mv, metadata, unmake_data))) = last_move
+            && self.board.unmake_move(mv, metadata, unmake_data).is_ok()
+        {
+            self.ply -= 1;
+            self.hashes.pop();
+            self.history.truncate(index);
+        }
     }
 }

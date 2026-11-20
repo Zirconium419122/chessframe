@@ -83,6 +83,9 @@ impl CastlingRights {
         if self.can_castle(Color::Black, false) {
             fen.push('q');
         }
+        if fen.is_empty() {
+            fen.push('-');
+        }
 
         fen
     }
@@ -144,12 +147,10 @@ impl CastlingRights {
     /// Revoke castling rights for a specific color and side.
     #[rustfmt::skip]
     pub fn revoke(&mut self, color: Color, kingside: bool) {
-        let mut castling_rights = *self;
-
         let offset = if color == Color::Black { CastlingRights::OFFSET } else { 0 };
         let castle_right = if kingside { CastlingRights::KINGSIDE } else { CastlingRights::QUEENSIDE };
 
-        castling_rights.0 &= !(castle_right << offset);
+        self.0 &= !(castle_right << offset);
     }
 
     /// Revoke all castling rights for a specific color.

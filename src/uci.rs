@@ -631,8 +631,10 @@ impl FromStr for UciCommand {
                             i += 2;
                         }
                         "string" => {
-                            info.string = tokens.get(i + 1).map(|s| s.to_string());
-                            i += 2;
+                            if i + 1 < tokens.len() {
+                                info.string = Some(tokens[i + 1..].join(" "));
+                            }
+                            break;
                         }
                         "refutation" => {
                             info.refutation = tokens.get(i + 1).map(|s| s.to_string());

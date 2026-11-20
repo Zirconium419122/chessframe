@@ -2,6 +2,10 @@ use std::{fmt, str::FromStr};
 
 use crate::{color::Color, error::Error, file::File, rank::Rank};
 
+/// A square on the chessboard.
+///
+/// When parsing a square with [`FromStr`], pass a two-byte ASCII coordinate such
+/// as `"e4"`. Unicode input is unsupported and can cause undefined behavior.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Default)]
 pub struct Square(u8);
 

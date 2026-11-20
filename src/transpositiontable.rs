@@ -7,10 +7,19 @@ pub struct Entry<T> {
     pub depth: u8,
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Default)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Hash)]
 pub struct TranspositionTable<T> {
     table: Vec<Option<Entry<T>>>,
     max_entries: usize,
+}
+
+impl<T> Default for TranspositionTable<T> {
+    fn default() -> Self {
+        Self {
+            table: vec![None],
+            max_entries: 1,
+        }
+    }
 }
 
 impl<T: Debug + Clone + Copy + PartialEq + PartialOrd + Hash + Default> TranspositionTable<T> {
@@ -42,7 +51,8 @@ impl<T: Debug + Clone + Copy + PartialEq + PartialOrd + Hash + Default> Transpos
     /// ```
     /// use chessframe::{transpositiontable::{Entry, TranspositionTable}};
     ///
-    /// let mut table = TranspositionTable::<i32>::with_capacity(64);
+    /// let mut table = TranspositionTable::<i32>::default();
+    /// assert_eq!(table.get(0x123456789ABCDEF), None);
     ///
     /// table.store(0x123456789ABCDEF, -16, 4);
     ///

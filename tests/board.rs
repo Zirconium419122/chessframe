@@ -1,6 +1,7 @@
 use chessframe::{
     bitboard::{BitBoard, EMPTY},
     board::*,
+    castling_rights::CastlingRights,
     chess_move::ChessMove,
     color::Color,
     error::Error,
@@ -86,6 +87,25 @@ fn test_to_fen() {
     let board = Board::from_fen(fen);
 
     assert_eq!(board.to_fen(), fen);
+
+    // Test that FEN preserves the half-move clock and the absence of castling rights
+    {
+        let fen = "k7/8/8/8/8/8/7R/7K b - - 42 99";
+        let expected_fen = "k7/8/8/8/8/8/7R/7K b - - 42 1";
+        let moved_fen = "1k6/8/8/8/8/8/7R/7K w - - 43 1";
+        let mut board = Board::from_fen(fen);
+        let mv = ChessMove::new(Square::A8, Square::B8);
+
+        assert_eq!(board.to_fen(), expected_fen);
+        assert_eq!(board.make_move_new(mv).unwrap().to_fen(), moved_fen);
+
+        let unmake_data = board.unmake_data();
+        let metadata = board.make_move_metadata(mv).unwrap();
+        assert_eq!(board.to_fen(), moved_fen);
+
+        board.unmake_move(mv, metadata, unmake_data).unwrap();
+        assert_eq!(board.to_fen(), expected_fen);
+    }
 }
 
 #[test]
@@ -181,6 +201,34 @@ fn test_validate_move() {
             BitBoard(0x000000000240000)
         );
     }
+
+    // Test that only a pawn reaching its last rank can promote
+    {
+        let fen = "7k/P7/8/8/8/8/7P/6K1 w - - 0 1";
+        let mut board = Board::from_fen(fen);
+
+        assert_eq!(
+            board.validate_move(ChessMove::new(Square::A7, Square::A8)),
+            Err(Error::InvalidMove)
+        );
+
+        let early_promotion = ChessMove::new_promotion(Square::H2, Square::H4, Piece::Queen);
+        assert_eq!(
+            board.validate_move(early_promotion),
+            Err(Error::InvalidMove)
+        );
+
+        for piece in [Piece::Pawn, Piece::King] {
+            let invalid_promotion = ChessMove::new_promotion(Square::A7, Square::A8, piece);
+            assert_eq!(
+                board.validate_move(invalid_promotion),
+                Err(Error::InvalidMove)
+            );
+        }
+
+        let promotion = ChessMove::new_promotion(Square::A7, Square::A8, Piece::Knight);
+        assert_eq!(board.validate_move(promotion), Ok(Piece::Pawn));
+    }
 }
 
 #[test]
@@ -210,6 +258,51 @@ fn test_make_move() {
             BitBoard(0x00000001000EF00)
         );
         assert_eq!(board.en_passant_square, None);
+    }
+
+    // Test that rejecting a pinned move leaves the board unchanged
+    {
+        let fen = "k3r3/8/8/8/8/8/4R3/4K3 w - - 0 1";
+        let board = Board::from_fen(fen);
+        let mut moved_board = board;
+        let mv = ChessMove::new(Square::E2, Square::F2);
+
+        assert!(moved_board.generate_moves_vec(!EMPTY).contains(&mv));
+        assert_eq!(board.make_move_new(mv), Err(Error::CannotMovePinned));
+        assert_eq!(moved_board.make_move(mv), Err(Error::CannotMovePinned));
+        assert_eq!(moved_board, board);
+    }
+
+    // Test that an en passant capture cannot expose the king to check
+    {
+        let fen = "k7/8/8/r3pPK1/8/8/8/8 w - e6 0 2";
+        let board = Board::from_fen(fen);
+        let mut moved_board = board;
+        let mv = ChessMove::new(Square::F5, Square::E6);
+
+        assert!(moved_board.generate_moves_vec(!EMPTY).contains(&mv));
+        assert_eq!(board.make_move_new(mv), Err(Error::CannotMovePinned));
+        assert_eq!(moved_board.make_move(mv), Err(Error::CannotMovePinned));
+        assert_eq!(moved_board, board);
+        assert_eq!(
+            moved_board.make_move_metadata(mv),
+            Err(Error::CannotMovePinned)
+        );
+        assert_eq!(moved_board, board);
+    }
+
+    // Test that moving from an empty square leaves the board unchanged
+    {
+        let mut moved_board = board;
+        let mv = ChessMove::new(Square::A3, Square::A4);
+
+        assert_eq!(moved_board.make_move(mv), Err(Error::NoPieceOnSquare));
+        assert_eq!(moved_board, board);
+        assert_eq!(
+            moved_board.make_move_metadata(mv),
+            Err(Error::NoPieceOnSquare)
+        );
+        assert_eq!(moved_board, board);
     }
 }
 
@@ -298,4 +391,15 @@ fn test_can_castle() {
             BitBoard(0x1000000000000000)
         );
     }
+}
+
+#[test]
+fn test_revoke_castling_rights() {
+    let mut rights = CastlingRights::from_fen("KQkq");
+
+    rights.revoke(Color::White, true);
+    assert_eq!(rights.to_fen(), "Qkq");
+
+    rights.revoke_all(Color::Black);
+    assert_eq!(rights.to_fen(), "Q");
 }

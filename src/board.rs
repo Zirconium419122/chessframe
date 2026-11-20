@@ -156,7 +156,9 @@ impl Board {
 
         board.castling_rights = CastlingRights::from_fen(parts[2]);
 
+        board.side_to_move = !board.side_to_move;
         board.parse_en_passant(parts[3]);
+        board.side_to_move = !board.side_to_move;
 
         board.half_moves = parts[4].parse::<u8>().unwrap();
 
@@ -216,7 +218,7 @@ impl Board {
         }
     }
 
-    /// Convert the current [`Board`] to a FEN.
+    /// Convert the current [`Board`] to a FEN, using `1` as the fullmove number.
     pub fn to_fen(&self) -> String {
         let mut fen = String::new();
 
@@ -274,8 +276,8 @@ impl Board {
         }
 
         fen.push(' ');
-
-        fen.push_str("0 1");
+        fen.push_str(&self.half_moves.to_string());
+        fen.push_str(" 1");
 
         fen
     }
@@ -609,6 +611,15 @@ impl Board {
     pub fn validate_move(&mut self, mv: ChessMove) -> Result<Piece, Error> {
         let (from, to) = mv.get_move();
         let piece = self.get_piece(from).ok_or(Error::NoPieceOnSquare)?;
+        let is_promotion = piece == Piece::Pawn && self.is_promotion(to);
+
+        if let Some(promotion) = mv.promotion() {
+            if !is_promotion || promotion == Piece::Pawn || promotion == Piece::King {
+                return Err(Error::InvalidMove);
+            }
+        } else if is_promotion {
+            return Err(Error::InvalidMove);
+        }
 
         let pieces = self.pieces(piece);
 
@@ -683,7 +694,8 @@ impl Board {
     pub fn make_move_new(&self, mv: ChessMove) -> Result<Board, Error> {
         let mut board = *self;
 
-        board.make_move(mv)?;
+        // A rejected move only affects this temporary copy.
+        board.apply_move::<false>(mv)?;
 
         Ok(board)
     }
@@ -702,6 +714,7 @@ impl Board {
     /// # Errors
     /// - Returns an error if the resulting board state places or leaves the king in check.
     /// - Errors when attempting to move a piece from an empty square or with other invalid conditions.
+    /// - On error, the board retains its original state.
     ///
     /// # Example
     /// ```
@@ -719,11 +732,18 @@ impl Board {
     /// certain rules (e.g., pinned pieces cannot move) during processing.
     ///
     /// [`generate_moves_vec`]: #method.generate_moves_vec
-    #[rustfmt::skip]
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
-        let (from, to) = mv.get_move();
+        self.apply_move::<true>(mv)
+    }
 
-        let in_check = self.check > 0;
+    #[rustfmt::skip]
+    fn apply_move<const RESTORE_ON_ERROR: bool>(&mut self, mv: ChessMove) -> Result<(), Error> {
+        let (from, to) = mv.get_move();
+        let piece = self.get_piece(from).ok_or(Error::NoPieceOnSquare)?;
+        let en_passant = piece == Piece::Pawn && self.en_passant_square() == Some(to);
+        let check_king = self.in_check() || en_passant || self.pinned.is_set(from) || piece == Piece::King;
+        let unmake_data = (RESTORE_ON_ERROR && check_king).then(|| self.unmake_data());
+
         self.check = 0;
 
         self.half_moves += 1;
@@ -732,12 +752,10 @@ impl Board {
         let to_bitboard = BitBoard::from_square(to);
         let move_bitboard = from_bitboard ^ to_bitboard;
 
-        let piece = self.get_piece(from).ok_or(Error::NoPieceOnSquare)?;
-
-        let en_passant_square = self.en_passant_square();
         self.remove_en_passant();
 
-        if let Some(captured) = self.get_piece(to) {
+        let captured = self.get_piece(to);
+        if let Some(captured) = captured {
             self.half_moves = 0;
             self.xor(to_bitboard, captured, !self.side_to_move);
         }
@@ -796,7 +814,7 @@ impl Board {
             {
                 self.set_en_passant(to.wrapping_backward(self.side_to_move));
                 self.check = (get_pawn_attacks(king_square, !self.side_to_move) & to_bitboard != EMPTY) as u8;
-            } else if Some(to) == en_passant_square {
+            } else if en_passant {
                 let side_to_move = self.side_to_move;
                 self.xor(
                     BitBoard::from_square(to.wrapping_backward(side_to_move)),
@@ -820,7 +838,7 @@ impl Board {
             self.xor(end, Piece::Rook, self.side_to_move);
         }
 
-        if (in_check || self.pinned.is_set(from) || piece == Piece::King)
+        if check_king
             && self
                 .get_attackers(
                     self.pieces_color(Piece::King, self.side_to_move)
@@ -828,6 +846,11 @@ impl Board {
                 )
                 .is_not_zero()
         {
+            if let Some(unmake_data) = unmake_data {
+                let metadata = MoveMetaData::new(to, piece, captured, en_passant, castle, self.side_to_move);
+                self.side_to_move = !self.side_to_move;
+                self.unmake_move(mv, metadata, unmake_data)?;
+            }
             return Err(Error::CannotMovePinned);
         }
 
@@ -1106,6 +1129,7 @@ impl Board {
     #[rustfmt::skip]
     pub fn make_move_metadata(&mut self, mv: ChessMove) -> Result<MoveMetaData, Error> {
         let (from, to) = mv.get_move();
+        let piece = self.get_piece(from).ok_or(Error::NoPieceOnSquare)?;
 
         let unmake_data = self.unmake_data();
 
@@ -1118,7 +1142,6 @@ impl Board {
         let to_bitboard = BitBoard::from_square(to);
         let move_bitboard = from_bitboard ^ to_bitboard;
 
-        let piece = self.get_piece(from).ok_or(Error::NoPieceOnSquare)?;
         let mut en_passant = false;
 
         let en_passant_square = self.en_passant_square();
@@ -1211,7 +1234,7 @@ impl Board {
 
         let metadata = MoveMetaData::new(to, piece, captured, en_passant, castle, self.side_to_move);
 
-        if (in_check || self.pinned.is_set(from) || piece == Piece::King)
+        if (in_check || en_passant || self.pinned.is_set(from) || piece == Piece::King)
             && self
                 .get_attackers(
                     self.pieces_color(Piece::King, self.side_to_move)
@@ -1397,7 +1420,12 @@ impl Board {
         moves
     }
 
-    /// Generate a psudo-legal [`ChessMove`]'s and put them into `moves`.
+    /// Write pseudo-legal moves to `moves` and return the number written.
+    ///
+    /// The slice must have room for every generated move for this position and mask,
+    /// including all four choices for each promotion. A short slice panics in debug
+    /// builds and can cause undefined behavior in release builds. Use
+    /// [`Board::generate_moves_vec`] when the required capacity is unknown.
     ///
     /// # Example
     /// ```

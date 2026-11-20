@@ -106,6 +106,23 @@ fn test_info_parse_pv() {
 }
 
 #[test]
+fn test_info_parse_string() {
+    let cmd: UciCommand = "info depth 3 string checking the position at depth 99"
+        .parse()
+        .unwrap();
+    match cmd {
+        UciCommand::Info(info) => {
+            assert_eq!(info.depth, Some(3));
+            assert_eq!(
+                info.string.as_deref(),
+                Some("checking the position at depth 99")
+            );
+        }
+        _ => panic!("Expected Info variant"),
+    }
+}
+
+#[test]
 fn test_go_parse_all() {
     let cmd: UciCommand =
         "go wtime 5000 btime 3000 winc 100 binc 50 depth 12 nodes 1000000 mate 10 movetime 5000 infinite ponder"
