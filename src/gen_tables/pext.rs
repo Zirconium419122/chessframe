@@ -3,9 +3,7 @@ use std::{arch::x86_64::_pext_u64, fs::File};
 
 use crate::{
     bitboard::{BitBoard, EMPTY},
-    gen_tables::magic::{
-        MagicPiece, generate_bishop_moves, generate_rook_mask, generate_rook_moves, subsets,
-    },
+    gen_tables::magic::{MagicPiece, subsets},
     square::{SQUARES, Square},
 };
 
@@ -21,21 +19,12 @@ fn pext_index(mask: BitBoard, blockers: BitBoard) -> usize {
 }
 
 fn generate_table(piece: MagicPiece, square: Square) -> (BitBoard, Vec<BitBoard>) {
-    let mask = match piece {
-        MagicPiece::Bishop => generate_bishop_moves(square, EMPTY) & BitBoard(0x007e7e7e7e7e7e00),
-        MagicPiece::Rook => generate_rook_mask(square),
-    };
-
+    let mask = piece.blocker_mask(square);
     let mut table = vec![EMPTY; 1 << mask.count_ones()];
 
     for blockers in subsets(mask) {
-        let moves = match piece {
-            MagicPiece::Bishop => generate_bishop_moves(square, blockers),
-            MagicPiece::Rook => generate_rook_moves(square, blockers),
-        };
-
         let index = pext_index(mask, blockers);
-        table[index] = moves;
+        table[index] = piece.attacks(square, blockers);
     }
 
     (mask, table)

@@ -1,6 +1,4 @@
 use std::fs::{File, OpenOptions};
-#[cfg(not(feature = "bmi2"))]
-use std::thread;
 
 use crate::gen_tables::*;
 
@@ -57,18 +55,7 @@ fn main() {
 
     if file.metadata().expect("file metadata not found").len() != 4 {
         #[cfg(not(feature = "bmi2"))]
-        {
-            let mut bishop_file = file.try_clone().unwrap();
-            let bishop_thread = thread::spawn(move || {
-                write_bishop_moves(&mut bishop_file);
-            });
-            let rook_thread = thread::spawn(move || {
-                write_rook_moves(&mut file);
-            });
-
-            let _ = bishop_thread.join();
-            let _ = rook_thread.join();
-        }
+        write_magic_moves(&mut file);
 
         #[cfg(feature = "bmi2")]
         {

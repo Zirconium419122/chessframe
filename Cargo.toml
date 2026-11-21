@@ -30,3 +30,6 @@ rand-chacha = ["rand_chacha"]
 name = "magic_gen"
 path = "src/bin/magic_gen.rs"
 required-features = ["rand-chacha"]
+
+[profile.release.build-override]
+opt-level = 3
