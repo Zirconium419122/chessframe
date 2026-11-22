@@ -48,7 +48,8 @@ impl Game {
     ///
     /// let game = Game::new();
     ///
-    /// assert_eq!(game.board, Board::default());
+    /// assert_eq!(game.board(), &Board::default());
+    /// ```
     pub fn new() -> Game {
         let board = Board::default();
         Game {
@@ -197,7 +198,7 @@ impl Game {
     ///
     /// let mv = ChessMove::new(Square::F5, Square::F8);
     ///
-    /// let _ = game.play_move(mv);
+    /// game.play_move(mv).unwrap();
     ///
     /// assert_eq!(game.history.last(), Some(&Event::Checkmate));
     /// ```
@@ -210,7 +211,7 @@ impl Game {
     ///
     /// let mv = ChessMove::new(Square::F5, Square::F7);
     ///
-    /// let _ = game.play_move(mv);
+    /// game.play_move(mv).unwrap();
     ///
     /// assert_eq!(game.history.last(), Some(&Event::Stalemate));
     /// ```
@@ -261,6 +262,9 @@ impl Game {
 
     /// Make a move on the [`Board`].
     ///
+    /// Pass a generated or prevalidated move. This records the move for
+    /// [`Game::undo_move`]. Use [`Game::play_move`] to also check for game-ending events.
+    ///
     /// # Example
     /// ```
     /// use chessframe::{chess_move::ChessMove, game::Game, square::Square};
@@ -270,7 +274,7 @@ impl Game {
     /// let mv = ChessMove::new(Square::H7, Square::H5);
     /// assert_eq!(game.board.en_passant_square, None);
     ///
-    /// game.make_move(mv);
+    /// game.make_move(mv).unwrap();
     /// assert_eq!(game.board.en_passant_square, Some(Square::H6));
     /// ```
     pub fn make_move(&mut self, mv: ChessMove) -> Result<(), Error> {
@@ -295,13 +299,13 @@ impl Game {
     /// let mut game = Game::from_fen(fen);
     ///
     /// let mv = ChessMove::new(Square::G5, Square::H6);
-    /// assert_eq!(game.board.get_piece(Square::H5), Some(Piece::Pawn));
+    /// assert_eq!(game.board().get_piece(Square::H5), Some(Piece::Pawn));
     ///
-    /// game.make_move(mv);
-    /// assert_eq!(game.board.get_piece(Square::H5), None);
+    /// game.make_move(mv).unwrap();
+    /// assert_eq!(game.board().get_piece(Square::H5), None);
     ///
     /// game.undo_move();
-    /// assert_eq!(game.board.get_piece(Square::H5), Some(Piece::Pawn));
+    /// assert_eq!(game.board().get_piece(Square::H5), Some(Piece::Pawn));
     /// ```
     ///
     /// Undo a castling move:
@@ -312,16 +316,16 @@ impl Game {
     /// let mut game = Game::from_fen(fen);
     ///
     /// let mv = ChessMove::new(Square::E1, Square::G1);
-    /// assert_eq!(game.board.get_piece(Square::F1), None);
-    /// assert_eq!(game.board.get_piece(Square::G1), None);
+    /// assert_eq!(game.board().get_piece(Square::F1), None);
+    /// assert_eq!(game.board().get_piece(Square::G1), None);
     ///
-    /// game.make_move(mv);
-    /// assert_eq!(game.board.get_piece(Square::F1), Some(Piece::Rook));
-    /// assert_eq!(game.board.get_piece(Square::G1), Some(Piece::King));
+    /// game.make_move(mv).unwrap();
+    /// assert_eq!(game.board().get_piece(Square::F1), Some(Piece::Rook));
+    /// assert_eq!(game.board().get_piece(Square::G1), Some(Piece::King));
     ///
     /// game.undo_move();
-    /// assert_eq!(game.board.get_piece(Square::F1), None);
-    /// assert_eq!(game.board.get_piece(Square::G1), None);
+    /// assert_eq!(game.board().get_piece(Square::F1), None);
+    /// assert_eq!(game.board().get_piece(Square::G1), None);
     /// ```
     ///
     /// Undo a promotion move:
@@ -332,15 +336,15 @@ impl Game {
     /// let mut game = Game::from_fen(fen);
     ///
     /// let mv = ChessMove::new_promotion(Square::B7, Square::B8, Piece::Queen);
-    /// assert_eq!(game.board.get_piece(Square::B8), None);
+    /// assert_eq!(game.board().get_piece(Square::B8), None);
     ///
-    /// game.make_move(mv);
+    /// game.make_move(mv).unwrap();
     ///
-    /// assert_eq!(game.board.get_piece(Square::B8), Some(Piece::Queen));
+    /// assert_eq!(game.board().get_piece(Square::B8), Some(Piece::Queen));
     ///
     /// game.undo_move();
-    /// assert_eq!(game.board.get_piece(Square::B8), None);
-    /// assert_eq!(game.board.get_piece(Square::B7), Some(Piece::Pawn));
+    /// assert_eq!(game.board().get_piece(Square::B8), None);
+    /// assert_eq!(game.board().get_piece(Square::B7), Some(Piece::Pawn));
     /// ```
     ///
     /// Restore the move clock and repetition history:

@@ -101,7 +101,16 @@ impl Board {
         }
     }
 
-    /// Create a board from a FEN in the form of a `&str`.
+    /// Create a board from a six-field FEN.
+    ///
+    /// The fullmove number is ignored. [`Board::to_fen`] always writes `1`.
+    ///
+    /// # Panics
+    ///
+    /// Malformed FEN can panic, including an incorrect field count, an invalid
+    /// active color, or a halfmove clock that cannot be parsed as a `u8`.
+    ///
+    /// # Example
     /// ```
     /// use chessframe::board::Board;
     ///
@@ -607,7 +616,11 @@ impl Board {
         Err(Error::NoPieceOnSquare)
     }
 
-    /// Checks that a [`ChessMove`] is a valid move for the current board state. Does not check if the move leaves the king in check.
+    /// Check a move against the movement and promotion rules of the position.
+    ///
+    /// A successful result gives the piece on the source square. Applying a
+    /// generated move with [`Board::make_move`] or [`Board::make_move_new`] also
+    /// checks whether the moving side is in check afterward.
     pub fn validate_move(&mut self, mv: ChessMove) -> Result<Piece, Error> {
         let (from, to) = mv.get_move();
         let piece = self.get_piece(from).ok_or(Error::NoPieceOnSquare)?;
@@ -663,7 +676,7 @@ impl Board {
     /// Make a [`ChessMove`] on a copy of the current [`Board`].
     ///
     /// # Parameters
-    /// - `mv`: A reference to a [`ChessMove`] representing the move to make.
+    /// - `mv`: A [`ChessMove`] representing the move to make.
     ///   The move must be either pseudo-legal or fully legal; invalid or unchecked moves
     ///   will result in undefined behavior.
     ///
@@ -703,7 +716,7 @@ impl Board {
     /// Make a [`ChessMove`] on the current [`Board`].
     ///
     /// # Parameters
-    /// - `mv`: A reference to a [`ChessMove`] representing the move to make.
+    /// - `mv`: A [`ChessMove`] representing the move to make.
     ///   The move must be either pseudo-legal or fully legal; invalid or unchecked moves
     ///   will result in undefined behavior.
     ///
@@ -937,6 +950,22 @@ impl Board {
     }
 
     /// Unmake a [`ChessMove`] on the current [`Board`].
+    ///
+    /// Call [`Board::unmake_data`] before applying the move, then pass the returned
+    /// snapshot and the metadata from [`Board::make_move_metadata`]. Undo moves
+    /// in reverse order.
+    ///
+    /// ```
+    /// use chessframe::{board::Board, chess_move::ChessMove, square::Square};
+    ///
+    /// let mut board = Board::default();
+    /// let mv = ChessMove::new(Square::E2, Square::E4);
+    /// let before = board.unmake_data();
+    /// let metadata = board.make_move_metadata(mv).unwrap();
+    ///
+    /// board.unmake_move(mv, metadata, before).unwrap();
+    /// assert_eq!(board, Board::default());
+    /// ```
     pub fn unmake_move(
         &mut self,
         mv: ChessMove,
@@ -1022,7 +1051,7 @@ impl Board {
     /// Make a [`ChessMove`] on a copy of the current [`Board`] and return [`MoveMetaData`].
     ///
     /// # Parameters
-    /// - `mv`: A reference to a [`ChessMove`] representing the move to make.
+    /// - `mv`: A [`ChessMove`] representing the move to make.
     ///   The move must be either pseudo-legal or fully legal; invalid or unchecked moves
     ///   will result in undefined behavior.
     ///
@@ -1067,7 +1096,7 @@ impl Board {
     /// Make a [`ChessMove`] on the current [`Board`] and return [`MoveMetaData`].
     ///
     /// # Parameters
-    /// - `mv`: A reference to a [`ChessMove`] representing the move to make.
+    /// - `mv`: A [`ChessMove`] representing the move to make.
     ///   The move must be either pseudo-legal or fully legal; invalid or unchecked moves
     ///   will result in undefined behavior.
     ///
@@ -1326,7 +1355,11 @@ impl Board {
             | self.generate_king_moves()
     }
 
-    /// Generate a vector of psudo-legal [`ChessMove`]'s.
+    /// Generate pseudo-legal moves for the side to move.
+    ///
+    /// `mask` selects destination squares. Use `!EMPTY` for all destinations.
+    /// Apply generated moves with [`Board::make_move_new`] or [`Board::make_move`]
+    /// to reject moves that leave the moving side in check.
     ///
     /// # Example
     /// ```
@@ -1421,6 +1454,7 @@ impl Board {
     }
 
     /// Write pseudo-legal moves to `moves` and return the number written.
+    /// `mask` selects destination squares, as in [`Board::generate_moves_vec`].
     ///
     /// The slice must have room for every generated move for this position and mask,
     /// including all four choices for each promotion. A short slice panics in debug
@@ -1536,7 +1570,7 @@ impl Board {
         self.generate_bishop_moves() | self.generate_rook_moves() | self.generate_queen_moves()
     }
 
-    /// Get attackers for a given square.
+    /// Return the squares from which the opponent of the side to move attacks the given square.
     ///
     /// # Example
     /// ```
@@ -1546,10 +1580,11 @@ impl Board {
     /// let board = Board::from_fen(fen);
     ///
     /// assert_eq!(board.get_attackers(Square::E4), EMPTY);
-    /// #
-    /// # // let _ = board.make_move_new(&ChessMove::new(Square::E2, Square::E4));
-    /// #
-    /// # // assert_eq!(board.get_attackers(Square::D5), BitBoard::from_square(Square::E4));
+    ///
+    /// let mv = ChessMove::new(Square::E2, Square::E4);
+    /// let board = board.make_move_new(mv).unwrap();
+    ///
+    /// assert_eq!(board.get_attackers(Square::D5), BitBoard::from_square(Square::E4));
     /// ```
     #[rustfmt::skip]
     #[inline]

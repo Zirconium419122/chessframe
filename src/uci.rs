@@ -1,3 +1,22 @@
+//! Types for handling individual Universal Chess Interface (UCI) messages.
+//!
+//! Parse a line using [`UciCommand`]. Position commands contain move strings,
+//! which can be parsed separately as [`crate::chess_move::ChessMove`] values.
+//! Implement [`Uci`] to connect command handling to your engine's input and output.
+//!
+//! ```
+//! use chessframe::uci::UciCommand;
+//!
+//! let command: UciCommand = "position startpos moves e2e4".parse().unwrap();
+//! assert_eq!(
+//!     command,
+//!     UciCommand::Position {
+//!         fen: "startpos".into(),
+//!         moves: Some(vec!["e2e4".into()]),
+//!     },
+//! );
+//! ```
+
 use std::{fmt, str::FromStr};
 
 use crate::chess_move::ChessMove;
